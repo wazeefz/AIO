@@ -14,6 +14,16 @@ import { createVuetify } from 'vuetify'
 // https://vuetifyjs.com/en/introduction/why-vuetify/#feature-guides
 export default createVuetify({
   theme: {
-    defaultTheme: 'dark',
+    defaultTheme: 'primary',
+    themes: {
+      primary: {
+        colors: {
+          primaryBrown: '#EAE3D6',
+          secondaryBrown: '#B1A184',
+          primaryGrey: '#5D7285',
+          secondaryGrey: '#9D9D9D',
+        },
+      },
+    },
   },
 })
