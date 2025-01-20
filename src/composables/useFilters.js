@@ -1,20 +1,23 @@
 // composables/useFilters.js
 import { ref, computed } from 'vue'
-import { mockData } from '@/mockdata/mockData' // Change this import
+import { mockData } from '@/mockdata/mockData'
 
 export function useFilters() {
+  // 1. State Management
   const filters = ref({
     skills: [],
     salary: [],
     role: [],
   })
 
+  // 2. Filter Initialization
   const initializeFilters = (initialFilters) => {
     Object.entries(initialFilters).forEach(([category, items]) => {
       filters.value[category] = items.map((item) => item.label)
     })
   }
 
+  // 3. Filter Manipulation Methods
   const addFilter = (category, value) => {
     if (!filters.value[category].includes(value)) {
       filters.value[category].push(value)
@@ -37,6 +40,7 @@ export function useFilters() {
     }
   }
 
+  // 4. Computed Properties
   const activeFilters = computed(() => {
     return Object.entries(filters.value).reduce((acc, [category, items]) => {
       items.forEach((item) => {
@@ -46,6 +50,7 @@ export function useFilters() {
     }, [])
   })
 
+  // 5. Filtered Results
   const filteredResults = computed(() => {
     return mockData.filter((item) => {
       // Check skills
@@ -67,6 +72,7 @@ export function useFilters() {
     })
   })
 
+  // 6. Return values and methods
   return {
     filters,
     addFilter,
