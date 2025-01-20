@@ -4,7 +4,7 @@
     <p>Hello test</p>
   </div>
   <div class="bg-secondaryBrown ma-16">
-    <p>Hello test</p>
+    <p>Hello world</p>
   </div>
   <div class="bg-primaryGrey ma-16">
     <p>Hello test</p>
