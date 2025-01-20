@@ -22,7 +22,7 @@ const router = useRouter()
 onMounted(() => {
   // Delay the push by 3 seconds
   setTimeout(() => {
-    router.push('/dashboard')
+    router.push('/prompt')
   }, 3000) // Delay time in milliseconds (3000ms = 3 seconds)
 })
 </script>

@@ -1,12 +1,14 @@
 <template>
   <v-main>
-    <div class="d-flex">
+    <div>
       <!-- Sidebar Section -->
       <SideNav />
 
       <!-- Main Content Section -->
       <div class="content w-100">
-        <router-view />
+        <v-container height="100%" width="100%">
+          <router-view />
+        </v-container>
       </div>
     </div>
   </v-main>

@@ -1,3 +1,7 @@
 <template>
-  <div>Prompt page</div>
+  <PromptPageDefault />
 </template>
+
+<script setup>
+import PromptPageDefault from '@/components/PromptPageDefault.vue'
+</script>
