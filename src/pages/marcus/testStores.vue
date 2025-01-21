@@ -10,9 +10,11 @@
       <!-- Results -->
       <v-col cols="12" md="8">
         <h2>Active Filters</h2>
+        <!-- Chips component -->
         <base-chips
           :chips="filterChips"
           :closable="true"
+          :use-color-mapping="true"
           @remove-chip="handleFilterRemoval"
         />
 
@@ -21,29 +23,14 @@
           <h2>
             Filtered Results ({{ filterStore.filteredResults.length }} matches)
           </h2>
-          <v-card
+          <!-- ProfileCard Component -->
+          <ProfileCard
             v-for="result in filterStore.filteredResults"
             :key="result.id"
-            class="mb-4 pa-4"
-          >
-            <v-card-title>{{ result.title }}</v-card-title>
-            <v-card-subtitle>{{ result.company }}</v-card-subtitle>
-            <v-card-text>
-              <div><strong>Department:</strong> {{ result.department }}</div>
-              <div><strong>Salary:</strong> {{ result.salary }}</div>
-              <div>
-                <strong>Skills:</strong>
-                <v-chip
-                  v-for="skill in result.skills"
-                  :key="skill"
-                  size="small"
-                  class="mr-2 mt-2"
-                >
-                  {{ skill }}
-                </v-chip>
-              </div>
-            </v-card-text>
-          </v-card>
+            :result="result"
+            @modal-opened="handleModalOpen"
+            @modal-closed="handleModalClose"
+          />
         </div>
       </v-col>
     </v-row>
@@ -55,6 +42,7 @@ import { computed } from 'vue'
 import BaseChips from '@/components/Chips.vue'
 import FilterInterface from '@/components/FilterInterface.vue'
 import { useFilterStore } from '@/stores/filterStore'
+import ProfileCard from '@/components/profileCard.vue'
 
 export default {
   name: 'MarcusPage',
@@ -68,7 +56,6 @@ export default {
     const filterChips = computed(() =>
       filterStore.activeFilters.map((filter) => ({
         label: filter.value,
-        color: getColorForCategory(filter.category),
         category: filter.category,
         value: filter.value,
       }))

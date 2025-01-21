@@ -3,7 +3,7 @@
     <v-chip
       v-for="(chip, index) in chips"
       :key="chip.label + chip.category"
-      :color="chip.color || 'primary'"
+      :color="getChipColor(chip)"
       :closable="closable"
       :class="['ma-1', chipClass]"
       @click:close="removeChip(chip)"
@@ -15,6 +15,8 @@
 </template>
 
 <script>
+import { getColorForCategory } from '@/utils/colorMappingChips.js'
+
 export default {
   name: 'BaseChips',
   props: {
@@ -31,11 +33,20 @@ export default {
       type: String,
       default: '',
     },
+    useColorMapping: {
+      type: Boolean,
+      default: false,
+    },
   },
   methods: {
     removeChip(chip) {
-      // Emit the entire chip object instead of just the index
       this.$emit('remove-chip', chip)
+    },
+    getChipColor(chip) {
+      if (this.useColorMapping && chip.category) {
+        return getColorForCategory(chip.category)
+      }
+      return chip.color || 'primary'
     },
   },
 }
