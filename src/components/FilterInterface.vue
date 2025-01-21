@@ -63,6 +63,20 @@
       />
     </div>
 
+    <!-- Department Filter -->
+    <div class="mb-4">
+      <h4>Department</h4>
+      <v-checkbox
+        v-for="dept in availableDepartments"
+        :key="dept"
+        v-model="selectedDepartments"
+        :label="dept"
+        :value="dept"
+        density="compact"
+        @update:modelValue="handleDepartmentChange"
+      />
+    </div>
+
     <!-- Clear Filters Button -->
     <v-btn
       color="error"
@@ -90,6 +104,7 @@ export default {
     const salaryMin = ref('')
     const salaryMax = ref('')
     const title = ref('')
+    const selectedDepartments = ref([])
 
     // Get unique skills from mockData
     const availableSkills = [
@@ -102,6 +117,21 @@ export default {
       skills.forEach((skill) => {
         filterStore.addFilter('skills', availableSkills[skill])
       })
+    }
+
+    // Get unique departments from mockData
+    const availableDepartments = [
+      ...new Set(mockData.map((item) => item.department)),
+    ].sort()
+
+    // Handle Department Change
+    const handleDepartmentChange = () => {
+      filterStore.clearFilters('department')
+      if (selectedDepartments.value.length > 0) {
+        selectedDepartments.value.forEach((dept) => {
+          filterStore.addFilter('department', dept)
+        })
+      }
     }
 
     // Handle Salary Change
@@ -128,6 +158,7 @@ export default {
       salaryMin.value = ''
       salaryMax.value = ''
       title.value = ''
+      selectedDepartments.value = []
     }
 
     // Watch store changes to update local state
@@ -151,6 +182,9 @@ export default {
 
         // Update title
         title.value = newFilters.title[0] || ''
+
+        // Update departments
+        selectedDepartments.value = newFilters.department
       },
       { deep: true }
     )
@@ -161,9 +195,12 @@ export default {
       salaryMin,
       salaryMax,
       title,
+      availableDepartments,
+      selectedDepartments,
       handleSkillsChange,
       handleSalaryChange,
       handleTitleChange,
+      handleDepartmentChange,
       clearAllFilters,
     }
   },

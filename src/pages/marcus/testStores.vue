@@ -29,6 +29,7 @@
             <v-card-title>{{ result.title }}</v-card-title>
             <v-card-subtitle>{{ result.company }}</v-card-subtitle>
             <v-card-text>
+              <div><strong>Department:</strong> {{ result.department }}</div>
               <div><strong>Salary:</strong> {{ result.salary }}</div>
               <div>
                 <strong>Skills:</strong>
@@ -82,6 +83,7 @@ export default {
         skills: 'amber darken-3',
         salary: 'light-green lighten-1',
         title: 'blue lighten-1',
+        department: 'bg-primaryGrey',
       }
       return colors[category] || 'grey'
     }

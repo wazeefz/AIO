@@ -8,6 +8,7 @@ export const useFilterStore = defineStore('filter', {
       skills: [],
       salary: [],
       title: [],
+      department: [],
     },
   }),
 
@@ -23,27 +24,25 @@ export const useFilterStore = defineStore('filter', {
 
     filteredResults: (state) => {
       return mockData.filter((item) => {
-        // Check if item matches all filter conditions
         return Object.entries(state.filters).every(
           ([category, selectedFilters]) => {
-            if (!selectedFilters.length) return true // Skip if no filters for category
+            if (!selectedFilters.length) return true
 
             switch (category) {
               case 'skills':
-                // Match if item has ANY of the selected skills
                 return selectedFilters.some((skill) =>
                   item.skills.includes(skill)
                 )
               case 'salary':
-                // Match if item's salary falls within ANY of the selected ranges
                 return selectedFilters.some((range) =>
                   isSalaryInRange(item.salary, range)
                 )
               case 'title':
-                // Match if item's title matches ANY selected title
                 return selectedFilters.some((searchTerm) =>
                   item.title.toLowerCase().includes(searchTerm.toLowerCase())
                 )
+              case 'department':
+                return selectedFilters.includes(item.department)
               default:
                 return true
             }
