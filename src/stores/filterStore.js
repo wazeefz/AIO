@@ -22,6 +22,9 @@ export const useFilterStore = defineStore('filter', {
       }, [])
     },
 
+    //For filtered output results
+    //some(): Returns true if ANY of the selected skills match (OR condition)
+    //every(): Returns true if ALL of the selected skills match (AND condition)
     filteredResults: (state) => {
       return mockData.filter((item) => {
         return Object.entries(state.filters).every(
@@ -30,7 +33,7 @@ export const useFilterStore = defineStore('filter', {
 
             switch (category) {
               case 'skills':
-                return selectedFilters.some((skill) =>
+                return selectedFilters.every((skill) =>
                   item.skills.includes(skill)
                 )
               case 'salary':
