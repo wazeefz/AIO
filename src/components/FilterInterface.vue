@@ -103,9 +103,39 @@ export default {
     const selectedSkills = ref([])
     const salaryMin = ref('')
     const salaryMax = ref('')
+    const salaryError = ref('') //For wrong salary input
     const title = ref('')
     const selectedDepartments = ref([])
 
+    // Validating salary input
+    const validateSalary = () => {
+      // Clear previous error
+      salaryError.value = ''
+
+      // Convert to numbers for comparison
+      const min = Number(salaryMin.value)
+      const max = Number(salaryMax.value)
+
+      // Check if both values exist and max is less than min
+      if (min && max && max < min) {
+        salaryError.value = 'Max salary cannot be less than min salary'
+        return false
+      }
+
+      // Check for negative values
+      if (min < 0 || max < 0) {
+        salaryError.value = 'Salary cannot be negative'
+        return false
+      }
+
+      // Check for valid numbers
+      if ((min && isNaN(min)) || (max && isNaN(max))) {
+        salaryError.value = 'Please enter valid numbers'
+        return false
+      }
+
+      return true
+    }
     // Get unique skills from mockData
     const availableSkills = [
       ...new Set(mockData.flatMap((item) => item.skills)),
@@ -136,10 +166,25 @@ export default {
 
     // Handle Salary Change
     const handleSalaryChange = () => {
+      filterStore.clearFilters('salary')
+
+      // If both fields are empty, clear the filter
+      if (!salaryMin.value && !salaryMax.value) {
+        return
+      }
+
+      // Validate the salary range
+      if (!validateSalary()) {
+        return
+      }
+      // Only add filter if validation passes
       if (salaryMin.value && salaryMax.value) {
-        filterStore.clearFilters('salary')
         const range = `RM${salaryMin.value}-RM${salaryMax.value}`
         filterStore.addFilter('salary', range)
+      } else if (salaryMin.value) {
+        filterStore.addFilter('salary', `RM${salaryMin.value}+`)
+      } else if (salaryMax.value) {
+        filterStore.addFilter('salary', `Up to RM${salaryMax.value}`)
       }
     }
 
@@ -162,23 +207,18 @@ export default {
     }
 
     // Watch store changes to update local state
+    // Watch for all filters except salary
     watch(
-      () => filterStore.filters,
+      () => ({
+        skills: filterStore.filters.skills,
+        title: filterStore.filters.title,
+        department: filterStore.filters.department,
+      }),
       (newFilters) => {
         // Update skills selection
         selectedSkills.value = newFilters.skills.map((skill) =>
           availableSkills.indexOf(skill)
         )
-
-        // Update salary range
-        if (newFilters.salary.length > 0) {
-          const range = newFilters.salary[0]
-          const [min, max] = range
-            .split('-')
-            .map((v) => parseInt(v.replace(/[^\d]/g, '')))
-          salaryMin.value = min
-          salaryMax.value = max
-        }
 
         // Update title
         title.value = newFilters.title[0] || ''
@@ -189,11 +229,42 @@ export default {
       { deep: true }
     )
 
+    // Separate watcher for salary
+    watch(
+      () => filterStore.filters.salary,
+      (newSalary) => {
+        if (newSalary.length === 0) {
+          salaryMin.value = ''
+          salaryMax.value = ''
+          salaryError.value = ''
+        } else {
+          const salaryFilter = newSalary[0]
+          if (salaryFilter.includes('-')) {
+            const [min, max] = salaryFilter
+              .replace(/[^\d-]/g, '')
+              .split('-')
+              .map(Number)
+            salaryMin.value = min
+            salaryMax.value = max
+          } else if (salaryFilter.includes('+')) {
+            salaryMin.value = salaryFilter.replace(/[^\d]/g, '')
+            salaryMax.value = ''
+          } else {
+            salaryMax.value = salaryFilter.replace(/[^\d]/g, '')
+            salaryMin.value = ''
+          }
+        }
+      },
+      { deep: true }
+    )
+
     return {
       availableSkills,
       selectedSkills,
       salaryMin,
       salaryMax,
+      salaryError,
+      handleSalaryChange,
       title,
       availableDepartments,
       selectedDepartments,

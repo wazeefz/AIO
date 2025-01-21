@@ -80,10 +80,10 @@ export default {
 
     const getColorForCategory = (category) => {
       const colors = {
-        skills: 'amber darken-3',
+        skills: 'blue-grey-darken-4',
         salary: 'light-green lighten-1',
         title: 'blue lighten-1',
-        department: 'bg-primaryGrey',
+        department: 'brown-lighten-2',
       }
       return colors[category] || 'grey'
     }
