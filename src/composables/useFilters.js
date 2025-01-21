@@ -3,31 +3,49 @@ import { ref, computed } from 'vue'
 import { mockData } from '@/mockdata/mockData'
 
 export function useFilters() {
-  // 1. State Management
   const filters = ref({
     skills: [],
     salary: [],
     role: [],
   })
 
-  // 2. Filter Initialization
+  // Helper function to extract numeric value from salary string
+  const extractSalaryValue = (salary) => {
+    return parseInt(salary.replace(/[^\d]/g, ''))
+  }
+
+  // Helper function to extract range values from a range string
+  const extractSalaryRange = (range) => {
+    const [min, max] = range.split('-').map((val) => extractSalaryValue(val))
+    return { min, max }
+  }
+
+  // Helper function to check if a salary falls within a range
+  const isSalaryInRange = (salary, range) => {
+    const salaryValue = extractSalaryValue(salary)
+    const { min, max } = extractSalaryRange(range)
+    return salaryValue >= min && salaryValue <= max
+  }
+
   const initializeFilters = (initialFilters) => {
     Object.entries(initialFilters).forEach(([category, items]) => {
-      filters.value[category] = items.map((item) => item.label)
+      items.forEach((item) => {
+        addFilter(category, item.label)
+      })
     })
   }
 
-  // 3. Filter Manipulation Methods
-  const addFilter = (category, value) => {
-    if (!filters.value[category].includes(value)) {
-      filters.value[category].push(value)
+  const addFilter = (category, item) => {
+    if (!filters.value[category].includes(item)) {
+      filters.value[category].push(item)
     }
   }
 
-  const removeFilter = (category, value) => {
-    filters.value[category] = filters.value[category].filter(
-      (item) => item !== value
-    )
+  const removeFilter = (category, item) => {
+    const index = filters.value[category].findIndex((filter) => filter === item)
+    if (index !== -1) {
+      filters.value[category].splice(index, 1)
+    }
   }
 
   const clearFilters = (category) => {
@@ -40,7 +58,6 @@ export function useFilters() {
     }
   }
 
-  // 4. Computed Properties
   const activeFilters = computed(() => {
     return Object.entries(filters.value).reduce((acc, [category, items]) => {
       items.forEach((item) => {
@@ -50,29 +67,35 @@ export function useFilters() {
     }, [])
   })
 
-  // 5. Filtered Results
   const filteredResults = computed(() => {
     return mockData.filter((item) => {
-      // Check skills
-      const skillsMatch =
-        filters.value.skills.length === 0 ||
-        filters.value.skills.every((skill) => item.skills.includes(skill))
+      // Check if item matches all filter conditions
+      return Object.entries(filters.value).every(
+        ([category, selectedFilters]) => {
+          if (!selectedFilters.length) return true // Skip if no filters for category
 
-      // Check salary
-      const salaryMatch =
-        filters.value.salary.length === 0 ||
-        filters.value.salary.includes(item.salary)
-
-      // Check role
-      const roleMatch =
-        filters.value.role.length === 0 ||
-        filters.value.role.includes(item.role)
-
-      return skillsMatch && salaryMatch && roleMatch
+          switch (category) {
+            case 'skills':
+              // Match if item has ANY of the selected skills
+              return selectedFilters.some((skill) =>
+                item.skills.includes(skill)
+              )
+            case 'salary':
+              // Match if item's salary falls within ANY of the selected ranges
+              return selectedFilters.some((range) =>
+                isSalaryInRange(item.salary, range)
+              )
+            case 'role':
+              // Match if item's role matches ANY selected role
+              return selectedFilters.includes(item.role)
+            default:
+              return true
+          }
+        }
+      )
     })
   })
 
-  // 6. Return values and methods
   return {
     filters,
     addFilter,
