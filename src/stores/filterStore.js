@@ -7,7 +7,7 @@ export const useFilterStore = defineStore('filter', {
     filters: {
       skills: [],
       salary: [],
-      role: [],
+      title: [],
     },
   }),
 
@@ -39,9 +39,11 @@ export const useFilterStore = defineStore('filter', {
                 return selectedFilters.some((range) =>
                   isSalaryInRange(item.salary, range)
                 )
-              case 'role':
-                // Match if item's role matches ANY selected role
-                return selectedFilters.includes(item.role)
+              case 'title':
+                // Match if item's title matches ANY selected title
+                return selectedFilters.some((searchTerm) =>
+                  item.title.toLowerCase().includes(searchTerm.toLowerCase())
+                )
               default:
                 return true
             }

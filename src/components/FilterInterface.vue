@@ -50,15 +50,16 @@
       </v-row>
     </div>
 
-    <!-- Role Filter -->
+    <!-- Title Filter (replaced Role Filter) -->
     <div class="mb-4">
-      <h4>Role</h4>
+      <h4>Search Title</h4>
       <v-text-field
-        v-model="role"
-        label="Enter role"
+        v-model="title"
+        label="Search job titles"
         variant="outlined"
         density="compact"
-        @update:modelValue="handleRoleChange"
+        @update:modelValue="handleTitleChange"
+        clearable
       />
     </div>
 
@@ -88,7 +89,7 @@ export default {
     const selectedSkills = ref([])
     const salaryMin = ref('')
     const salaryMax = ref('')
-    const role = ref('')
+    const title = ref('')
 
     // Get unique skills from mockData
     const availableSkills = [
@@ -112,11 +113,11 @@ export default {
       }
     }
 
-    // Handle Role Change
-    const handleRoleChange = () => {
-      filterStore.clearFilters('role')
-      if (role.value.trim()) {
-        filterStore.addFilter('role', role.value.trim())
+    // Handle Title Change
+    const handleTitleChange = () => {
+      filterStore.clearFilters('title')
+      if (title.value.trim()) {
+        filterStore.addFilter('title', title.value.trim())
       }
     }
 
@@ -126,7 +127,7 @@ export default {
       selectedSkills.value = []
       salaryMin.value = ''
       salaryMax.value = ''
-      role.value = ''
+      title.value = ''
     }
 
     // Watch store changes to update local state
@@ -148,8 +149,8 @@ export default {
           salaryMax.value = max
         }
 
-        // Update role
-        role.value = newFilters.role[0] || ''
+        // Update title
+        title.value = newFilters.title[0] || ''
       },
       { deep: true }
     )
@@ -159,10 +160,10 @@ export default {
       selectedSkills,
       salaryMin,
       salaryMax,
-      role,
+      title,
       handleSkillsChange,
       handleSalaryChange,
-      handleRoleChange,
+      handleTitleChange,
       clearAllFilters,
     }
   },

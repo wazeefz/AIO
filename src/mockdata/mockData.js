@@ -53,10 +53,10 @@ export const filterData = (filters) => {
     const matchesSalary =
       filters.salary.length === 0 || filters.salary.includes(item.salary)
 
-    const matchesRole =
-      filters.role.length === 0 || filters.role.includes(item.role)
+    const matchesTitle =
+      filters.title.length === 0 || filters.title.includes(item.title)
 
     // Item must match all active filter criteria
-    return matchesSkills && matchesSalary && matchesRole
+    return matchesSkills && matchesSalary && matchesTitle
   })
 }
