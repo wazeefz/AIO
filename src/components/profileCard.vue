@@ -1,27 +1,50 @@
 <template>
   <div>
-    <!-- Card remains the same -->
-    <v-card class="mb-4 pa-4 cursor-pointer" @click="openModal">
-      <v-card-title>{{ result.title }}</v-card-title>
-      <v-card-subtitle>{{ result.company }}</v-card-subtitle>
-      <v-card-text>
-        <div><strong>Department:</strong> {{ result.department }}</div>
-        <div><strong>Salary:</strong> {{ result.salary }}</div>
-        <div>
-          <strong>Skills:</strong>
+    <!-- Card -->
+    <v-card
+      class="mb-4 profile-card cursor-pointer"
+      @click="openModal"
+      color="#c2b7a4"
+      rounded="lg"
+    >
+      <v-card-text class="pa-6">
+        <v-card-title class="text-h5 font-weight-medium pa-0 text-white mb-1">
+          {{ result.title }}
+        </v-card-title>
+        <v-card-subtitle class="pa-0 text-white mb-4">
+          {{ result.department }}
+        </v-card-subtitle>
+        <v-card-subtitle class="pa-0 text-white mb-4">
+          {{ result.salary }}
+        </v-card-subtitle>
+
+        <div class="d-flex flex-wrap gap-2">
           <v-chip
-            v-for="skill in result.skills"
-            :key="skill"
-            size="small"
-            class="mr-2 mt-2"
+            v-for="skill in skillChips"
+            :key="skill.label"
+            variant="elevated"
+            class="mr-2 mb-2"
+            color="#2d2d2d"
+            text-color="white"
           >
-            {{ skill }}
+            {{ skill.label }}
+          </v-chip>
+          <v-chip
+            v-if="result.tools"
+            v-for="tool in result.tools"
+            :key="tool"
+            variant="elevated"
+            class="mr-2 mb-2"
+            color="#2d2d2d"
+            text-color="white"
+          >
+            {{ tool }}
           </v-chip>
         </div>
       </v-card-text>
     </v-card>
 
-    <!-- Modified Modal -->
+    <!-- Modal remains the same -->
     <v-dialog v-model="showModal" max-width="600px">
       <v-card>
         <div class="d-flex align-center justify-space-between pa-4">
@@ -49,15 +72,8 @@
               <h3 class="text-h6 mt-4">Salary</h3>
               <p>{{ result.salary }}</p>
 
-              <h3 class="text-h6 mt-4">Skill set</h3>
-              <v-chip
-                v-for="skill in result.skills"
-                :key="skill"
-                size="small"
-                class="mr-2 mt-2"
-              >
-                {{ skill }}
-              </v-chip>
+              <h3 class="text-h6 mt-4">Required Skills</h3>
+              <base-chips :chips="skillChips" :use-color-mapping="true" />
             </div>
           </slot>
         </v-card-text>
@@ -76,45 +92,65 @@
   </div>
 </template>
 
-<script>
-import { ref } from 'vue'
+<script setup>
+import BaseChips from '@/components/Chips.vue'
+import { ref, computed } from 'vue'
 
-export default {
-  name: 'ProfileCard',
-  props: {
-    result: {
-      type: Object,
-      required: true,
-    },
+const props = defineProps({
+  result: {
+    type: Object,
+    required: true,
   },
-  setup(props, { emit }) {
-    const showModal = ref(false)
+})
 
-    const openModal = () => {
-      showModal.value = true
-      emit('modal-opened', props.result)
-    }
+const emit = defineEmits(['modal-opened', 'modal-closed'])
+const showModal = ref(false)
 
-    const closeModal = () => {
-      showModal.value = false
-      emit('modal-closed')
-    }
+const skillChips = computed(() => {
+  return props.result.skills.map((skill) => ({
+    label: skill,
+    category: 'skills',
+  }))
+})
 
-    return {
-      showModal,
-      openModal,
-      closeModal,
-    }
-  },
+const openModal = () => {
+  showModal.value = true
+  emit('modal-opened', props.result)
+}
+
+const closeModal = () => {
+  showModal.value = false
+  emit('modal-closed')
 }
 </script>
 
 <style scoped>
+.profile-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-card::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 150px;
+  height: 150px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
 .cursor-pointer {
   cursor: pointer;
 }
+
 .cursor-pointer:hover {
   transform: translateY(-2px);
   transition: transform 0.2s ease;
+}
+
+.gap-2 {
+  gap: 0.5rem;
 }
 </style>
