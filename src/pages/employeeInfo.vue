@@ -302,11 +302,10 @@
                           Back
                         </v-btn>
                         <v-btn
-                          color="#d9c6a5"
+                          style="background-color: #d9c6a5; color: white"
                           :loading="isSubmitting"
                           :disabled="!isFormValid"
                           @click="submitForm"
-                          prepend-icon="mdi-check"
                         >
                           Submit Application
                         </v-btn>
@@ -347,7 +346,9 @@
     <!-- Success Dialog -->
     <v-dialog v-model="showSuccessDialog" max-width="400" persistent>
       <v-card class="success-dialog">
-        <v-card-title class="success-title">Registration Complete</v-card-title>
+        <v-card-title class="success-title"
+          >Employee Information Completed</v-card-title
+        >
         <v-card-text class="pa-6 text-center">
           <v-icon
             color="success"
@@ -356,8 +357,7 @@
             icon="mdi-check-circle"
           ></v-icon>
           <p class="text-body-1">
-            Your information has been successfully submitted. HR will review
-            your details and contact you soon.
+            Employee information has been successfully uploaded.
           </p>
         </v-card-text>
         <v-card-actions class="pa-4">
@@ -613,7 +613,6 @@ const formatFileSize = (bytes) => {
 }
 
 .progress-text {
-  color: white;
   font-weight: 500;
 }
 

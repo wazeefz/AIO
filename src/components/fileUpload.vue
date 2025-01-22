@@ -15,11 +15,7 @@
         rounded
       >
         <div v-if="!uploadedFile" class="upload-placeholder">
-          <v-icon
-            size="large"
-            color="grey-darken-1"
-            icon="mdi-cloud-upload"
-          ></v-icon>
+          <v-icon size="large" color="#d9c6a5" icon="mdi-cloud-upload"></v-icon>
           <p class="text-body-2 mt-2">
             Click or drag file to this area to upload
           </p>
@@ -35,14 +31,19 @@
         <v-list v-else density="compact" class="bg-grey-lighten-4">
           <v-list-item>
             <template v-slot:prepend>
-              <v-icon :icon="fileTypeIcon"></v-icon>
+              <v-icon :icon="fileTypeIcon" color="#d9c6a5"></v-icon>
             </template>
 
-            <v-list-item-title>{{ uploadedFile.name }}</v-list-item-title>
+            <v-list-item-title style="font-size: 14px">{{
+              uploadedFile.name
+            }}</v-list-item-title>
+            <v-list-item-subtitle class="text-caption text-grey">{{
+              formatFileSize(uploadedFile.size)
+            }}</v-list-item-subtitle>
 
             <template v-slot:append>
               <v-btn
-                icon="mdi-close"
+                icon="mdi-delete"
                 variant="text"
                 color="error"
                 size="small"
@@ -61,7 +62,7 @@
         <v-col cols="12" sm="auto">
           <v-btn
             prepend-icon="mdi-eye"
-            variant="outlined"
+            style="background-color: #d9c6a5; color: white"
             @click="showPreview"
             class="mr-2"
           >
@@ -74,7 +75,10 @@
     <!-- Preview Dialog -->
     <v-dialog v-model="isPreviewOpen" max-width="900px" scrollable>
       <v-card>
-        <v-card-title class="d-flex justify-space-between align-center">
+        <v-card-title
+          class="d-flex justify-space-between align-center"
+          style="background-color: #d9c6a5"
+        >
           Preview: {{ uploadedFile?.name }}
           <v-btn icon="mdi-close" variant="text" @click="closePreview"></v-btn>
         </v-card-title>
@@ -126,155 +130,151 @@
   </v-card>
 </template>
 
-<script>
-export default {
-  name: 'FileUpload',
-  props: {
-    title: {
-      type: String,
-      default: 'File Upload',
-    },
-    acceptedFormats: {
-      type: Array,
-      default: () => ['.pdf', '.docx'],
-    },
-    maxSize: {
-      type: Number,
-      default: 10,
-    },
-    onFileUpload: {
-      type: Function,
-      default: null,
-    },
+<script setup>
+import { ref, computed, onBeforeUnmount } from 'vue'
+
+const props = defineProps({
+  title: {
+    type: String,
+    default: 'File Upload',
   },
-
-  data() {
-    return {
-      isDragging: false,
-      uploadedFile: null,
-      isPreviewOpen: false,
-      filePreviewUrl: null,
-      showError: false,
-      errorMessage: '',
-    }
+  acceptedFormats: {
+    type: Array,
+    default: () => ['.pdf', '.docx'],
   },
-
-  computed: {
-    formatList() {
-      return this.acceptedFormats.join(' and ')
-    },
-
-    isPDF() {
-      return this.uploadedFile?.type === 'application/pdf'
-    },
-
-    isImage() {
-      return this.uploadedFile?.type.startsWith('image/')
-    },
-
-    fileTypeIcon() {
-      if (this.isPDF) return 'mdi-file-pdf-box'
-      if (this.isImage) return 'mdi-file-image'
-      return 'mdi-file-document-outline'
-    },
+  maxSize: {
+    type: Number,
+    default: 10,
   },
-
-  methods: {
-    handleDragOver(e) {
-      this.isDragging = true
-    },
-
-    handleDragLeave(e) {
-      this.isDragging = false
-    },
-
-    handleDrop(e) {
-      this.isDragging = false
-      const files = e.dataTransfer.files
-      if (files.length) {
-        this.processFile(files[0])
-      }
-    },
-
-    handleFileSelect(e) {
-      const files = e.target.files
-      if (files.length) {
-        this.processFile(files[0])
-      }
-    },
-
-    processFile(file) {
-      if (file.size > this.maxSize * 1024 * 1024) {
-        this.showErrorMessage(`File size should not exceed ${this.maxSize}MB`)
-        return
-      }
-
-      const fileExtension = '.' + file.name.split('.').pop().toLowerCase()
-      if (!this.acceptedFormats.includes(fileExtension)) {
-        this.showErrorMessage('Invalid file format')
-        return
-      }
-
-      this.uploadedFile = file
-      this.$emit('file-selected', file)
-
-      if (this.onFileUpload) {
-        this.onFileUpload(file)
-      }
-    },
-
-    showErrorMessage(message) {
-      this.errorMessage = message
-      this.showError = true
-      this.$emit('error', message)
-    },
-
-    removeFile() {
-      if (this.filePreviewUrl) {
-        URL.revokeObjectURL(this.filePreviewUrl)
-      }
-      this.uploadedFile = null
-      this.filePreviewUrl = null
-      this.$refs.fileInput.value = ''
-      this.$emit('file-removed')
-    },
-
-    showPreview() {
-      this.filePreviewUrl = URL.createObjectURL(this.uploadedFile)
-      this.isPreviewOpen = true
-    },
-
-    closePreview() {
-      this.isPreviewOpen = false
-      if (this.filePreviewUrl) {
-        URL.revokeObjectURL(this.filePreviewUrl)
-        this.filePreviewUrl = null
-      }
-    },
-
-    downloadFile() {
-      if (this.uploadedFile) {
-        const url = URL.createObjectURL(this.uploadedFile)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = this.uploadedFile.name
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-      }
-    },
+  onFileUpload: {
+    type: Function,
+    default: null,
   },
+})
 
-  beforeDestroy() {
-    if (this.filePreviewUrl) {
-      URL.revokeObjectURL(this.filePreviewUrl)
-    }
-  },
+const emit = defineEmits(['file-selected', 'file-removed', 'error'])
+
+const isDragging = ref(false)
+const uploadedFile = ref(null)
+const isPreviewOpen = ref(false)
+const filePreviewUrl = ref(null)
+const showError = ref(false)
+const errorMessage = ref('')
+const fileInput = ref(null)
+
+const formatList = computed(() => props.acceptedFormats.join(' and '))
+
+const isPDF = computed(() => uploadedFile.value?.type === 'application/pdf')
+
+const isImage = computed(() => uploadedFile.value?.type.startsWith('image/'))
+
+const fileTypeIcon = computed(() => {
+  if (isPDF.value) return 'mdi-file-pdf-box'
+  if (isImage.value) return 'mdi-file-image'
+  return 'mdi-file-document-outline'
+})
+
+const handleDragOver = () => {
+  isDragging.value = true
 }
+
+const handleDragLeave = () => {
+  isDragging.value = false
+}
+
+const handleDrop = (e) => {
+  isDragging.value = false
+  const files = e.dataTransfer.files
+  if (files.length) {
+    processFile(files[0])
+  }
+}
+
+const handleFileSelect = (e) => {
+  const files = e.target.files
+  if (files.length) {
+    processFile(files[0])
+  }
+}
+
+const processFile = (file) => {
+  if (file.size > props.maxSize * 1024 * 1024) {
+    showErrorMessage(`File size should not exceed ${props.maxSize}MB`)
+    return
+  }
+
+  const fileExtension = '.' + file.name.split('.').pop().toLowerCase()
+  if (!props.acceptedFormats.includes(fileExtension)) {
+    showErrorMessage('Invalid file format')
+    return
+  }
+
+  uploadedFile.value = file
+  emit('file-selected', file)
+
+  if (props.onFileUpload) {
+    props.onFileUpload(file)
+  }
+}
+
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
+}
+
+const showErrorMessage = (message) => {
+  errorMessage.value = message
+  showError.value = true
+  emit('error', message)
+}
+
+const removeFile = () => {
+  if (filePreviewUrl.value) {
+    URL.revokeObjectURL(filePreviewUrl.value)
+  }
+  uploadedFile.value = null
+  filePreviewUrl.value = null
+  fileInput.value.value = ''
+  emit('file-removed')
+}
+
+const showPreview = () => {
+  filePreviewUrl.value = URL.createObjectURL(uploadedFile.value)
+  isPreviewOpen.value = true
+}
+
+const closePreview = () => {
+  isPreviewOpen.value = false
+  if (filePreviewUrl.value) {
+    URL.revokeObjectURL(filePreviewUrl.value)
+    filePreviewUrl.value = null
+  }
+}
+
+const downloadFile = () => {
+  if (uploadedFile.value) {
+    const url = URL.createObjectURL(uploadedFile.value)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = uploadedFile.value.name
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+}
+
+onBeforeUnmount(() => {
+  if (filePreviewUrl.value) {
+    URL.revokeObjectURL(filePreviewUrl.value)
+  }
+})
 </script>
 
-<style scoped>
+<style>
 .file-upload-container {
   width: 100%;
   max-width: 600px;

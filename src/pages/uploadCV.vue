@@ -30,9 +30,10 @@
                     <v-icon color="info">mdi-information</v-icon>
                   </template>
                   <div class="alert-content">
-                    <span class="font-weight-medium">Smart Upload:</span>
-                    Some of the information will be extracted automatically from
-                    the CV
+                    <span style="font-size: smaller"
+                      >Some information will be extracted automatically from the
+                      CV uploaded</span
+                    >
                   </div>
                 </v-alert>
 
@@ -45,44 +46,6 @@
                   @error="handleError"
                   :onFileUpload="uploadToServer"
                 />
-
-                <v-expand-transition>
-                  <div v-if="uploadedFile" class="mt-4">
-                    <v-divider class="mb-4"></v-divider>
-                    <div class="d-flex align-center justify-space-between">
-                      <div class="d-flex align-center">
-                        <v-icon
-                          :icon="getFileIcon(uploadedFile.name)"
-                          color="#d9c6a5"
-                          class="mr-2"
-                        ></v-icon>
-                        <div>
-                          <div class="text-subtitle-2">
-                            {{ uploadedFile.name }}
-                          </div>
-                          <div class="text-caption text-grey">
-                            {{ formatFileSize(uploadedFile.size) }}
-                          </div>
-                        </div>
-                      </div>
-                      <div class="d-flex gap-2">
-                        <v-btn color="#d9c6a5" @click="previewCV" size="small">
-                          <v-icon left>mdi-eye</v-icon>
-                          Preview
-                        </v-btn>
-                        <v-btn
-                          color="error"
-                          @click="handleFileRemoved"
-                          size="small"
-                          variant="outlined"
-                        >
-                          <v-icon left>mdi-delete</v-icon>
-                          Remove
-                        </v-btn>
-                      </div>
-                    </div>
-                  </div>
-                </v-expand-transition>
               </v-card-text>
 
               <v-card-actions class="mt-4">
@@ -100,29 +63,6 @@
         </v-row>
       </v-container>
     </v-main>
-
-    <!-- CV Preview Dialog -->
-    <v-dialog v-model="showCVPreview" max-width="800">
-      <v-card>
-        <v-toolbar style="background-color: #d9c6a5">
-          <v-toolbar-title class="text-white">CV Preview</v-toolbar-title>
-          <v-spacer></v-spacer>
-          <v-btn
-            icon="mdi-close"
-            variant="text"
-            @click="showCVPreview = false"
-          ></v-btn>
-        </v-toolbar>
-        <v-card-text class="pa-0">
-          <iframe
-            v-if="cvPreviewUrl"
-            :src="cvPreviewUrl"
-            class="cv-preview-frame"
-            frameborder="0"
-          ></iframe>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
   </v-app>
 </template>
 
