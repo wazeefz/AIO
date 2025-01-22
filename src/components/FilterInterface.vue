@@ -89,191 +89,170 @@
   </v-card>
 </template>
 
-<script>
+<script setup>
 import { ref, watch } from 'vue'
 import { useFilterStore } from '@/stores/filterStore'
 import { mockData } from '@/mockdata/mockData'
 
-export default {
-  name: 'FilterInterface',
-  setup() {
-    const filterStore = useFilterStore()
+const filterStore = useFilterStore()
 
-    // Local state
-    const selectedSkills = ref([])
-    const salaryMin = ref('')
-    const salaryMax = ref('')
-    const salaryError = ref('') //For wrong salary input
-    const title = ref('')
-    const selectedDepartments = ref([])
+// Local state
+const selectedSkills = ref([])
+const salaryMin = ref('')
+const salaryMax = ref('')
+const salaryError = ref('') //For wrong salary input
+const title = ref('')
+const selectedDepartments = ref([])
 
-    // Validating salary input
-    const validateSalary = () => {
-      // Clear previous error
-      salaryError.value = ''
+// Validating salary input
+const validateSalary = () => {
+  // Clear previous error
+  salaryError.value = ''
 
-      // Convert to numbers for comparison
-      const min = Number(salaryMin.value)
-      const max = Number(salaryMax.value)
+  // Convert to numbers for comparison
+  const min = Number(salaryMin.value)
+  const max = Number(salaryMax.value)
 
-      // Check if both values exist and max is less than min
-      if (min && max && max < min) {
-        salaryError.value = 'Max salary cannot be less than min salary'
-        return false
-      }
+  // Check if both values exist and max is less than min
+  if (min && max && max < min) {
+    salaryError.value = 'Max salary cannot be less than min salary'
+    return false
+  }
 
-      // Check for negative values
-      if (min < 0 || max < 0) {
-        salaryError.value = 'Salary cannot be negative'
-        return false
-      }
+  // Check for negative values
+  if (min < 0 || max < 0) {
+    salaryError.value = 'Salary cannot be negative'
+    return false
+  }
 
-      // Check for valid numbers
-      if ((min && isNaN(min)) || (max && isNaN(max))) {
-        salaryError.value = 'Please enter valid numbers'
-        return false
-      }
+  // Check for valid numbers
+  if ((min && isNaN(min)) || (max && isNaN(max))) {
+    salaryError.value = 'Please enter valid numbers'
+    return false
+  }
 
-      return true
-    }
-    // Get unique skills from mockData
-    const availableSkills = [
-      ...new Set(mockData.flatMap((item) => item.skills)),
-    ].sort()
+  return true
+}
 
-    // Handle Skills Change
-    const handleSkillsChange = (skills) => {
-      filterStore.clearFilters('skills')
-      skills.forEach((skill) => {
-        filterStore.addFilter('skills', availableSkills[skill])
-      })
-    }
+// Get unique skills from mockData
+const availableSkills = [
+  ...new Set(mockData.flatMap((item) => item.skills)),
+].sort()
 
-    // Get unique departments from mockData
-    const availableDepartments = [
-      ...new Set(mockData.map((item) => item.department)),
-    ].sort()
+// Handle Skills Change
+const handleSkillsChange = (skills) => {
+  filterStore.clearFilters('skills')
+  skills.forEach((skill) => {
+    filterStore.addFilter('skills', availableSkills[skill])
+  })
+}
 
-    // Handle Department Change
-    const handleDepartmentChange = () => {
-      filterStore.clearFilters('department')
-      if (selectedDepartments.value.length > 0) {
-        selectedDepartments.value.forEach((dept) => {
-          filterStore.addFilter('department', dept)
-        })
-      }
-    }
+// Get unique departments from mockData
+const availableDepartments = [
+  ...new Set(mockData.map((item) => item.department)),
+].sort()
 
-    // Handle Salary Change
-    const handleSalaryChange = () => {
-      filterStore.clearFilters('salary')
+// Handle Department Change
+const handleDepartmentChange = () => {
+  filterStore.clearFilters('department')
+  if (selectedDepartments.value.length > 0) {
+    selectedDepartments.value.forEach((dept) => {
+      filterStore.addFilter('department', dept)
+    })
+  }
+}
 
-      // If both fields are empty, clear the filter
-      if (!salaryMin.value && !salaryMax.value) {
-        return
-      }
+// Handle Salary Change
+const handleSalaryChange = () => {
+  filterStore.clearFilters('salary')
 
-      // Validate the salary range
-      if (!validateSalary()) {
-        return
-      }
-      // Only add filter if validation passes
-      if (salaryMin.value && salaryMax.value) {
-        const range = `RM${salaryMin.value}-RM${salaryMax.value}`
-        filterStore.addFilter('salary', range)
-      } else if (salaryMin.value) {
-        filterStore.addFilter('salary', `RM${salaryMin.value}+`)
-      } else if (salaryMax.value) {
-        filterStore.addFilter('salary', `Up to RM${salaryMax.value}`)
-      }
-    }
+  // If both fields are empty, clear the filter
+  if (!salaryMin.value && !salaryMax.value) {
+    return
+  }
 
-    // Handle Title Change
-    const handleTitleChange = () => {
-      filterStore.clearFilters('title')
-      if (title.value.trim()) {
-        filterStore.addFilter('title', title.value.trim())
-      }
-    }
+  // Validate the salary range
+  if (!validateSalary()) {
+    return
+  }
+  // Only add filter if validation passes
+  if (salaryMin.value && salaryMax.value) {
+    const range = `RM${salaryMin.value}-RM${salaryMax.value}`
+    filterStore.addFilter('salary', range)
+  } else if (salaryMin.value) {
+    filterStore.addFilter('salary', `RM${salaryMin.value}+`)
+  } else if (salaryMax.value) {
+    filterStore.addFilter('salary', `Up to RM${salaryMax.value}`)
+  }
+}
 
-    // Clear all filters
-    const clearAllFilters = () => {
-      filterStore.clearFilters()
-      selectedSkills.value = []
+// Handle Title Change
+const handleTitleChange = () => {
+  filterStore.clearFilters('title')
+  if (title.value.trim()) {
+    filterStore.addFilter('title', title.value.trim())
+  }
+}
+
+// Clear all filters
+const clearAllFilters = () => {
+  filterStore.clearFilters()
+  selectedSkills.value = []
+  salaryMin.value = ''
+  salaryMax.value = ''
+  title.value = ''
+  selectedDepartments.value = []
+}
+
+// Watch store changes to update local state
+// Watch for all filters except salary
+watch(
+  () => ({
+    skills: filterStore.filters.skills,
+    title: filterStore.filters.title,
+    department: filterStore.filters.department,
+  }),
+  (newFilters) => {
+    // Update skills selection
+    selectedSkills.value = newFilters.skills.map((skill) =>
+      availableSkills.indexOf(skill)
+    )
+
+    // Update title
+    title.value = newFilters.title[0] || ''
+
+    // Update departments
+    selectedDepartments.value = newFilters.department
+  },
+  { deep: true }
+)
+
+// Separate watcher for salary
+watch(
+  () => filterStore.filters.salary,
+  (newSalary) => {
+    if (newSalary.length === 0) {
       salaryMin.value = ''
       salaryMax.value = ''
-      title.value = ''
-      selectedDepartments.value = []
-    }
-
-    // Watch store changes to update local state
-    // Watch for all filters except salary
-    watch(
-      () => ({
-        skills: filterStore.filters.skills,
-        title: filterStore.filters.title,
-        department: filterStore.filters.department,
-      }),
-      (newFilters) => {
-        // Update skills selection
-        selectedSkills.value = newFilters.skills.map((skill) =>
-          availableSkills.indexOf(skill)
-        )
-
-        // Update title
-        title.value = newFilters.title[0] || ''
-
-        // Update departments
-        selectedDepartments.value = newFilters.department
-      },
-      { deep: true }
-    )
-
-    // Separate watcher for salary
-    watch(
-      () => filterStore.filters.salary,
-      (newSalary) => {
-        if (newSalary.length === 0) {
-          salaryMin.value = ''
-          salaryMax.value = ''
-          salaryError.value = ''
-        } else {
-          const salaryFilter = newSalary[0]
-          if (salaryFilter.includes('-')) {
-            const [min, max] = salaryFilter
-              .replace(/[^\d-]/g, '')
-              .split('-')
-              .map(Number)
-            salaryMin.value = min
-            salaryMax.value = max
-          } else if (salaryFilter.includes('+')) {
-            salaryMin.value = salaryFilter.replace(/[^\d]/g, '')
-            salaryMax.value = ''
-          } else {
-            salaryMax.value = salaryFilter.replace(/[^\d]/g, '')
-            salaryMin.value = ''
-          }
-        }
-      },
-      { deep: true }
-    )
-
-    return {
-      availableSkills,
-      selectedSkills,
-      salaryMin,
-      salaryMax,
-      salaryError,
-      handleSalaryChange,
-      title,
-      availableDepartments,
-      selectedDepartments,
-      handleSkillsChange,
-      handleSalaryChange,
-      handleTitleChange,
-      handleDepartmentChange,
-      clearAllFilters,
+      salaryError.value = ''
+    } else {
+      const salaryFilter = newSalary[0]
+      if (salaryFilter.includes('-')) {
+        const [min, max] = salaryFilter
+          .replace(/[^\d-]/g, '')
+          .split('-')
+          .map(Number)
+        salaryMin.value = min
+        salaryMax.value = max
+      } else if (salaryFilter.includes('+')) {
+        salaryMin.value = salaryFilter.replace(/[^\d]/g, '')
+        salaryMax.value = ''
+      } else {
+        salaryMax.value = salaryFilter.replace(/[^\d]/g, '')
+        salaryMin.value = ''
+      }
     }
   },
-}
+  { deep: true }
+)
 </script>
