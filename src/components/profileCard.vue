@@ -17,6 +17,9 @@
         <v-card-subtitle class="pa-0 text-white mb-4">
           {{ result.salary }}
         </v-card-subtitle>
+        <v-card-subtitle class="pa-0 text-white mb-4">
+          {{ result.employment }}
+        </v-card-subtitle>
 
         <div class="d-flex flex-wrap gap-2">
           <v-chip
@@ -28,17 +31,6 @@
             text-color="white"
           >
             {{ skill.label }}
-          </v-chip>
-          <v-chip
-            v-if="result.tools"
-            v-for="tool in result.tools"
-            :key="tool"
-            variant="elevated"
-            class="mr-2 mb-2"
-            color="#2d2d2d"
-            text-color="white"
-          >
-            {{ tool }}
           </v-chip>
         </div>
       </v-card-text>
@@ -71,6 +63,9 @@
 
               <h3 class="text-h6 mt-4">Salary</h3>
               <p>{{ result.salary }}</p>
+
+              <h3 class="text-h6 mt-4">Employment Type</h3>
+              <p>{{ result.employment }}</p>
 
               <h3 class="text-h6 mt-4">Required Skills</h3>
               <base-chips :chips="skillChips" :use-color-mapping="true" />

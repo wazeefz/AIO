@@ -9,6 +9,7 @@ export const useFilterStore = defineStore('filter', {
       salary: [],
       title: [],
       department: [],
+      employment: [],
     },
   }),
 
@@ -46,6 +47,8 @@ export const useFilterStore = defineStore('filter', {
                 )
               case 'department':
                 return selectedFilters.includes(item.department)
+              case 'employment':
+                return selectedFilters.includes(item.employment)
               default:
                 return true
             }
