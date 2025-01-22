@@ -33,5 +33,52 @@ const copyMessage = () => {
 </script>
 
 <style scoped>
-/* Copy relevant styles from original CSS */
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.message {
+  display: flex;
+  padding: 10px;
+}
+
+.message.user {
+  background-color: #f7f7f8;
+}
+
+.message.assistant {
+  background-color: #ffffff;
+}
+
+.message-content {
+  display: flex;
+  gap: 15px;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.avatar {
+  font-size: 1.5em;
+  width: 30px;
+}
+
+.text {
+  flex: 1;
+  line-height: 1.6;
+}
+
+.actions {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.message:hover .actions {
+  opacity: 1;
+}
 </style>
