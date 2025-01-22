@@ -56,14 +56,6 @@ export const useFilterStore = defineStore('filter', {
   },
 
   actions: {
-    initializeFilters(initialFilters) {
-      Object.entries(initialFilters).forEach(([category, items]) => {
-        items.forEach((item) => {
-          this.addFilter(category, item.label)
-        })
-      })
-    },
-
     addFilter(category, item) {
       if (!this.filters[category].includes(item)) {
         this.filters[category].push(item)
