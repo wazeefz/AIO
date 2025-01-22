@@ -1,6 +1,6 @@
 <template>
   <div class="ma-8">
-    <h1 class="text-md-center">Projects</h1>
+    <h1 class="text-left text-md-right">Projects</h1>
   </div>
 
   <div class="data-table-container">

@@ -1,0 +1,11 @@
+.project-table {
+  margin: 20px;
+}
+
+.v-chip {
+  text-transform: capitalize;
+}
+
+.v-data-table .v-data-table__wrapper {
+  border-radius: 4px;
+}
