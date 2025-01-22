@@ -1,6 +1,6 @@
 <template>
-  <ProjectTable />
   <Breadcrumbs />
+  <ProjectTable />
 </template>
 
 <script setup>

@@ -55,9 +55,9 @@ export default {
           to: '/prompt',
         },
         {
-          title: 'Project',
+          title: 'Projects',
           icon: 'mdi-briefcase',
-          to: '/project',
+          to: '/projects',
         },
         {
           title: 'Upload CV',

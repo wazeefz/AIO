@@ -1,7 +1,4 @@
 <template>
-  <div class="ma-10 text-center text-h2 font-weight-medium text-secondaryBrown">
-    Projects
-  </div>
   <v-card>
     <v-data-table
       height="500"
