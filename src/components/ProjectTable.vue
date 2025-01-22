@@ -44,17 +44,17 @@
             </v-chip>
           </td>
           <td>{{ formatDuration(item.duration) }}</td>
-          <td>
+          <td class="d-flex align-center">
             <v-btn
               icon="mdi-pencil"
-              size="small"
+              size="x-small"
               color="primaryBrown"
-              class="mr-5"
+              class="mr-1 mr-xl-3"
               @click="editItem(item)"
             ></v-btn>
             <v-btn
               icon="mdi-close-circle"
-              size="small"
+              size="x-small"
               color="#DB848C"
               @click="deleteItem(item)"
             ></v-btn>
