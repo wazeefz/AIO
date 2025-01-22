@@ -192,7 +192,6 @@ const handleContinue = () => {
 
   // Store the file blob/URL separately
   localStorage.setItem('cvPreviewUrl', cvPreviewUrl.value)
-
   window.location.href = '/employeeInfo'
 }
 
