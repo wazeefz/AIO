@@ -14,40 +14,36 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { defineProps, defineEmits } from 'vue'
 import { getColorForCategory } from '@/utils/colorMappingChips.js'
 
-export default {
-  name: 'BaseChips',
-  props: {
-    chips: {
-      type: Array,
-      required: true,
-      default: () => [],
-    },
-    closable: {
-      type: Boolean,
-      default: false,
-    },
-    chipClass: {
-      type: String,
-      default: '',
-    },
-    useColorMapping: {
-      type: Boolean,
-      default: false,
-    },
+const props = defineProps({
+  chips: {
+    type: Array,
+    required: true,
+    default: () => [],
   },
-  methods: {
-    removeChip(chip) {
-      this.$emit('remove-chip', chip)
-    },
-    getChipColor(chip) {
-      if (this.useColorMapping && chip.category) {
-        return getColorForCategory(chip.category)
-      }
-      return chip.color || 'primary'
-    },
+  closable: {
+    type: Boolean,
+    default: false,
   },
+  chipClass: {
+    type: String,
+    default: '',
+  },
+  useColorMapping: {
+    type: Boolean,
+    default: false,
+  },
+})
+
+const emit = defineEmits(['remove-chip'])
+
+const getChipColor = (chip) => {
+  if (props.useColorMapping && chip.category) {
+    return getColorForCategory(chip.category)
+  }
+  return chip.color || 'primary'
 }
 </script>

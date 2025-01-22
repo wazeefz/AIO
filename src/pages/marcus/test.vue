@@ -37,48 +37,24 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { computed } from 'vue'
 import BaseChips from '@/components/Chips.vue'
 import FilterInterface from '@/components/FilterInterface.vue'
 import { useFilterStore } from '@/stores/filterStore'
+import ProfileCard from '@/components/profileCard.vue'
 
-export default {
-  name: 'MarcusPage',
-  components: {
-    BaseChips,
-    FilterInterface,
-  },
-  setup() {
-    const filterStore = useFilterStore()
+const filterStore = useFilterStore()
 
-    const filterChips = computed(() =>
-      filterStore.activeFilters.map((filter) => ({
-        label: filter.value,
-        category: filter.category,
-        value: filter.value,
-      }))
-    )
+const filterChips = computed(() =>
+  filterStore.activeFilters.map((filter) => ({
+    label: filter.value,
+    category: filter.category,
+    value: filter.value,
+  }))
+)
 
-    const handleFilterRemoval = (chip) => {
-      filterStore.removeFilter(chip.category, chip.value)
-    }
-
-    const getColorForCategory = (category) => {
-      const colors = {
-        skills: 'blue-grey-darken-4',
-        salary: 'light-green lighten-1',
-        title: 'blue lighten-1',
-        department: 'brown-lighten-2',
-      }
-      return colors[category] || 'grey'
-    }
-
-    return {
-      filterStore,
-      filterChips,
-      handleFilterRemoval,
-    }
-  },
+const handleFilterRemoval = (chip) => {
+  filterStore.removeFilter(chip.category, chip.value)
 }
 </script>
