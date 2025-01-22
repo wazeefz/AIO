@@ -6,21 +6,17 @@
     <!-- Skills Filter -->
     <div class="mb-4">
       <h4>Skills</h4>
-      <v-chip-group
+      <v-select
         v-model="selectedSkills"
-        column
+        :items="availableSkills"
+        label="Select skills"
+        variant="outlined"
+        density="compact"
         multiple
+        chips
+        clearable
         @update:modelValue="handleSkillsChange"
-      >
-        <v-chip
-          v-for="skill in availableSkills"
-          :key="skill"
-          filter
-          variant="outlined"
-        >
-          {{ skill }}
-        </v-chip>
-      </v-chip-group>
+      />
     </div>
 
     <!-- Salary Range Filter -->
@@ -66,14 +62,32 @@
     <!-- Department Filter -->
     <div class="mb-4">
       <h4>Department</h4>
-      <v-checkbox
-        v-for="dept in availableDepartments"
-        :key="dept"
+      <v-select
         v-model="selectedDepartments"
-        :label="dept"
-        :value="dept"
+        :items="availableDepartments"
+        label="Select departments"
+        variant="outlined"
         density="compact"
+        multiple
+        chips
+        clearable
         @update:modelValue="handleDepartmentChange"
+      />
+    </div>
+
+    <!-- Employment Filter -->
+    <div class="mb-4">
+      <h4>Employment Type</h4>
+      <v-select
+        v-model="selectedEmployment"
+        :items="availableEmploymentTypes"
+        label="Select employment type"
+        variant="outlined"
+        density="compact"
+        multiple
+        chips
+        clearable
+        @update:modelValue="handleEmploymentChange"
       />
     </div>
 
@@ -103,6 +117,7 @@ const salaryMax = ref('')
 const salaryError = ref('') //For wrong salary input
 const title = ref('')
 const selectedDepartments = ref([])
+const selectedEmployment = ref([])
 
 // Validating salary input
 const validateSalary = () => {
@@ -140,16 +155,23 @@ const availableSkills = [
 ].sort()
 
 // Handle Skills Change
-const handleSkillsChange = (skills) => {
+const handleSkillsChange = () => {
   filterStore.clearFilters('skills')
-  skills.forEach((skill) => {
-    filterStore.addFilter('skills', availableSkills[skill])
-  })
+  if (selectedSkills.value.length > 0) {
+    selectedSkills.value.forEach((skill) => {
+      filterStore.addFilter('skills', skill)
+    })
+  }
 }
 
 // Get unique departments from mockData
 const availableDepartments = [
   ...new Set(mockData.map((item) => item.department)),
+].sort()
+
+// Add this to get unique employment types
+const availableEmploymentTypes = [
+  ...new Set(mockData.map((item) => item.employment)),
 ].sort()
 
 // Handle Department Change
@@ -194,6 +216,16 @@ const handleTitleChange = () => {
   }
 }
 
+// Handle Employment Change
+const handleEmploymentChange = () => {
+  filterStore.clearFilters('employment')
+  if (selectedEmployment.value.length > 0) {
+    selectedEmployment.value.forEach((type) => {
+      filterStore.addFilter('employment', type)
+    })
+  }
+}
+
 // Clear all filters
 const clearAllFilters = () => {
   filterStore.clearFilters()
@@ -202,6 +234,7 @@ const clearAllFilters = () => {
   salaryMax.value = ''
   title.value = ''
   selectedDepartments.value = []
+  selectedEmployment.value = []
 }
 
 // Watch store changes to update local state
@@ -211,18 +244,20 @@ watch(
     skills: filterStore.filters.skills,
     title: filterStore.filters.title,
     department: filterStore.filters.department,
+    employment: filterStore.filters.employment,
   }),
   (newFilters) => {
-    // Update skills selection
-    selectedSkills.value = newFilters.skills.map((skill) =>
-      availableSkills.indexOf(skill)
-    )
+    // Update skills selection [old one only returned value]
+    selectedSkills.value = newFilters.skills
 
     // Update title
     title.value = newFilters.title[0] || ''
 
     // Update departments
     selectedDepartments.value = newFilters.department
+
+    // Update employment
+    selectedEmployment.value = newFilters.employment
   },
   { deep: true }
 )

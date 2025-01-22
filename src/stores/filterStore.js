@@ -9,6 +9,7 @@ export const useFilterStore = defineStore('filter', {
       salary: [],
       title: [],
       department: [],
+      employment: [],
     },
   }),
 
@@ -46,6 +47,8 @@ export const useFilterStore = defineStore('filter', {
                 )
               case 'department':
                 return selectedFilters.includes(item.department)
+              case 'employment':
+                return selectedFilters.includes(item.employment)
               default:
                 return true
             }
@@ -56,14 +59,6 @@ export const useFilterStore = defineStore('filter', {
   },
 
   actions: {
-    initializeFilters(initialFilters) {
-      Object.entries(initialFilters).forEach(([category, items]) => {
-        items.forEach((item) => {
-          this.addFilter(category, item.label)
-        })
-      })
-    },
-
     addFilter(category, item) {
       if (!this.filters[category].includes(item)) {
         this.filters[category].push(item)

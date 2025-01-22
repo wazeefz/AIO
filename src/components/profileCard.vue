@@ -17,6 +17,9 @@
         <v-card-subtitle class="pa-0 text-white mb-4">
           {{ result.salary }}
         </v-card-subtitle>
+        <v-card-subtitle class="pa-0 text-white mb-4">
+          {{ result.employment }}
+        </v-card-subtitle>
 
         <div class="d-flex flex-wrap gap-2">
           <v-chip
@@ -28,17 +31,6 @@
             text-color="white"
           >
             {{ skill.label }}
-          </v-chip>
-          <v-chip
-            v-if="result.tools"
-            v-for="tool in result.tools"
-            :key="tool"
-            variant="elevated"
-            class="mr-2 mb-2"
-            color="#2d2d2d"
-            text-color="white"
-          >
-            {{ tool }}
           </v-chip>
         </div>
       </v-card-text>
@@ -71,6 +63,9 @@
 
               <h3 class="text-h6 mt-4">Salary</h3>
               <p>{{ result.salary }}</p>
+
+              <h3 class="text-h6 mt-4">Employment Type</h3>
+              <p>{{ result.employment }}</p>
 
               <h3 class="text-h6 mt-4">Required Skills</h3>
               <base-chips :chips="skillChips" :use-color-mapping="true" />
@@ -128,16 +123,54 @@ const closeModal = () => {
 .profile-card {
   position: relative;
   overflow: hidden;
+  --ring-color: rgba(255, 255, 255, 0.05);
 }
 
+/* First ring */
 .profile-card::before {
   content: '';
   position: absolute;
-  top: -50px;
-  right: -50px;
-  width: 150px;
-  height: 150px;
+  top: -100px;
+  right: -100px;
+  width: 300px;
+  height: 300px;
   border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+/* Second ring */
+.profile-card::after {
+  content: '';
+  position: absolute;
+  top: -150px;
+  right: -150px;
+  width: 400px;
+  height: 400px;
+  border: 2px solid rgba(255, 255, 255, 0.07);
+  border-radius: 50%;
+}
+
+/* Third ring */
+.profile-card .v-card-text::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  right: -200px;
+  width: 500px;
+  height: 500px;
+  border: 2px solid var(--ring-color);
+  border-radius: 50%;
+}
+
+/* Fourth ring */
+.profile-card .v-card-text::after {
+  content: '';
+  position: absolute;
+  top: -250px;
+  right: -250px;
+  width: 600px;
+  height: 600px;
+  border: 2px solid var(--ring-color);
   border-radius: 50%;
 }
 
