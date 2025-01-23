@@ -8,56 +8,62 @@
       rounded="lg"
     >
       <v-card-text class="pa-6">
-        <v-card-title class="text-h5 font-weight-medium pa-0 text-white mb-1">
-          {{ result.title }}
-        </v-card-title>
-        <v-card-subtitle class="pa-0 text-white mb-4">
-          {{ result.department }}
-        </v-card-subtitle>
-        <v-card-subtitle class="pa-0 text-white mb-4">
-          {{ result.salary }}
-        </v-card-subtitle>
-        <v-card-subtitle class="pa-0 text-white mb-4">
-          {{ result.employment }}
-        </v-card-subtitle>
+        <!-- Card Header Slot -->
+        <slot name="card-header" :result="result">
+          <v-card-title class="text-h5 font-weight-medium pa-0 text-white mb-1">
+            {{ result.title }}
+          </v-card-title>
+          <v-card-subtitle class="pa-0 text-white mb-4">
+            {{ result.department }}
+          </v-card-subtitle>
+          <v-card-subtitle class="pa-0 text-white mb-4">
+            {{ result.salary }}
+          </v-card-subtitle>
+          <v-card-subtitle class="pa-0 text-white mb-4">
+            {{ result.employment }}
+          </v-card-subtitle>
+        </slot>
 
-        <div class="d-flex flex-wrap gap-2">
-          <v-chip
-            v-for="skill in skillChips"
-            :key="skill.label"
-            variant="elevated"
-            class="mr-2 mb-2"
-            color="#2d2d2d"
-            text-color="white"
-          >
-            {{ skill.label }}
-          </v-chip>
-        </div>
+        <!-- Skills Slot -->
+        <slot name="skills" :skills="skillChips">
+          <div class="d-flex flex-wrap gap-2">
+            <v-chip
+              v-for="skill in skillChips"
+              :key="skill.label"
+              variant="elevated"
+              class="mr-2 mb-2"
+              color="#2d2d2d"
+              text-color="white"
+            >
+              {{ skill.label }}
+            </v-chip>
+          </div>
+        </slot>
       </v-card-text>
     </v-card>
 
-    <!-- Modal remains the same -->
+    <!-- Modal -->
     <v-dialog v-model="showModal" max-width="600px">
       <v-card>
-        <div class="d-flex align-center justify-space-between pa-4">
-          <v-card-title class="text-h5 pa-0">
-            {{ result.title }}
-          </v-card-title>
-          <v-btn
-            icon="mdi-close"
-            variant="text"
-            size="small"
-            @click="closeModal"
-          ></v-btn>
-        </div>
+        <!-- Modal Header Slot -->
+        <slot name="modal-header" :result="result" :close="closeModal">
+          <div class="d-flex align-center justify-space-between pa-4">
+            <v-card-title class="text-h5 pa-0">
+              {{ result.title }}
+            </v-card-title>
+            <v-btn
+              icon="mdi-close"
+              variant="text"
+              size="small"
+              @click="closeModal"
+            ></v-btn>
+          </div>
+        </slot>
 
         <v-card-text>
-          <slot name="modal-content">
+          <slot name="modal-content" :result="result" :skills="skillChips">
             <!-- Default modal content -->
             <div class="mt-4">
-              <h3 class="text-h6">Company</h3>
-              <p>{{ result.company }}</p>
-
               <h3 class="text-h6 mt-4">Department</h3>
               <p>{{ result.department }}</p>
 
@@ -75,7 +81,7 @@
 
         <v-card-actions>
           <v-spacer></v-spacer>
-          <slot name="modal-actions">
+          <slot name="modal-actions" :close="closeModal" :result="result">
             <!-- Default actions -->
             <v-btn color="primary" variant="text" @click="closeModal">
               Close

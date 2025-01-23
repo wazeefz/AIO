@@ -1,16 +1,32 @@
 <template>
   <div>
-    <v-chip
-      v-for="(chip, index) in chips"
-      :key="chip.label + chip.category"
-      :color="getChipColor(chip)"
-      :closable="closable"
-      :class="['ma-1', chipClass]"
-      @click:close="removeChip(chip)"
-    >
-      <v-icon v-if="chip.icon" start>{{ chip.icon }}</v-icon>
-      {{ chip.label }}
-    </v-chip>
+    <template v-for="(chip, index) in chips" :key="chip.label + chip.category">
+      <!-- Default slot with fallback -->
+      <slot
+        name="chip"
+        :chip="chip"
+        :color="getChipColor(chip)"
+        :remove="() => removeChip(chip)"
+        :index="index"
+      >
+        <v-chip
+          :color="getChipColor(chip)"
+          :closable="closable"
+          :class="['ma-1', chipClass]"
+          @click:close="removeChip(chip)"
+        >
+          <slot name="prefix" :chip="chip">
+            <v-icon v-if="chip.icon" start>{{ chip.icon }}</v-icon>
+          </slot>
+
+          <slot name="label" :chip="chip">
+            {{ chip.label }}
+          </slot>
+
+          <slot name="suffix" :chip="chip"></slot>
+        </v-chip>
+      </slot>
+    </template>
   </div>
 </template>
 
