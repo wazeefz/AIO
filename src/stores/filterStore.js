@@ -1,6 +1,6 @@
 // stores/filterStore.js
 import { defineStore } from 'pinia'
-import { mockData } from '@/mockdata/mockData'
+import { mockData } from '@/mockdata/mockData' //to be replaced with actual data from the API
 
 export const useFilterStore = defineStore('filter', {
   state: () => ({
@@ -56,6 +56,8 @@ export const useFilterStore = defineStore('filter', {
   },
 
   actions: {
+    // async action for API here
+
     addFilter(category, item) {
       if (!this.filters[category].includes(item)) {
         this.filters[category].push(item)
@@ -83,13 +85,16 @@ export const useFilterStore = defineStore('filter', {
   },
 })
 
-// Helper functions (outside of store)
+// Helper functions (not in the store but assist the methods in it)
 function extractSalaryValue(salary) {
   return parseInt(salary.replace(/[^\d]/g, ''))
 }
 
 function isSalaryInRange(salary, range) {
+  // Extract the salary value from the salary string
   const salaryValue = extractSalaryValue(salary)
+
+  // Salary value logic here!!
   if (range.includes('-')) {
     const [minStr, maxStr] = range.split('-')
     const min = parseInt(minStr.replace(/[^\d]/g, ''))

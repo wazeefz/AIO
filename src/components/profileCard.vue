@@ -1,3 +1,4 @@
+<!-- profileCard.vue -->
 <template>
   <div>
     <!-- Card -->
@@ -8,6 +9,16 @@
       rounded="lg"
     >
       <v-card-text class="pa-6">
+        <!-- Cancel Button (Visible only in edit mode) -->
+        <v-btn
+          v-if="isEditing"
+          icon="mdi-close"
+          variant="text"
+          size="small"
+          class="cancel-button"
+          @click.stop="removeProfile"
+        ></v-btn>
+
         <!-- Card Header Slot -->
         <slot name="card-header" :result="result">
           <v-card-title class="text-h5 font-weight-medium pa-0 text-white mb-1">
@@ -102,9 +113,13 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  isEditing: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['modal-opened', 'modal-closed'])
+const emit = defineEmits(['modal-opened', 'modal-closed', 'remove-profile'])
 const showModal = ref(false)
 
 const skillChips = computed(() => {
@@ -123,73 +138,17 @@ const closeModal = () => {
   showModal.value = false
   emit('modal-closed')
 }
+
+const removeProfile = () => {
+  emit('remove-profile', props.result.id)
+}
 </script>
 
 <style scoped>
-.profile-card {
-  position: relative;
-  overflow: hidden;
-  --ring-color: rgba(255, 255, 255, 0.05);
-}
-
-/* First ring */
-.profile-card::before {
-  content: '';
+.cancel-button {
   position: absolute;
-  top: -100px;
-  right: -100px;
-  width: 300px;
-  height: 300px;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-}
-
-/* Second ring */
-.profile-card::after {
-  content: '';
-  position: absolute;
-  top: -150px;
-  right: -150px;
-  width: 400px;
-  height: 400px;
-  border: 2px solid rgba(255, 255, 255, 0.07);
-  border-radius: 50%;
-}
-
-/* Third ring */
-.profile-card .v-card-text::before {
-  content: '';
-  position: absolute;
-  top: -200px;
-  right: -200px;
-  width: 500px;
-  height: 500px;
-  border: 2px solid var(--ring-color);
-  border-radius: 50%;
-}
-
-/* Fourth ring */
-.profile-card .v-card-text::after {
-  content: '';
-  position: absolute;
-  top: -250px;
-  right: -250px;
-  width: 600px;
-  height: 600px;
-  border: 2px solid var(--ring-color);
-  border-radius: 50%;
-}
-
-.cursor-pointer {
-  cursor: pointer;
-}
-
-.cursor-pointer:hover {
-  transform: translateY(-2px);
-  transition: transform 0.2s ease;
-}
-
-.gap-2 {
-  gap: 0.5rem;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
 }
 </style>

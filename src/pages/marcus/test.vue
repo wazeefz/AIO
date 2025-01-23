@@ -46,6 +46,7 @@ import ProfileCard from '@/components/profileCard.vue'
 
 const filterStore = useFilterStore()
 
+//to show the active filters in the chips component
 const filterChips = computed(() =>
   filterStore.activeFilters.map((filter) => ({
     label: filter.value,
