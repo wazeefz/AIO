@@ -41,26 +41,3 @@ export const mockData = [
     employment: 'Contractual',
   },
 ]
-
-// Filter function
-export const filterData = (filters) => {
-  return mockData.filter((item) => {
-    // Check if all active filters match the item
-    const matchesSkills =
-      filters.skills.length === 0 ||
-      filters.skills.every((skill) => item.skills.includes(skill))
-
-    const matchesSalary =
-      filters.salary.length === 0 || filters.salary.includes(item.salary)
-
-    const matchesTitle =
-      filters.title.length === 0 || filters.title.includes(item.title)
-
-    const matchesDepartment =
-      filters.department.length === 0 ||
-      filters.department.includes(item.department)
-
-    // Item must match all active filter criteria
-    return matchesSkills && matchesSalary && matchesTitle && matchesDepartment
-  })
-}

@@ -30,7 +30,8 @@
             type="number"
             variant="outlined"
             density="compact"
-            @update:modelValue="handleSalaryChange"
+            :error-messages="salaryError"
+            @input="handleSalaryChange"
           />
         </v-col>
         <v-col cols="6">
@@ -40,7 +41,8 @@
             type="number"
             variant="outlined"
             density="compact"
-            @update:modelValue="handleSalaryChange"
+            :error-messages="salaryError"
+            @input="handleSalaryChange"
           />
         </v-col>
       </v-row>
@@ -114,40 +116,11 @@ const filterStore = useFilterStore()
 const selectedSkills = ref([])
 const salaryMin = ref('')
 const salaryMax = ref('')
-const salaryError = ref('') //For wrong salary input
+const salaryError = ref('')
+
 const title = ref('')
 const selectedDepartments = ref([])
 const selectedEmployment = ref([])
-
-// Validating salary input
-const validateSalary = () => {
-  // Clear previous error
-  salaryError.value = ''
-
-  // Convert to numbers for comparison
-  const min = Number(salaryMin.value)
-  const max = Number(salaryMax.value)
-
-  // Check if both values exist and max is less than min
-  if (min && max && max < min) {
-    salaryError.value = 'Max salary cannot be less than min salary'
-    return false
-  }
-
-  // Check for negative values
-  if (min < 0 || max < 0) {
-    salaryError.value = 'Salary cannot be negative'
-    return false
-  }
-
-  // Check for valid numbers
-  if ((min && isNaN(min)) || (max && isNaN(max))) {
-    salaryError.value = 'Please enter valid numbers'
-    return false
-  }
-
-  return true
-}
 
 // Get unique skills from mockData
 const availableSkills = [
@@ -186,18 +159,22 @@ const handleDepartmentChange = () => {
 
 // Handle Salary Change
 const handleSalaryChange = () => {
+  salaryError.value = ''
+
+  // Only validate if both fields have values
+  if (salaryMin.value && salaryMax.value) {
+    if (parseInt(salaryMin.value) > parseInt(salaryMax.value)) {
+      salaryError.value = 'Min salary cannot be greater than max salary'
+      return
+    }
+  }
+
   filterStore.clearFilters('salary')
 
-  // If both fields are empty, clear the filter
   if (!salaryMin.value && !salaryMax.value) {
     return
   }
 
-  // Validate the salary range
-  if (!validateSalary()) {
-    return
-  }
-  // Only add filter if validation passes
   if (salaryMin.value && salaryMax.value) {
     const range = `RM${salaryMin.value}-RM${salaryMax.value}`
     filterStore.addFilter('salary', range)
@@ -238,7 +215,6 @@ const clearAllFilters = () => {
 }
 
 // Watch store changes to update local state
-// Watch for all filters except salary
 watch(
   () => ({
     skills: filterStore.filters.skills,
@@ -247,16 +223,9 @@ watch(
     employment: filterStore.filters.employment,
   }),
   (newFilters) => {
-    // Update skills selection [old one only returned value]
     selectedSkills.value = newFilters.skills
-
-    // Update title
     title.value = newFilters.title[0] || ''
-
-    // Update departments
     selectedDepartments.value = newFilters.department
-
-    // Update employment
     selectedEmployment.value = newFilters.employment
   },
   { deep: true }

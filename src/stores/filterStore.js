@@ -23,9 +23,6 @@ export const useFilterStore = defineStore('filter', {
       }, [])
     },
 
-    //For filtered output results
-    //some(): Returns true if ANY of the selected skills match (OR condition)
-    //every(): Returns true if ALL of the selected skills match (AND condition)
     filteredResults: (state) => {
       return mockData.filter((item) => {
         return Object.entries(state.filters).every(
@@ -93,8 +90,17 @@ function extractSalaryValue(salary) {
 
 function isSalaryInRange(salary, range) {
   const salaryValue = extractSalaryValue(salary)
-  const [minStr, maxStr] = range.split('-')
-  const min = parseInt(minStr.replace(/[^\d]/g, ''))
-  const max = parseInt(maxStr.replace(/[^\d]/g, ''))
-  return salaryValue >= min && salaryValue <= max
+  if (range.includes('-')) {
+    const [minStr, maxStr] = range.split('-')
+    const min = parseInt(minStr.replace(/[^\d]/g, ''))
+    const max = parseInt(maxStr.replace(/[^\d]/g, ''))
+    return salaryValue >= min && salaryValue <= max
+  } else if (range.includes('+')) {
+    const min = parseInt(range.replace(/[^\d]/g, ''))
+    return salaryValue >= min
+  } else if (range.startsWith('Up to')) {
+    const max = parseInt(range.replace(/[^\d]/g, ''))
+    return salaryValue <= max
+  }
+  return false
 }
