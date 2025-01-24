@@ -6,7 +6,7 @@ export const mockData = [
     skills: ['Javascript', 'HTML', 'CSS', 'Vue.js'],
     salary: 'RM10,000',
     department: 'Developer',
-    company: 'Tech Corp',
+    employment: 'Full Time',
   },
   {
     id: 2,
@@ -14,7 +14,7 @@ export const mockData = [
     skills: ['Adobe Photoshop', 'Figma', 'HTML', 'CSS'],
     salary: 'RM10,000',
     department: 'Designer',
-    company: 'Design Studio',
+    employment: 'External',
   },
   {
     id: 3,
@@ -22,7 +22,7 @@ export const mockData = [
     skills: ['Javascript', 'Python', 'MongoDB', 'Vue.js'],
     salary: 'RM15,000',
     department: 'Developer',
-    company: 'StartUp Inc',
+    employment: 'Part Time',
   },
   {
     id: 4,
@@ -30,7 +30,7 @@ export const mockData = [
     skills: ['Javascript', 'HTML', 'CSS', 'Bootstrap'],
     salary: 'RM6,000',
     department: 'Developer',
-    company: 'Web Solutions',
+    employment: 'Intern',
   },
   {
     id: 5,
@@ -38,7 +38,7 @@ export const mockData = [
     skills: ['Adobe Photoshop', 'Illustrator', 'Figma'],
     salary: 'RM6,000',
     department: 'Designer',
-    company: 'Creative Agency',
+    employment: 'Contractual',
   },
 ]
 
