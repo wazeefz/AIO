@@ -1,6 +1,32 @@
 <!-- profileCard.vue -->
 <template>
-  <div>
+  <div class="profile-card-container">
+    <!-- Remove Button with confirmation dialog -->
+    <v-btn
+      v-if="isEditing"
+      icon="mdi-close"
+          variant="text"
+          size="small"
+          class="cancel-button"
+          @click.stop="confirmRemove"
+    >
+    </v-btn>
+
+    <!-- Confirmation Dialog -->
+    <v-dialog v-model="showConfirmDialog" max-width="300">
+      <v-card>
+        <v-card-title class="text-h6"> Confirm Removal </v-card-title>
+        <v-card-text> Are you sure you want to remove this item? </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="grey" text @click="showConfirmDialog = false">
+            Cancel
+          </v-btn>
+          <v-btn color="error" text @click="confirmAndRemove"> Remove </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Card -->
     <v-card
       class="mb-4 profile-card cursor-pointer"
@@ -9,16 +35,6 @@
       rounded="lg"
     >
       <v-card-text class="pa-6">
-        <!-- Cancel Button (Visible only in edit mode) -->
-        <v-btn
-          v-if="isEditing"
-          icon="mdi-close"
-          variant="text"
-          size="small"
-          class="cancel-button"
-          @click.stop="removeProfile"
-        ></v-btn>
-
         <!-- Card Header Slot -->
         <slot name="card-header" :result="result">
           <v-card-title class="text-h5 font-weight-medium pa-0 text-white mb-1">
@@ -119,8 +135,10 @@ const props = defineProps({
   },
 })
 
+
 const emit = defineEmits(['modal-opened', 'modal-closed', 'remove-profile'])
 const showModal = ref(false)
+const showConfirmDialog = ref(false)
 
 const skillChips = computed(() => {
   return props.result.skills.map((skill) => ({
@@ -139,10 +157,42 @@ const closeModal = () => {
   emit('modal-closed')
 }
 
-const removeProfile = () => {
+const confirmRemove = (event) => {
+  event.stopPropagation()
+  showConfirmDialog.value = true
+}
+
+const confirmAndRemove = () => {
+  showConfirmDialog.value = false
   emit('remove-profile', props.result.id)
 }
 </script>
+
+<style scoped>
+.profile-card-container {
+  position: relative;
+}
+
+.remove-button {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  z-index: 2;
+  background-color: #ff5252;
+  border: 2px solid white;
+  transition: transform 0.2s ease;
+}
+
+.remove-button:hover {
+  transform: scale(1.1);
+}
+
+.profile-card {
+  position: relative;
+  overflow: hidden;
+  --ring-color: rgba(255, 255, 255, 0.05);
+}
+
 
 <style scoped>
 .cancel-button {
@@ -150,5 +200,65 @@ const removeProfile = () => {
   top: 8px;
   right: 8px;
   z-index: 1;
+  
+/* First ring */
+.profile-card::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  right: -100px;
+  width: 300px;
+  height: 300px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+/* Second ring */
+.profile-card::after {
+  content: '';
+  position: absolute;
+  top: -150px;
+  right: -150px;
+  width: 400px;
+  height: 400px;
+  border: 2px solid rgba(255, 255, 255, 0.07);
+  border-radius: 50%;
+}
+
+/* Third ring */
+.profile-card .v-card-text::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  right: -200px;
+  width: 500px;
+  height: 500px;
+  border: 2px solid var(--ring-color);
+  border-radius: 50%;
+}
+
+/* Fourth ring */
+.profile-card .v-card-text::after {
+  content: '';
+  position: absolute;
+  top: -250px;
+  right: -250px;
+  width: 600px;
+  height: 600px;
+  border: 2px solid var(--ring-color);
+  border-radius: 50%;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.cursor-pointer:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s ease;
+}
+
+.gap-2 {
+  gap: 0.5rem;
 }
 </style>

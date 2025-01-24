@@ -6,14 +6,14 @@
     <!-- Skills Filter -->
     <div class="mb-4">
       <h4>Skills</h4>
-      <v-select
+      <v-combobox
         v-model="selectedSkills"
         :items="availableSkills"
         label="Select skills"
         variant="outlined"
         density="compact"
         multiple
-        chips
+        closable-chips
         clearable
         @update:modelValue="handleSkillsChange"
       />
@@ -223,9 +223,13 @@ watch(
     employment: filterStore.filters.employment,
   }),
   (newFilters) => {
+    // Update skills selection [old one only returned value]
     selectedSkills.value = newFilters.skills
+
+    // Update title
     title.value = newFilters.title[0] || ''
     selectedDepartments.value = newFilters.department
+    // Update employment
     selectedEmployment.value = newFilters.employment
   },
   { deep: true }

@@ -1,4 +1,3 @@
-<!-- Marcus/index.vue -->
 <template>
   <div>
     <v-row>

@@ -57,7 +57,6 @@ export const useFilterStore = defineStore('filter', {
 
   actions: {
     // async action for API here
-
     addFilter(category, item) {
       if (!this.filters[category].includes(item)) {
         this.filters[category].push(item)
