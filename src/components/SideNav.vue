@@ -62,7 +62,7 @@ export default {
         {
           title: 'Upload CV',
           icon: 'mdi-file-document-outline',
-          to: '/upload-cv',
+          to: '/uploadCV',
         },
       ],
     }
