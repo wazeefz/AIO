@@ -73,7 +73,7 @@
         </div>
 
         <!-- Filter Dialog -->
-        <v-dialog v-model="showFilterDialog" max-width="800px">
+        <v-dialog v-model="showFilterDialog" max-width="800px" persistent>
           <v-card>
             <v-card-title class="headline">
               Filter Options
@@ -84,7 +84,7 @@
             </v-card-title>
             <v-card-text>
               <v-container>
-                <FilterInterface />
+                <FilterInterface @apply-filters="closeFilterDialog" />
               </v-container>
             </v-card-text>
           </v-card>

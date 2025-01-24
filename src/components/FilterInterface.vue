@@ -1,4 +1,3 @@
-<!-- components/FilterInterface.vue -->
 <template>
   <v-card class="pa-4">
     <h3>Filters</h3>
@@ -47,7 +46,7 @@
       </v-row>
     </div>
 
-    <!-- Title Filter (replaced Role Filter) -->
+    <!-- Title Filter -->
     <div class="mb-4">
       <h4>Search Title</h4>
       <v-text-field
@@ -92,15 +91,15 @@
       />
     </div>
 
-    <!-- Clear Filters Button -->
-    <v-btn
-      color="error"
-      variant="outlined"
-      @click="clearAllFilters"
-      class="mt-4"
-    >
-      Clear All Filters
-    </v-btn>
+    <!-- Action Buttons -->
+    <div class="d-flex justify-end gap-2 mt-4">
+      <v-btn color="error" variant="outlined" @click="clearAllFilters">
+        Clear All Filters
+      </v-btn>
+      <v-btn color="primary" variant="flat" @click="applyFilters">
+        Apply Filters
+      </v-btn>
+    </div>
   </v-card>
 </template>
 
@@ -115,39 +114,17 @@ const filterStore = useFilterStore()
 const selectedSkills = ref([])
 const salaryMin = ref('')
 const salaryMax = ref('')
-const salaryError = ref('') //For wrong salary input
+const salaryError = ref('') // For wrong salary input
 const title = ref('')
 const selectedDepartments = ref([])
 const selectedEmployment = ref([])
 
-// Validating salary input
-const validateSalary = () => {
-  // Clear previous error
-  salaryError.value = ''
+// Emit event to parent to close the dialog
+const emit = defineEmits(['apply-filters'])
 
-  // Convert to numbers for comparison
-  const min = Number(salaryMin.value)
-  const max = Number(salaryMax.value)
-
-  // Check if both values exist and max is less than min
-  if (min && max && max < min) {
-    salaryError.value = 'Max salary cannot be less than min salary'
-    return false
-  }
-
-  // Check for negative values
-  if (min < 0 || max < 0) {
-    salaryError.value = 'Salary cannot be negative'
-    return false
-  }
-
-  // Check for valid numbers
-  if ((min && isNaN(min)) || (max && isNaN(max))) {
-    salaryError.value = 'Please enter valid numbers'
-    return false
-  }
-
-  return true
+// Apply filters and close the dialog
+const applyFilters = () => {
+  emit('apply-filters')
 }
 
 // Get unique skills from mockData
@@ -170,7 +147,7 @@ const availableDepartments = [
   ...new Set(mockData.map((item) => item.department)),
 ].sort()
 
-// Add this to get unique employment types
+// Get unique employment types from mockData
 const availableEmploymentTypes = [
   ...new Set(mockData.map((item) => item.employment)),
 ].sort()
@@ -198,6 +175,7 @@ const handleSalaryChange = () => {
   if (!validateSalary()) {
     return
   }
+
   // Only add filter if validation passes
   if (salaryMin.value && salaryMax.value) {
     const range = `RM${salaryMin.value}-RM${salaryMax.value}`
@@ -238,8 +216,32 @@ const clearAllFilters = () => {
   selectedEmployment.value = []
 }
 
+// Validate salary input
+const validateSalary = () => {
+  salaryError.value = ''
+
+  const min = Number(salaryMin.value)
+  const max = Number(salaryMax.value)
+
+  if (min && max && max < min) {
+    salaryError.value = 'Max salary cannot be less than min salary'
+    return false
+  }
+
+  if (min < 0 || max < 0) {
+    salaryError.value = 'Salary cannot be negative'
+    return false
+  }
+
+  if ((min && isNaN(min)) || (max && isNaN(max))) {
+    salaryError.value = 'Please enter valid numbers'
+    return false
+  }
+
+  return true
+}
+
 // Watch store changes to update local state
-// Watch for all filters except salary
 watch(
   () => ({
     skills: filterStore.filters.skills,
@@ -248,16 +250,9 @@ watch(
     employment: filterStore.filters.employment,
   }),
   (newFilters) => {
-    // Update skills selection [old one only returned value]
     selectedSkills.value = newFilters.skills
-
-    // Update title
     title.value = newFilters.title[0] || ''
-
-    // Update departments
     selectedDepartments.value = newFilters.department
-
-    // Update employment
     selectedEmployment.value = newFilters.employment
   },
   { deep: true }
