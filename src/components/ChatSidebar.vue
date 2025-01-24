@@ -4,9 +4,9 @@
       <button class="new-chat-btn" @click="$emit('new-chat')">
         <span class="icon">+</span> New Chat
       </button>
-      <button class="collapse-btn" @click="$emit('toggle-sidebar')">
+      <!-- <button class="collapse-btn" @click="$emit('toggle-sidebar')">
         {{ isSidebarCollapsed ? '→' : '←' }}
-      </button>
+      </button> -->
     </div>
 
     <div class="chat-history">
