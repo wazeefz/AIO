@@ -39,7 +39,7 @@ function generatePieChart() {
 
   pieChart.value = dc.pieChart(`#${props.chartId}`)
   pieChart.value
-    .width(500)
+    .width(0)
     .height(150)
     .radius(150)
     .innerRadius(50)

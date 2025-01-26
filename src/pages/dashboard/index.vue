@@ -6,7 +6,7 @@
         <StatCard
           title="Total Revenue"
           value="$53,009"
-          subtitle="12% increase from last month"
+          subtitle="12% increase"
           icon="mdi-currency-usd"
         />
       </v-col>
@@ -14,15 +14,15 @@
         <StatCard
           title="Projects"
           value="95/100"
-          subtitle="10% decrease from last month"
+          subtitle="10% decrease"
           icon="mdi-briefcase"
         />
       </v-col>
       <v-col cols="3">
         <StatCard
           title="Time Spent"
-          value="1022/1300 Hrs"
-          subtitle="8% increase from last month"
+          value="1022 Hrs"
+          subtitle="8% increase"
           icon="mdi-clock"
         />
       </v-col>
@@ -30,7 +30,7 @@
         <StatCard
           title="Resources"
           value="101/120"
-          subtitle="2% increase from last month"
+          subtitle="2% increase"
           icon="mdi-account-group"
         />
       </v-col>
@@ -64,7 +64,7 @@
       <!-- All Projects Pie Chart -->
       <v-col cols="4">
         <v-card>
-          <v-card-title>All Projects Overview</v-card-title>
+          <v-card-title>All Projects</v-card-title>
           <PieChart
             :dimension="projectStatusDimension"
             :group="projectStatusGroup"
