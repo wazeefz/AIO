@@ -1,6 +1,11 @@
 <template>
   <v-card class="pa-4">
-    <h3>Filters</h3>
+    <!-- Close button at the top-right corner -->
+    <div class="d-flex justify-end">
+      <v-btn icon @click="closeFilterDialog">
+        <v-icon>mdi-close</v-icon>
+      </v-btn>
+    </div>
 
     <!-- Skills Filter -->
     <div class="mb-4">
@@ -13,7 +18,6 @@
         density="compact"
         multiple
         chips
-        closable-chips
         clearable
         @update:modelValue="handleSkillsChange"
       />
@@ -46,59 +50,54 @@
       </v-row>
     </div>
 
+    <v-row>
+      <v-col>
+        <!-- Department Filter -->
+        <div class="mb-4">
+          <h4>Department</h4>
+          <v-combobox
+            v-model="selectedDepartments"
+            :items="availableDepartments"
+            label="Select department"
+            variant="outlined"
+            density="compact"
+            multiple
+            chips
+            clearable
+            @update:modelValue="handleDepartmentChange"
+          />
+        </div>
+      </v-col>
+      <v-col>
+        <!-- Employment Filter -->
+        <div class="mb-4">
+          <h4>Employment Type</h4>
+          <v-combobox
+            v-model="selectedEmployment"
+            :items="availableEmploymentTypes"
+            label="Select employment type"
+            variant="outlined"
+            density="compact"
+            multiple
+            chips
+            clearable
+            @update:modelValue="handleEmploymentChange"
+          />
+        </div>
+      </v-col>
+    </v-row>
+
     <!-- Title Filter -->
     <div class="mb-4">
-      <h4>Search Title</h4>
+      <h4>Role</h4>
       <v-text-field
         v-model="title"
-        label="Search job titles"
+        label="Search role"
         variant="outlined"
         density="compact"
         @update:modelValue="handleTitleChange"
         clearable
       />
-    </div>
-
-    <!-- Department Filter -->
-    <div class="mb-4">
-      <h4>Department</h4>
-      <v-select
-        v-model="selectedDepartments"
-        :items="availableDepartments"
-        label="Select departments"
-        variant="outlined"
-        density="compact"
-        multiple
-        chips
-        clearable
-        @update:modelValue="handleDepartmentChange"
-      />
-    </div>
-
-    <!-- Employment Filter -->
-    <div class="mb-4">
-      <h4>Employment Type</h4>
-      <v-select
-        v-model="selectedEmployment"
-        :items="availableEmploymentTypes"
-        label="Select employment type"
-        variant="outlined"
-        density="compact"
-        multiple
-        chips
-        clearable
-        @update:modelValue="handleEmploymentChange"
-      />
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="d-flex justify-end gap-2 mt-4">
-      <v-btn color="error" variant="outlined" @click="clearAllFilters">
-        Clear All Filters
-      </v-btn>
-      <v-btn color="primary" variant="flat" @click="applyFilters">
-        Apply Filters
-      </v-btn>
     </div>
   </v-card>
 </template>
@@ -109,6 +108,7 @@ import { useFilterStore } from '@/stores/filterStore'
 import { mockData } from '@/mockdata/mockData'
 
 const filterStore = useFilterStore()
+const emit = defineEmits(['close-filter-dialog'])
 
 // Local state
 const selectedSkills = ref([])
@@ -119,12 +119,34 @@ const title = ref('')
 const selectedDepartments = ref([])
 const selectedEmployment = ref([])
 
-// Emit event to parent to close the dialog
-const emit = defineEmits(['apply-filters'])
+// Validating salary input
+const validateSalary = () => {
+  // Clear previous error
+  salaryError.value = ''
 
-// Apply filters and close the dialog
-const applyFilters = () => {
-  emit('apply-filters')
+  // Convert to numbers for comparison
+  const min = Number(salaryMin.value)
+  const max = Number(salaryMax.value)
+
+  // Check if both values exist and max is less than min
+  if (min && max && max < min) {
+    salaryError.value = 'Max salary cannot be less than min salary'
+    return false
+  }
+
+  // Check for negative values
+  if (min < 0 || max < 0) {
+    salaryError.value = 'Salary cannot be negative'
+    return false
+  }
+
+  // Check for valid numbers
+  if ((min && isNaN(min)) || (max && isNaN(max))) {
+    salaryError.value = 'Please enter valid numbers'
+    return false
+  }
+
+  return true
 }
 
 // Get unique skills from mockData
@@ -164,26 +186,27 @@ const handleDepartmentChange = () => {
 
 // Handle Salary Change
 const handleSalaryChange = () => {
-  filterStore.clearFilters('salary')
-
-  // If both fields are empty, clear the filter
   if (!salaryMin.value && !salaryMax.value) {
+    filterStore.clearFilters('salary')
     return
   }
 
-  // Validate the salary range
   if (!validateSalary()) {
     return
   }
 
-  // Only add filter if validation passes
+  let range = ''
   if (salaryMin.value && salaryMax.value) {
-    const range = `RM${salaryMin.value}-RM${salaryMax.value}`
-    filterStore.addFilter('salary', range)
+    range = `RM${salaryMin.value}-RM${salaryMax.value}`
   } else if (salaryMin.value) {
-    filterStore.addFilter('salary', `RM${salaryMin.value}+`)
+    range = `RM${salaryMin.value}+`
   } else if (salaryMax.value) {
-    filterStore.addFilter('salary', `Up to RM${salaryMax.value}`)
+    range = `Up to RM${salaryMax.value}`
+  }
+
+  filterStore.clearFilters('salary')
+  if (range) {
+    filterStore.addFilter('salary', range)
   }
 }
 
@@ -205,43 +228,8 @@ const handleEmploymentChange = () => {
   }
 }
 
-// Clear all filters
-const clearAllFilters = () => {
-  filterStore.clearFilters()
-  selectedSkills.value = []
-  salaryMin.value = ''
-  salaryMax.value = ''
-  title.value = ''
-  selectedDepartments.value = []
-  selectedEmployment.value = []
-}
-
-// Validate salary input
-const validateSalary = () => {
-  salaryError.value = ''
-
-  const min = Number(salaryMin.value)
-  const max = Number(salaryMax.value)
-
-  if (min && max && max < min) {
-    salaryError.value = 'Max salary cannot be less than min salary'
-    return false
-  }
-
-  if (min < 0 || max < 0) {
-    salaryError.value = 'Salary cannot be negative'
-    return false
-  }
-
-  if ((min && isNaN(min)) || (max && isNaN(max))) {
-    salaryError.value = 'Please enter valid numbers'
-    return false
-  }
-
-  return true
-}
-
 // Watch store changes to update local state
+// Watch for all filters except salary
 watch(
   () => ({
     skills: filterStore.filters.skills,
@@ -250,9 +238,16 @@ watch(
     employment: filterStore.filters.employment,
   }),
   (newFilters) => {
+    // Update skills selection
     selectedSkills.value = newFilters.skills
+
+    // Update title
     title.value = newFilters.title[0] || ''
+
+    // Update departments
     selectedDepartments.value = newFilters.department
+
+    // Update employment
     selectedEmployment.value = newFilters.employment
   },
   { deep: true }
@@ -286,4 +281,15 @@ watch(
   },
   { deep: true }
 )
+
+// Close filter dialog
+const closeFilterDialog = () => {
+  emit('close-filter-dialog') // Emit the event to the parent component
+}
 </script>
+
+<style scoped>
+.v-card {
+  box-shadow: none; /* Remove elevation */
+}
+</style>

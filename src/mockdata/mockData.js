@@ -1,15 +1,17 @@
-// mockdata/mockData.js
-export const mockData = [
+// All employees in the company
+export const employeesData = [
   {
-    id: 1,
+    id: 101,
+    name: 'John Doe',
     title: 'Frontend Developer',
-    skills: ['Javascript', 'HTML', 'CSS', 'Vue.js'],
+    skills: ['JavaScript', 'HTML', 'CSS', 'Vue.js'],
     salary: 'RM10,000',
     department: 'Developer',
     employment: 'Full Time',
   },
   {
-    id: 2,
+    id: 102,
+    name: 'Jane Smith',
     title: 'UI/UX Designer',
     skills: ['Adobe Photoshop', 'Figma', 'HTML', 'CSS'],
     salary: 'RM10,000',
@@ -17,23 +19,26 @@ export const mockData = [
     employment: 'External',
   },
   {
-    id: 3,
+    id: 103,
+    name: 'Michael Johnson',
     title: 'Full Stack Developer',
-    skills: ['Javascript', 'Python', 'MongoDB', 'Vue.js'],
+    skills: ['JavaScript', 'Python', 'MongoDB', 'Vue.js'],
     salary: 'RM15,000',
     department: 'Developer',
     employment: 'Part Time',
   },
   {
-    id: 4,
+    id: 201,
+    name: 'Emily Davis',
     title: 'Frontend Engineer',
-    skills: ['Javascript', 'HTML', 'CSS', 'Bootstrap'],
+    skills: ['JavaScript', 'HTML', 'CSS', 'Bootstrap'],
     salary: 'RM6,000',
     department: 'Developer',
     employment: 'Intern',
   },
   {
-    id: 5,
+    id: 202,
+    name: 'Sarah Wilson',
     title: 'Creative Designer',
     skills: ['Adobe Photoshop', 'Illustrator', 'Figma'],
     salary: 'RM6,000',
@@ -42,10 +47,34 @@ export const mockData = [
   },
 ]
 
-// Filter function
+// Project specific data
+export const projectsData = [
+  {
+    id: 1,
+    projectName: 'Project Alpha',
+    description: 'Frontend Development Project',
+    status: 'Active',
+    startDate: '2023-01-01',
+    endDate: '2023-12-31',
+    team: [101, 102, 103], // Reference to employee IDs
+  },
+  {
+    id: 2,
+    projectName: 'Project Beta',
+    description: 'UI/UX Design Project',
+    status: 'Active',
+    startDate: '2023-06-01',
+    endDate: '2024-06-01',
+    team: [201, 202],
+  },
+]
+
+// Keep the original mockData export for backward compatibility
+export const mockData = employeesData
+
+// Optional: Add filterData function from old code
 export const filterData = (filters) => {
   return mockData.filter((item) => {
-    // Check if all active filters match the item
     const matchesSkills =
       filters.skills.length === 0 ||
       filters.skills.every((skill) => item.skills.includes(skill))
@@ -60,7 +89,6 @@ export const filterData = (filters) => {
       filters.department.length === 0 ||
       filters.department.includes(item.department)
 
-    // Item must match all active filter criteria
     return matchesSkills && matchesSalary && matchesTitle && matchesDepartment
   })
 }

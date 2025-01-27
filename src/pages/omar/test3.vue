@@ -101,7 +101,7 @@ import FilterInterface from '@/components/FilterInterface.vue'
 import { useFilterStore } from '@/stores/filterStore'
 import ProfileCard from '@/components/profileCard.vue'
 import { useJobFilter } from '@/plugins/useJobFilter'
-import { mockData } from '@/mockdata/mockData'
+import { employeesData } from '@/mockdata/mockData'
 
 const filterStore = useFilterStore()
 const { filterJobs, isLoading } = useJobFilter()

@@ -162,7 +162,7 @@ const confirmRemove = (event) => {
 
 const confirmAndRemove = () => {
   showConfirmDialog.value = false
-  emit('remove-item', props.result)
+  emit('remove-profile', props.result.id) // Emit the memberId to remove
 }
 </script>
 

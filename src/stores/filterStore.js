@@ -1,6 +1,6 @@
 // stores/filterStore.js
 import { defineStore } from 'pinia'
-import { mockData } from '@/mockdata/mockData'
+import { useProjectStore } from '@/stores/projectStore'
 
 export const useFilterStore = defineStore('filter', {
   state: () => ({
@@ -10,8 +10,6 @@ export const useFilterStore = defineStore('filter', {
       title: [],
       department: [],
       employment: [],
-      activeFilters: [],
-      filteredResults: [],
     },
   }),
 
@@ -25,11 +23,13 @@ export const useFilterStore = defineStore('filter', {
       }, [])
     },
 
-    //For filtered output results
-    //some(): Returns true if ANY of the selected skills match (OR condition)
-    //every(): Returns true if ALL of the selected skills match (AND condition)
     filteredResults: (state) => {
-      return mockData.filter((item) => {
+      const projectStore = useProjectStore()
+      const teamMembers = projectStore.currentProject
+        ? projectStore.getCurrentProjectTeam
+        : []
+
+      return teamMembers.filter((item) => {
         return Object.entries(state.filters).every(
           ([category, selectedFilters]) => {
             if (!selectedFilters.length) return true
@@ -61,11 +61,6 @@ export const useFilterStore = defineStore('filter', {
   },
 
   actions: {
-    removeResult(itemId) {
-      this.filteredResults = this.filteredResults.filter(
-        (result) => result.id !== itemId
-      )
-    },
     addFilter(category, item) {
       if (!this.filters[category].includes(item)) {
         this.filters[category].push(item)
@@ -74,7 +69,7 @@ export const useFilterStore = defineStore('filter', {
 
     removeFilter(category, item) {
       const index = this.filters[category].findIndex(
-        (filter) => filter === item
+        (filter) => filter.toString() === item.toString()
       )
       if (index !== -1) {
         this.filters[category].splice(index, 1)
@@ -90,18 +85,35 @@ export const useFilterStore = defineStore('filter', {
         })
       }
     },
+
+    // Optional: Add removeResult from old code
+    removeResult(itemId) {
+      this.filteredResults = this.filteredResults.filter(
+        (result) => result.id !== itemId
+      )
+    },
   },
 })
 
-// Helper functions (outside of store)
+// Helper functions
 function extractSalaryValue(salary) {
   return parseInt(salary.replace(/[^\d]/g, ''))
 }
 
 function isSalaryInRange(salary, range) {
   const salaryValue = extractSalaryValue(salary)
-  const [minStr, maxStr] = range.split('-')
-  const min = parseInt(minStr.replace(/[^\d]/g, ''))
-  const max = parseInt(maxStr.replace(/[^\d]/g, ''))
-  return salaryValue >= min && salaryValue <= max
+
+  if (range.includes('-')) {
+    const [minStr, maxStr] = range.split('-')
+    const min = parseInt(minStr.replace(/[^\d]/g, ''))
+    const max = parseInt(maxStr.replace(/[^\d]/g, ''))
+    return salaryValue >= min && salaryValue <= max
+  } else if (range.includes('+')) {
+    const min = parseInt(range.replace(/[^\d]/g, ''))
+    return salaryValue >= min
+  } else if (range.startsWith('Up to')) {
+    const max = parseInt(range.replace(/[^\d]/g, ''))
+    return salaryValue <= max
+  }
+  return false
 }

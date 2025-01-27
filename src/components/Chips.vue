@@ -34,6 +34,7 @@
 import { defineProps, defineEmits } from 'vue'
 import { getColorForCategory } from '@/utils/colorMappingChips.js'
 
+// Props
 const props = defineProps({
   chips: {
     type: Array,
@@ -54,12 +55,19 @@ const props = defineProps({
   },
 })
 
+// Emits
 const emit = defineEmits(['remove-chip'])
 
+// Get chip color based on category or fallback to default
 const getChipColor = (chip) => {
   if (props.useColorMapping && chip.category) {
     return getColorForCategory(chip.category)
   }
   return chip.color || 'primary'
+}
+
+// Remove chip and emit event
+const removeChip = (chip) => {
+  emit('remove-chip', chip)
 }
 </script>
