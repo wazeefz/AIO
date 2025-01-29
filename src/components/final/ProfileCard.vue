@@ -2,13 +2,13 @@
   <div class="profile-card-container">
     <!-- Remove Button with confirmation dialog -->
     <v-btn
-      v-if="isEditing && !selectable"
-      icon="mdi-close"
-      variant="text"
-      size="small"
-      class="cancel-button"
+      v-if="isEditing"
+      icon
+      color="error"
+      class="remove-button"
       @click.stop="confirmRemove"
     >
+      <v-icon>mdi-close</v-icon>
     </v-btn>
 
     <!-- Confirmation Dialog -->
@@ -171,18 +171,6 @@ const confirmAndRemove = () => {
   position: relative;
 }
 
-.selection-checkbox {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 2;
-}
-
-.profile-card.selected {
-  opacity: 0.7;
-  transform: scale(0.98);
-}
-
 .remove-button {
   position: absolute;
   top: -12px;
@@ -201,13 +189,6 @@ const confirmAndRemove = () => {
   position: relative;
   overflow: hidden;
   --ring-color: rgba(255, 255, 255, 0.05);
-}
-
-.cancel-button {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 1;
 }
 
 /* First ring */

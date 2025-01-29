@@ -1,6 +1,6 @@
 <template>
   <div>
-    <!-- Project Selection (New Code) -->
+    <!-- Component 1: Project Selection (New Code) -->
     <v-card class="mb-4">
       <v-card-title>
         <h2>Project Management</h2>
@@ -31,7 +31,7 @@
 
         <!-- Results Display -->
         <div class="mt-6">
-          <!-- Action Buttons Card -->
+          <!-- Componet 2: Action Buttons Card -->
           <div class="d-flex justify-end mb-4">
             <v-card
               class="action-buttons-card d-inline-flex align-center"

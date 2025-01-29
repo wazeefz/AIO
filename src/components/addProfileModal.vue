@@ -9,52 +9,73 @@
       </v-card-title>
 
       <v-card-text>
-        <FilterInterface @filter-applied="handleFiltersApplied" />
+        <!-- Filter Button -->
+        <div class="d-flex justify-end mb-4">
+          <v-card
+            class="action-buttons-card d-inline-flex align-center"
+            rounded="pill"
+            color="#EAE3D6"
+            elevation="0"
+          >
+            <v-btn icon @click="showFilterDialog = true">
+              <v-icon color="#292D32">mdi-tune-vertical</v-icon>
+            </v-btn>
+          </v-card>
+        </div>
+
+        <!-- Filter Dialog -->
+        <v-dialog v-model="showFilterDialog" max-width="800px" persistent>
+          <v-card>
+            <FilterInterface
+              @filter-applied="handleFiltersApplied"
+              @close-filter-dialog="closeFilterDialog"
+            />
+          </v-card>
+        </v-dialog>
 
         <div class="mt-4">
           <h3 class="text-h6 mb-3">Available Employees</h3>
-          <v-row>
+          <v-row class="gap-4">
             <v-col
               v-for="employee in availableEmployees"
               :key="employee.id"
               cols="12"
               sm="6"
             >
-              <v-card @click="showDetail(employee)" class="cursor-pointer">
-                <v-card-text>
-                  <v-card-title>{{ employee.name }}</v-card-title>
-                  <v-card-subtitle>{{ employee.title }}</v-card-subtitle>
-                </v-card-text>
-              </v-card>
+              <ProfileCard
+                :result="employee"
+                :selectable="true"
+                @click="showDetail(employee)"
+              />
             </v-col>
           </v-row>
         </div>
 
-        <!-- Detailed Profile Card -->
-        <v-dialog v-model="showDetailModal" max-width="600px">
+        <!-- Detailed Profile Card Modal -->
+        <v-dialog v-model="showDetailModal" max-width="600px" persistent>
           <v-card>
             <v-card-title
               class="headline d-flex justify-space-between align-center"
             >
-              <span>{{ selectedEmployee.name }}</span>
+              <span>{{ selectedEmployee?.name }}</span>
               <v-btn icon @click="closeDetailModal">
                 <v-icon>mdi-close</v-icon>
               </v-btn>
             </v-card-title>
 
             <v-card-text>
-              <p><strong>Title:</strong> {{ selectedEmployee.title }}</p>
+              <p><strong>Title:</strong> {{ selectedEmployee?.title }}</p>
               <p>
-                <strong>Department:</strong> {{ selectedEmployee.department }}
+                <strong>Department:</strong> {{ selectedEmployee?.department }}
               </p>
-              <p><strong>Salary:</strong> {{ selectedEmployee.salary }}</p>
+              <p><strong>Salary:</strong> {{ selectedEmployee?.salary }}</p>
               <p>
                 <strong>Employment Type:</strong>
-                {{ selectedEmployee.employment }}
+                {{ selectedEmployee?.employment }}
               </p>
               <p><strong>Skills:</strong></p>
               <v-chip
-                v-for="skill in selectedEmployee.skills"
+                v-for="skill in selectedEmployee?.skills"
                 :key="skill"
                 class="mr-2 mb-2"
               >
@@ -79,6 +100,7 @@ import { ref, computed, watch } from 'vue'
 import { useFilterStore } from '@/stores/filterStore'
 import { useProjectStore } from '@/stores/projectStore'
 import FilterInterface from '@/components/FilterInterface.vue'
+import ProfileCard from '@/components/profileCard.vue'
 
 const props = defineProps({
   showModal: {
@@ -103,7 +125,9 @@ const localShowModal = ref(props.showModal)
 const selectedProfiles = ref([])
 const showDetailModal = ref(false)
 const selectedEmployee = ref(null)
+const showFilterDialog = ref(false)
 
+// Get available employees (unchanged)
 const availableEmployees = computed(() => {
   const available = projectStore.getAvailableEmployees(props.currentProject.id)
 
@@ -167,6 +191,10 @@ const handleFiltersApplied = () => {
   emit('filter-chips-updated', filterStore.activeFilters)
 }
 
+const closeFilterDialog = () => {
+  showFilterDialog.value = false
+}
+
 watch(
   () => props.showModal,
   (newVal) => {
@@ -210,7 +238,15 @@ const isSalaryInRange = (salary, range) => {
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-.cursor-pointer {
-  cursor: pointer;
+.action-buttons-card {
+  padding: 4px 8px;
+}
+
+:deep(.v-btn--icon) {
+  background: transparent;
+}
+
+:deep(.v-btn:hover) {
+  opacity: 0.8;
 }
 </style>
