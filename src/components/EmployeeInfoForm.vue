@@ -508,7 +508,7 @@ const goBack = () => {
   ) {
     localStorage.removeItem('cvData')
     localStorage.removeItem('cvPreviewUrl')
-    window.location.href = '/uploadCV'
+    window.location.href = '/upload-cv'
   }
 }
 
