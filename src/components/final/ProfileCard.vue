@@ -34,12 +34,15 @@
       rounded="lg"
     >
       <v-card-text class="pa-6">
-        <!-- Card Header Slot -->
+        <!-- Card Header -->
         <slot name="card-header" :result="result">
           <v-card-title class="text-h5 font-weight-medium pa-0 text-white mb-1">
-            {{ result.title }}
+            {{ result.name }}
           </v-card-title>
-          <v-card-subtitle class="pa-0 text-white mb-4">
+          <v-card-subtitle class="pa-0 text-white mb-2">
+            {{ result.title }}
+          </v-card-subtitle>
+          <v-card-subtitle class="pa-0 text-white mb-2">
             {{ result.department }}
           </v-card-subtitle>
           <v-card-subtitle class="pa-0 text-white mb-4">

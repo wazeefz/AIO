@@ -34,12 +34,15 @@
       rounded="lg"
     >
       <v-card-text class="pa-6">
-        <!-- Card Header Slot -->
+        <!-- Card Header -->
         <slot name="card-header" :result="result">
           <v-card-title class="text-h5 font-weight-medium pa-0 text-white mb-1">
-            {{ result.title }}
+            {{ result.name }}
           </v-card-title>
-          <v-card-subtitle class="pa-0 text-white mb-4">
+          <v-card-subtitle class="pa-0 text-white mb-2">
+            {{ result.title }}
+          </v-card-subtitle>
+          <v-card-subtitle class="pa-0 text-white mb-2">
             {{ result.department }}
           </v-card-subtitle>
           <v-card-subtitle class="pa-0 text-white mb-4">
@@ -75,7 +78,7 @@
         <slot name="modal-header" :result="result" :close="closeModal">
           <div class="d-flex align-center justify-space-between pa-4">
             <v-card-title class="text-h5 pa-0">
-              {{ result.title }}
+              {{ result.name }}
             </v-card-title>
             <v-btn
               icon="mdi-close"
@@ -88,18 +91,20 @@
 
         <v-card-text>
           <slot name="modal-content" :result="result" :skills="skillChips">
-            <!-- Default modal content -->
             <div class="mt-4">
+              <h3 class="text-h6 mt-4">Title</h3>
+              <p>{{ result.title }}</p>
+
               <h3 class="text-h6 mt-4">Department</h3>
               <p>{{ result.department }}</p>
-
-              <h3 class="text-h6 mt-4">Salary</h3>
-              <p>{{ result.salary }}</p>
 
               <h3 class="text-h6 mt-4">Employment Type</h3>
               <p>{{ result.employment }}</p>
 
-              <h3 class="text-h6 mt-4">Required Skills</h3>
+              <h3 class="text-h6 mt-4">Salary</h3>
+              <p>{{ result.salary }}</p>
+
+              <h3 class="text-h6 mt-4">Skills</h3>
               <base-chips :chips="skillChips" :use-color-mapping="true" />
             </div>
           </slot>
