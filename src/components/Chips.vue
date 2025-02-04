@@ -1,3 +1,6 @@
+<!--
+If want to add the same thing as profile card FOR MORE DETAIL MODAL to limit the skills is here
+-->
 <template>
   <div>
     <template v-for="(chip, index) in chips" :key="chip.label + chip.category">

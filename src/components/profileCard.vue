@@ -55,16 +55,33 @@
 
         <!-- Skills Slot -->
         <slot name="skills" :skills="skillChips">
-          <div class="d-flex flex-wrap gap-2">
-            <v-chip
-              v-for="skill in skillChips"
+          <div
+            ref="skillsContainer"
+            class="d-flex flex-wrap gap-2 skills-container"
+          >
+            <template
+              v-for="(skill, index) in visibleSkills"
               :key="skill.label"
+            >
+              <v-chip
+                ref="skillChips"
+                variant="elevated"
+                class="mr-2 mb-2 skill-chip"
+                color="#2d2d2d"
+                text-color="white"
+              >
+                {{ skill.label }}
+              </v-chip>
+            </template>
+            <v-chip
+              v-if="hiddenSkillsCount > 0"
+              ref="overflowChip"
               variant="elevated"
-              class="mr-2 mb-2"
+              class="mr-2 mb-2 overflow-chip"
               color="#2d2d2d"
               text-color="white"
             >
-              {{ skill.label }}
+              +{{ hiddenSkillsCount }}
             </v-chip>
           </div>
         </slot>
@@ -126,7 +143,7 @@
 
 <script setup>
 import BaseChips from '@/components/Chips.vue'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 
 const props = defineProps({
   result: {
@@ -137,18 +154,106 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  selectable: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['modal-opened', 'modal-closed', 'remove-item'])
+const emit = defineEmits(['modal-opened', 'modal-closed', 'remove-profile'])
 const showModal = ref(false)
 const showConfirmDialog = ref(false)
+const visibleCount = ref(props.result.skills.length)
+const skillsContainer = ref(null)
+const skillChips = ref([])
+const resizeObserver = ref(null)
 
-const skillChips = computed(() => {
+const skillChipsData = computed(() => {
   return props.result.skills.map((skill) => ({
     label: skill,
     category: 'skills',
   }))
 })
+
+const visibleSkills = computed(() => {
+  return skillChipsData.value.slice(0, visibleCount.value)
+})
+
+const hiddenSkillsCount = computed(() => {
+  return Math.max(0, skillChipsData.value.length - visibleCount.value)
+})
+
+const calculateVisibleChips = async () => {
+  if (!skillsContainer.value) return
+
+  const containerWidth = skillsContainer.value.offsetWidth
+  const containerHeight = skillsContainer.value.offsetHeight
+  const chipMargin = 8 // margin-right + margin-bottom
+  const chipGap = 8 // gap between chips
+
+  // Reset to show all chips initially
+  visibleCount.value = skillChipsData.value.length
+  await nextTick()
+
+  // Get all chip elements including the overflow chip
+  const chipElements = skillsContainer.value.querySelectorAll(
+    '.skill-chip, .overflow-chip'
+  )
+  let currentRowWidth = 0
+  let currentRow = 1
+  let maxRows = 2 // Maximum number of rows allowed
+  let lastVisibleIndex = skillChipsData.value.length
+
+  for (let i = 0; i < chipElements.length; i++) {
+    const chip = chipElements[i]
+    const chipWidth = chip.offsetWidth + chipMargin + chipGap
+
+    if (currentRowWidth + chipWidth > containerWidth) {
+      currentRow++
+      currentRowWidth = chipWidth
+    } else {
+      currentRowWidth += chipWidth
+    }
+
+    if (currentRow > maxRows) {
+      lastVisibleIndex = i - 1
+      break
+    }
+  }
+
+  // Adjust visible count to ensure overflow chip fits
+  if (lastVisibleIndex < skillChipsData.value.length) {
+    // Reserve space for overflow chip
+    visibleCount.value = Math.max(1, lastVisibleIndex)
+  }
+}
+
+// Initialize resize observer
+onMounted(() => {
+  if (skillsContainer.value) {
+    resizeObserver.value = new ResizeObserver(() => {
+      calculateVisibleChips()
+    })
+    resizeObserver.value.observe(skillsContainer.value)
+  }
+  calculateVisibleChips()
+})
+
+// Cleanup
+onBeforeUnmount(() => {
+  if (resizeObserver.value) {
+    resizeObserver.value.disconnect()
+  }
+})
+
+// Watch for changes in skills data
+watch(
+  () => props.result.skills,
+  () => {
+    calculateVisibleChips()
+  },
+  { deep: true }
+)
 
 const openModal = () => {
   showModal.value = true
@@ -167,7 +272,7 @@ const confirmRemove = (event) => {
 
 const confirmAndRemove = () => {
   showConfirmDialog.value = false
-  emit('remove-profile', props.result.id) // Emit the memberId to remove
+  emit('remove-profile', props.result.id)
 }
 </script>
 
@@ -213,6 +318,13 @@ const confirmAndRemove = () => {
   top: 8px;
   right: 8px;
   z-index: 1;
+}
+
+.skills-container {
+  max-width: 100%;
+  min-height: 32px;
+  position: relative;
+  overflow: hidden;
 }
 
 /* First ring */
@@ -274,5 +386,16 @@ const confirmAndRemove = () => {
 
 .gap-2 {
   gap: 0.5rem;
+}
+
+.skill-chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.overflow-chip {
+  min-width: 45px;
+  text-align: center;
 }
 </style>
