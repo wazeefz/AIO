@@ -4,8 +4,8 @@
     <v-row>
       <v-col cols="3">
         <StatCard
-          title="Total Revenue"
-          value="$53,009"
+          title="Revenue"
+          :value="formatCurrency(projectStore.totalRevenue)"
           subtitle="12% increase"
           icon="mdi-currency-usd"
         />
@@ -13,15 +13,15 @@
       <v-col cols="3">
         <StatCard
           title="Projects"
-          value="95/100"
-          subtitle="10% decrease"
+          :value="`${projectStore.completedProjects}/${projectStore.projectCount}`"
+          subtitle="Completion rate"
           icon="mdi-briefcase"
         />
       </v-col>
       <v-col cols="3">
         <StatCard
           title="Time Spent"
-          value="1022 Hrs"
+          :value="`${projectStore.totalHoursSpent} Hrs`"
           subtitle="8% increase"
           icon="mdi-clock"
         />
@@ -29,8 +29,8 @@
       <v-col cols="3">
         <StatCard
           title="Resources"
-          value="101/120"
-          subtitle="2% increase"
+          :value="`${projectStore.resourceCount}/120`"
+          subtitle="Utilization"
           icon="mdi-account-group"
         />
       </v-col>
@@ -43,7 +43,7 @@
           <v-card-title>Recent Projects</v-card-title>
           <v-data-table
             :headers="projectHeaders"
-            :items="projects"
+            :items="projectStore.projects"
             class="elevation-1"
           >
             <template v-slot:[`item.progress`]="{ item }">
@@ -54,9 +54,9 @@
               ></v-progress-linear>
             </template>
             <template v-slot:[`item.status`]="{ item }">
-              <v-chip :color="statusColors[item.status]" dark>{{
-                item.status
-              }}</v-chip>
+              <v-chip :color="statusColors[item.status]" dark>
+                {{ item.status }}
+              </v-chip>
             </template>
           </v-data-table>
         </v-card>
@@ -64,7 +64,7 @@
       <!-- All Projects Pie Chart -->
       <v-col cols="4">
         <v-card>
-          <v-card-title>All Projects</v-card-title>
+          <v-card-title>Project Status Distribution</v-card-title>
           <PieChart
             :dimension="projectStatusDimension"
             :group="projectStatusGroup"
@@ -88,7 +88,7 @@
         </v-card>
       </v-col>
       <!-- Revenue Chart -->
-      <v-col>
+      <v-col cols="6">
         <v-card>
           <v-card-title>Revenue This Year</v-card-title>
           <BarChart
@@ -104,14 +104,17 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted } from 'vue'
+import { useProjectStore } from '@/stores/project'
 import StatCard from '@/components/StatCard.vue'
 import BarChart from '@/components/BarChart.vue'
 import PieChart from '@/components/PieChart.vue'
 import * as dc from 'dc'
 import crossfilter from 'crossfilter2'
 
-// Recent Projects Table Data
+const projectStore = useProjectStore()
+
+// Table headers
 const projectHeaders = [
   { text: 'Project', value: 'name' },
   { text: 'Progress', value: 'progress' },
@@ -119,82 +122,34 @@ const projectHeaders = [
   { text: 'Status', value: 'status' },
 ]
 
-const projects = [
-  {
-    name: 'Website Redesign',
-    progress: 80,
-    dueDate: '2023-08-23',
-    status: 'In Progress',
-  },
-  {
-    name: 'Internal CMS Tools',
-    progress: 100,
-    dueDate: '2023-06-22',
-    status: 'Finished',
-  },
-  {
-    name: 'E-Commerce App Phase 01',
-    progress: 20,
-    dueDate: '2023-06-01',
-    status: 'Unfinished',
-  },
-  {
-    name: 'Netflix UX Evaluation',
-    progress: 20,
-    dueDate: '2023-06-01',
-    status: 'In Progress',
-  },
-]
-
 const statusColors = {
   'In Progress': 'blue',
-  Finished: 'green',
-  Unfinished: 'red',
+  'Finished': 'green',
+  'Unfinished': 'red',
 }
 
-// Crossfilter for Charts
-const revenueData = [
-  { month: 'Jan', revenue: 200 },
-  { month: 'Feb', revenue: 300 },
-  { month: 'Mar', revenue: 400 },
-  { month: 'Apr', revenue: 500 },
-  { month: 'May', revenue: 600 },
-  { month: 'Jun', revenue: 700 },
-  { month: 'Jul', revenue: 800 },
-  { month: 'Aug', revenue: 700 },
-  { month: 'Sep', revenue: 600 },
-  { month: 'Oct', revenue: 700 },
-  { month: 'Nov', revenue: 800 },
-  { month: 'Dec', revenue: 900 },
-]
+// Crossfilter setup
+const ndxRevenue = crossfilter(projectStore.monthlyRevenue)
+const ndxProjects = crossfilter(projectStore.projects)
+const ndxTargets = crossfilter(projectStore.departmentTargets)
 
-const projectData = [
-  { status: 'In Progress', count: 40 },
-  { status: 'Finished', count: 50 },
-  { status: 'Unfinished', count: 10 },
-]
+const monthDimension = ndxRevenue.dimension(d => d.month)
+const revenueGroup = monthDimension.group().reduceSum(d => d.revenue)
 
-const targetData = [
-  { department: 'Marketing', target: 80 },
-  { department: 'Development', target: 70 },
-  { department: 'Design', target: 90 },
-  { department: 'Sales', target: 100 },
-]
+const projectStatusDimension = ndxProjects.dimension(d => d.status)
+const projectStatusGroup = projectStatusDimension.group()
 
-const ndx = crossfilter(revenueData)
-const ndxProjects = crossfilter(projectData)
-const ndxTargets = crossfilter(targetData)
+const targetDimension = ndxTargets.dimension(d => d.department)
+const targetGroup = targetDimension.group().reduceSum(d => d.target)
 
-const monthDimension = ndx.dimension((d) => d.month)
-const revenueGroup = monthDimension.group().reduceSum((d) => d.revenue)
-
-const projectStatusDimension = ndxProjects.dimension((d) => d.status)
-const projectStatusGroup = projectStatusDimension
-  .group()
-  .reduceSum((d) => d.count)
-
-const targetDimension = ndxTargets.dimension((d) => d.department)
-const targetGroup = targetDimension.group().reduceSum((d) => d.target)
+// Utility functions
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0
+  }).format(value)
+}
 </script>
 
 <style scoped>
