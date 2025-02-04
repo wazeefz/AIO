@@ -1,3 +1,8 @@
 <template>
-  <div>Upload CV page</div>
+  <EmployeeResumeUpload />
 </template>
+
+<script setup>
+import EmployeeResumeUpload from '@/components/EmployeeResumeUpload.vue'
+</script>
+i
