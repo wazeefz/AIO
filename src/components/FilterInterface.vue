@@ -104,8 +104,7 @@
 
     <v-card-actions>
       <v-spacer></v-spacer>
-
-      <v-btn color="error" @click="clearAllFilters"> Clear All Filters </v-btn>
+      <v-btn color="error" @click="clearFilters">Clear All Filters</v-btn>
     </v-card-actions>
   </v-card>
 </template>
@@ -188,8 +187,19 @@ const handleDepartmentChange = () => {
   }
 }
 
-const clearAllFilters = () => {
-  filterStore.clearTeamFilters()
+// Updated clearFilters function
+const clearFilters = () => {
+  // Clear store filters based on context
+  filterStore.clearFilters(props.isModal ? 'modal' : 'team')
+
+  // Reset local state
+  selectedSkills.value = []
+  salaryMin.value = ''
+  salaryMax.value = ''
+  salaryError.value = ''
+  title.value = ''
+  selectedDepartments.value = []
+  selectedEmployment.value = []
 }
 
 const handleSalaryChange = () => {
