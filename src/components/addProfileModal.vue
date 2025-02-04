@@ -35,6 +35,19 @@
         </v-dialog>
 
         <div class="mt-4">
+          <v-row>
+            <!-- Results -->
+            <v-col cols="12" md="8">
+              <h2>Active Filters</h2>
+              <!-- Chips component -->
+              <base-chips
+                :chips="filterChips"
+                :closable="true"
+                :use-color-mapping="true"
+                @remove-chip="handleFilterRemoval"
+              />
+            </v-col>
+          </v-row>
           <h3 class="text-h6 mb-3">
             Available Employees ({{ availableEmployees.length }})
           </h3>
@@ -104,6 +117,7 @@ import { useFilterStore } from '@/stores/filterStore'
 import { useProjectStore } from '@/stores/projectStore'
 import FilterInterface from '@/components/FilterInterface.vue'
 import ProfileCard from '@/components/profileCard.vue'
+import BaseChips from '@/components/Chips.vue'
 
 const props = defineProps({
   showModal: {
@@ -168,6 +182,23 @@ const confirmAddProfile = () => {
 
 const handleFiltersApplied = () => {
   emit('filter-chips-updated', filterStore.activeModalFilters)
+}
+
+const filterChips = computed(() => {
+  try {
+    return filterStore.activeModalFilters.map((filter) => ({
+      label: filter.value,
+      category: filter.category,
+      value: filter.value,
+    }))
+  } catch (e) {
+    console.error('Error computing filter chips:', e)
+    return []
+  }
+})
+
+const handleFilterRemoval = (chip) => {
+  filterStore.removeModalFilter(chip.category, chip.value)
 }
 
 const closeFilterDialog = () => {
