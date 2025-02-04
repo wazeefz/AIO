@@ -61,7 +61,7 @@ function generateCharts() {
     .section((d) => d.department)
     .size(Infinity)
     .columns([
-      'name',
+      'first',
       {
         label: 'Gender',
         format: (d) => d.gender,
@@ -87,7 +87,7 @@ function generateCharts() {
         format: (d) => `$${d.wage.toLocaleString()}`,
       },
     ])
-    .sortBy((d) => d.name)
+    .sortBy((d) => d.first)
     .order(d3.ascending)
 
   countChart.value.render()
