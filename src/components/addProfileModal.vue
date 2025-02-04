@@ -12,7 +12,7 @@
         <!-- Filter Button -->
         <div class="d-flex justify-end mb-4">
           <v-card
-            class="action-buttons-card d-inline-flex align-center"
+            class="d-inline-flex align-center"
             rounded="pill"
             color="#EAE3D6"
             elevation="0"

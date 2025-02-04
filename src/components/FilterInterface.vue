@@ -101,6 +101,12 @@
         clearable
       />
     </div>
+
+    <v-card-actions>
+      <v-spacer></v-spacer>
+
+      <v-btn color="error" @click="clearAllFilters"> Clear All Filters </v-btn>
+    </v-card-actions>
   </v-card>
 </template>
 
@@ -180,6 +186,10 @@ const handleDepartmentChange = () => {
   } catch (error) {
     console.error('Error handling department change:', error)
   }
+}
+
+const clearAllFilters = () => {
+  filterStore.clearTeamFilters()
 }
 
 const handleSalaryChange = () => {

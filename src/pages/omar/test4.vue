@@ -125,15 +125,6 @@
                   />
                 </v-container>
               </v-card-text>
-              <v-card-actions>
-                <v-spacer></v-spacer>
-                <v-btn color="primary" @click="handleFilterAndClose">
-                  Apply Filters
-                </v-btn>
-                <v-btn color="error" @click="clearAllFilters">
-                  Clear All Filters
-                </v-btn>
-              </v-card-actions>
             </v-card>
           </v-dialog>
 
@@ -227,20 +218,6 @@ const toggleEdit = () => {
 
 const toggleFilter = () => {
   showFilterDialog.value = true
-}
-
-const handleFilterAndClose = async () => {
-  try {
-    await filterJobs()
-    closeFilterDialog()
-  } catch (e) {
-    error.value = 'Error applying filters'
-    console.error(e)
-  }
-}
-
-const clearAllFilters = () => {
-  filterStore.clearTeamFilters()
 }
 
 const openAddProfileModal = () => {
