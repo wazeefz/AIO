@@ -35,22 +35,26 @@
         No projects available.
       </v-alert>
 
-      <v-row v-if="selectedProjectId">
-        <!-- Results -->
-        <v-col cols="12" md="8">
-          <h2>Active Filters</h2>
-          <!-- Chips component -->
-          <base-chips
-            :chips="filterChips"
-            :closable="true"
-            :use-color-mapping="true"
-            @remove-chip="handleFilterRemoval"
-          />
+      <div>
+        <v-row v-if="selectedProjectId">
+          <!-- Results -->
+          <v-col cols="12" md="12">
+            <div
+              class="d-flex flex-row justify-space-between align-center mb-12"
+            >
+              <div>
+                <h2>Active Filters</h2>
+                <!-- Chips component -->
+                <base-chips
+                  :chips="filterChips"
+                  :closable="true"
+                  :use-color-mapping="true"
+                  @remove-chip="handleFilterRemoval"
+                />
+              </div>
 
-          <!-- Results Display -->
-          <div class="mt-6">
-            <!-- Action Buttons Card -->
-            <div class="d-flex justify-end mb-4">
+              <!-- Results Display -->
+              <!-- Action Buttons Card -->
               <v-card
                 class="action-buttons-card d-inline-flex align-center"
                 rounded="pill"
@@ -93,8 +97,9 @@
             </div>
 
             <!-- Team Members Section -->
-            <h2>Team Members ({{ filterStore.filteredTeamMembers.length }})</h2>
-
+            <h2 class="mb-4">
+              Team Members ({{ filterStore.filteredTeamMembers.length }})
+            </h2>
             <!-- ProfileCard Component -->
             <v-row class="gap-4">
               <v-col
@@ -112,32 +117,32 @@
                 />
               </v-col>
             </v-row>
-          </div>
 
-          <!-- Filter Dialog -->
-          <v-dialog v-model="showFilterDialog" max-width="800px" persistent>
-            <v-card>
-              <v-card-text>
-                <v-container>
-                  <FilterInterface
-                    :is-modal="false"
-                    @close-filter-dialog="closeFilterDialog"
-                  />
-                </v-container>
-              </v-card-text>
-            </v-card>
-          </v-dialog>
+            <!-- Filter Dialog -->
+            <v-dialog v-model="showFilterDialog" max-width="800px" persistent>
+              <v-card>
+                <v-card-text>
+                  <v-container>
+                    <FilterInterface
+                      :is-modal="false"
+                      @close-filter-dialog="closeFilterDialog"
+                    />
+                  </v-container>
+                </v-card-text>
+              </v-card>
+            </v-dialog>
 
-          <!-- Add Profile Modal -->
-          <AddProfileModal
-            v-if="currentProject"
-            v-model:showModal="showAddProfileModal"
-            :current-project="currentProject"
-            @profiles-added="handleProfilesAdded"
-            @filter-chips-updated="updateFilterChipsAddProfile"
-          />
-        </v-col>
-      </v-row>
+            <!-- Add Profile Modal -->
+            <AddProfileModal
+              v-if="currentProject"
+              v-model:showModal="showAddProfileModal"
+              :current-project="currentProject"
+              @profiles-added="handleProfilesAdded"
+              @filter-chips-updated="updateFilterChipsAddProfile"
+            />
+          </v-col>
+        </v-row>
+      </div>
     </div>
   </div>
 </template>
@@ -315,5 +320,9 @@ const closeFilterDialog = () => {
 
 :deep(.v-btn--icon .v-icon) {
   z-index: 1;
+}
+
+.v-card-text {
+  padding: 0rem !important;
 }
 </style>
