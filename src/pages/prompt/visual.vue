@@ -55,7 +55,7 @@
         />
       </v-col>
       <v-col cols="6">
-        <DataTable :ndx="ndx" />
+        <DataTable table-type="people" :ndx="ndx" />
       </v-col>
     </v-row>
     <div class="reset-section">
