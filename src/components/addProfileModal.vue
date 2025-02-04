@@ -27,6 +27,7 @@
         <v-dialog v-model="showFilterDialog" max-width="800px" persistent>
           <v-card>
             <FilterInterface
+              :is-modal="true"
               @filter-applied="handleFiltersApplied"
               @close-filter-dialog="closeFilterDialog"
             />
@@ -34,7 +35,9 @@
         </v-dialog>
 
         <div class="mt-4">
-          <h3 class="text-h6 mb-3">Available Employees</h3>
+          <h3 class="text-h6 mb-3">
+            Available Employees ({{ availableEmployees.length }})
+          </h3>
           <v-row class="gap-4">
             <v-col
               v-for="employee in availableEmployees"
@@ -127,47 +130,23 @@ const showDetailModal = ref(false)
 const selectedEmployee = ref(null)
 const showFilterDialog = ref(false)
 
-// Get available employees (unchanged)
+// Get available employees with modal filters
 const availableEmployees = computed(() => {
-  const available = projectStore.getAvailableEmployees(props.currentProject.id)
-
-  if (Object.values(filterStore.filters).some((filter) => filter.length > 0)) {
-    return available.filter((employee) => {
-      return Object.entries(filterStore.filters).every(
-        ([category, selectedFilters]) => {
-          if (!selectedFilters.length) return true
-
-          switch (category) {
-            case 'skills':
-              return selectedFilters.every((skill) =>
-                employee.skills.includes(skill)
-              )
-            case 'salary':
-              return selectedFilters.some((range) =>
-                isSalaryInRange(employee.salary, range)
-              )
-            case 'title':
-              return selectedFilters.some((searchTerm) =>
-                employee.title.toLowerCase().includes(searchTerm.toLowerCase())
-              )
-            case 'department':
-              return selectedFilters.includes(employee.department)
-            case 'employment':
-              return selectedFilters.includes(employee.employment)
-            default:
-              return true
-          }
-        }
-      )
-    })
+  try {
+    const available = projectStore.getAvailableEmployees(
+      props.currentProject.id
+    )
+    return filterStore.filteredModalMembers
+  } catch (error) {
+    console.error('Error computing available employees:', error)
+    return []
   }
-
-  return available
 })
 
 const closeModal = () => {
   localShowModal.value = false
   selectedProfiles.value = []
+  filterStore.clearModalFilters() // Clear modal filters when closing
   emit('update:showModal', false)
 }
 
@@ -188,7 +167,7 @@ const confirmAddProfile = () => {
 }
 
 const handleFiltersApplied = () => {
-  emit('filter-chips-updated', filterStore.activeFilters)
+  emit('filter-chips-updated', filterStore.activeModalFilters)
 }
 
 const closeFilterDialog = () => {
@@ -201,6 +180,7 @@ watch(
     localShowModal.value = newVal
     if (!newVal) {
       selectedProfiles.value = []
+      filterStore.clearModalFilters() // Clear filters when modal is closed
     }
   }
 )
@@ -210,27 +190,10 @@ watch(
   (newVal) => {
     if (!newVal) {
       selectedProfiles.value = []
+      filterStore.clearModalFilters() // Clear filters when modal is closed
     }
   }
 )
-
-const isSalaryInRange = (salary, range) => {
-  const salaryValue = parseInt(salary.replace(/[^\d]/g, ''))
-
-  if (range.includes('-')) {
-    const [minStr, maxStr] = range.split('-')
-    const min = parseInt(minStr.replace(/[^\d]/g, ''))
-    const max = parseInt(maxStr.replace(/[^\d]/g, ''))
-    return salaryValue >= min && salaryValue <= max
-  } else if (range.includes('+')) {
-    const min = parseInt(range.replace(/[^\d]/g, ''))
-    return salaryValue >= min
-  } else if (range.startsWith('Up to')) {
-    const max = parseInt(range.replace(/[^\d]/g, ''))
-    return salaryValue <= max
-  }
-  return false
-}
 </script>
 
 <style scoped>

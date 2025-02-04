@@ -1,6 +1,6 @@
 <template>
   <v-card class="pa-4">
-    <!-- Close button at the top-right corner -->
+    <!-- Close button -->
     <div class="d-flex justify-end">
       <v-btn icon @click="closeFilterDialog">
         <v-icon>mdi-close</v-icon>
@@ -34,7 +34,8 @@
             type="number"
             variant="outlined"
             density="compact"
-            @update:modelValue="handleSalaryChange"
+            :error-messages="salaryError"
+            @input="handleSalaryChange"
           />
         </v-col>
         <v-col cols="6">
@@ -44,7 +45,8 @@
             type="number"
             variant="outlined"
             density="compact"
-            @update:modelValue="handleSalaryChange"
+            :error-messages="salaryError"
+            @input="handleSalaryChange"
           />
         </v-col>
       </v-row>
@@ -103,193 +105,226 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useFilterStore } from '@/stores/filterStore'
 import { mockData } from '@/mockdata/mockData'
+import { parseSalaryRange } from '@/utils/salary'
 
-const filterStore = useFilterStore()
+const props = defineProps({
+  isModal: {
+    type: Boolean,
+    default: false,
+  },
+})
+
 const emit = defineEmits(['close-filter-dialog'])
+const filterStore = useFilterStore()
 
 // Local state
 const selectedSkills = ref([])
 const salaryMin = ref('')
 const salaryMax = ref('')
-const salaryError = ref('') // For wrong salary input
+const salaryError = ref('')
 const title = ref('')
 const selectedDepartments = ref([])
 const selectedEmployment = ref([])
 
-// Validating salary input
-const validateSalary = () => {
-  // Clear previous error
-  salaryError.value = ''
-
-  // Convert to numbers for comparison
-  const min = Number(salaryMin.value)
-  const max = Number(salaryMax.value)
-
-  // Check if both values exist and max is less than min
-  if (min && max && max < min) {
-    salaryError.value = 'Max salary cannot be less than min salary'
-    return false
-  }
-
-  // Check for negative values
-  if (min < 0 || max < 0) {
-    salaryError.value = 'Salary cannot be negative'
-    return false
-  }
-
-  // Check for valid numbers
-  if ((min && isNaN(min)) || (max && isNaN(max))) {
-    salaryError.value = 'Please enter valid numbers'
-    return false
-  }
-
-  return true
-}
-
-// Get unique skills from mockData
+// Static data
 const availableSkills = [
   ...new Set(mockData.flatMap((item) => item.skills)),
 ].sort()
-
-// Handle Skills Change
-const handleSkillsChange = () => {
-  filterStore.clearFilters('skills')
-  if (selectedSkills.value.length > 0) {
-    selectedSkills.value.forEach((skill) => {
-      filterStore.addFilter('skills', skill)
-    })
-  }
-}
-
-// Get unique departments from mockData
 const availableDepartments = [
   ...new Set(mockData.map((item) => item.department)),
 ].sort()
-
-// Get unique employment types from mockData
 const availableEmploymentTypes = [
   ...new Set(mockData.map((item) => item.employment)),
 ].sort()
 
-// Handle Department Change
+// Helper function to get current filters
+const getCurrentFilters = () => {
+  return props.isModal ? filterStore.modalFilters : filterStore.teamFilters
+}
+
+// Event handlers
+const handleSkillsChange = () => {
+  try {
+    if (props.isModal) {
+      filterStore.clearModalFilters('skills')
+      selectedSkills.value?.forEach((skill) =>
+        filterStore.addModalFilter('skills', skill)
+      )
+    } else {
+      filterStore.clearTeamFilters('skills')
+      selectedSkills.value?.forEach((skill) =>
+        filterStore.addTeamFilter('skills', skill)
+      )
+    }
+  } catch (error) {
+    console.error('Error handling skills change:', error)
+  }
+}
+
 const handleDepartmentChange = () => {
-  filterStore.clearFilters('department')
-  if (selectedDepartments.value.length > 0) {
-    selectedDepartments.value.forEach((dept) => {
-      filterStore.addFilter('department', dept)
-    })
+  try {
+    if (props.isModal) {
+      filterStore.clearModalFilters('department')
+      selectedDepartments.value?.forEach((dept) =>
+        filterStore.addModalFilter('department', dept)
+      )
+    } else {
+      filterStore.clearTeamFilters('department')
+      selectedDepartments.value?.forEach((dept) =>
+        filterStore.addTeamFilter('department', dept)
+      )
+    }
+  } catch (error) {
+    console.error('Error handling department change:', error)
   }
 }
 
-// Handle Salary Change
 const handleSalaryChange = () => {
-  if (!salaryMin.value && !salaryMax.value) {
-    filterStore.clearFilters('salary')
-    return
-  }
+  try {
+    salaryError.value = ''
 
-  if (!validateSalary()) {
-    return
-  }
+    if (
+      salaryMin.value &&
+      salaryMax.value &&
+      parseInt(salaryMin.value) > parseInt(salaryMax.value)
+    ) {
+      salaryError.value = 'Min salary cannot be greater than max salary'
+      return
+    }
 
-  let range = ''
-  if (salaryMin.value && salaryMax.value) {
-    range = `RM${salaryMin.value}-RM${salaryMax.value}`
-  } else if (salaryMin.value) {
-    range = `RM${salaryMin.value}+`
-  } else if (salaryMax.value) {
-    range = `Up to RM${salaryMax.value}`
-  }
+    if (props.isModal) {
+      filterStore.clearModalFilters('salary')
+    } else {
+      filterStore.clearTeamFilters('salary')
+    }
 
-  filterStore.clearFilters('salary')
-  if (range) {
-    filterStore.addFilter('salary', range)
+    if (!salaryMin.value && !salaryMax.value) return
+
+    let range = ''
+    if (salaryMin.value && salaryMax.value) {
+      range = `RM${salaryMin.value}-RM${salaryMax.value}`
+    } else if (salaryMin.value) {
+      range = `RM${salaryMin.value}+`
+    } else if (salaryMax.value) {
+      range = `Up to RM${salaryMax.value}`
+    }
+
+    if (props.isModal) {
+      filterStore.addModalFilter('salary', range)
+    } else {
+      filterStore.addTeamFilter('salary', range)
+    }
+  } catch (error) {
+    console.error('Error handling salary change:', error)
   }
 }
 
-// Handle Title Change
 const handleTitleChange = () => {
-  filterStore.clearFilters('title')
-  if (title.value.trim()) {
-    filterStore.addFilter('title', title.value.trim())
+  try {
+    if (props.isModal) {
+      filterStore.clearModalFilters('title')
+      if (title.value?.trim()) {
+        filterStore.addModalFilter('title', title.value.trim())
+      }
+    } else {
+      filterStore.clearTeamFilters('title')
+      if (title.value?.trim()) {
+        filterStore.addTeamFilter('title', title.value.trim())
+      }
+    }
+  } catch (error) {
+    console.error('Error handling title change:', error)
   }
 }
 
-// Handle Employment Change
 const handleEmploymentChange = () => {
-  filterStore.clearFilters('employment')
-  if (selectedEmployment.value.length > 0) {
-    selectedEmployment.value.forEach((type) => {
-      filterStore.addFilter('employment', type)
-    })
+  try {
+    if (props.isModal) {
+      filterStore.clearModalFilters('employment')
+      selectedEmployment.value?.forEach((type) =>
+        filterStore.addModalFilter('employment', type)
+      )
+    } else {
+      filterStore.clearTeamFilters('employment')
+      selectedEmployment.value?.forEach((type) =>
+        filterStore.addTeamFilter('employment', type)
+      )
+    }
+  } catch (error) {
+    console.error('Error handling employment change:', error)
   }
 }
 
-// Watch store changes to update local state
-// Watch for all filters except salary
+// Watch for changes in store filters
 watch(
   () => ({
-    skills: filterStore.filters.skills,
-    title: filterStore.filters.title,
-    department: filterStore.filters.department,
-    employment: filterStore.filters.employment,
+    skills: getCurrentFilters().skills,
+    title: getCurrentFilters().title,
+    department: getCurrentFilters().department,
+    employment: getCurrentFilters().employment,
   }),
   (newFilters) => {
-    // Update skills selection
-    selectedSkills.value = newFilters.skills
-
-    // Update title
-    title.value = newFilters.title[0] || ''
-
-    // Update departments
-    selectedDepartments.value = newFilters.department
-
-    // Update employment
-    selectedEmployment.value = newFilters.employment
-  },
-  { deep: true }
-)
-
-// Separate watcher for salary
-watch(
-  () => filterStore.filters.salary,
-  (newSalary) => {
-    if (newSalary.length === 0) {
-      salaryMin.value = ''
-      salaryMax.value = ''
-      salaryError.value = ''
-    } else {
-      const salaryFilter = newSalary[0]
-      if (salaryFilter.includes('-')) {
-        const [min, max] = salaryFilter
-          .replace(/[^\d-]/g, '')
-          .split('-')
-          .map(Number)
-        salaryMin.value = min
-        salaryMax.value = max
-      } else if (salaryFilter.includes('+')) {
-        salaryMin.value = salaryFilter.replace(/[^\d]/g, '')
-        salaryMax.value = ''
-      } else {
-        salaryMax.value = salaryFilter.replace(/[^\d]/g, '')
-        salaryMin.value = ''
-      }
+    try {
+      selectedSkills.value = newFilters.skills || []
+      title.value = newFilters.title?.[0] || ''
+      selectedDepartments.value = newFilters.department || []
+      selectedEmployment.value = newFilters.employment || []
+    } catch (error) {
+      console.error('Error updating filter values:', error)
     }
   },
   { deep: true }
 )
 
-// Close filter dialog
+watch(
+  () => getCurrentFilters().salary,
+  (newSalary) => {
+    try {
+      if (!newSalary?.length) {
+        salaryMin.value = ''
+        salaryMax.value = ''
+        return
+      }
+
+      const { min, max } = parseSalaryRange(newSalary[0])
+      salaryMin.value = min !== 0 ? min.toString() : ''
+      salaryMax.value = max !== Infinity ? max.toString() : ''
+    } catch (error) {
+      console.error('Error updating salary values:', error)
+    }
+  },
+  { deep: true }
+)
+
+// Initialize filters
+onMounted(() => {
+  try {
+    const currentFilters = getCurrentFilters()
+    selectedSkills.value = currentFilters.skills || []
+    title.value = currentFilters.title?.[0] || ''
+    selectedDepartments.value = currentFilters.department || []
+    selectedEmployment.value = currentFilters.employment || []
+
+    if (currentFilters.salary?.length) {
+      const { min, max } = parseSalaryRange(currentFilters.salary[0])
+      salaryMin.value = min !== 0 ? min.toString() : ''
+      salaryMax.value = max !== Infinity ? max.toString() : ''
+    }
+  } catch (error) {
+    console.error('Error initializing filters:', error)
+  }
+})
+
 const closeFilterDialog = () => {
-  emit('close-filter-dialog') // Emit the event to the parent component
+  emit('close-filter-dialog')
 }
 </script>
 
 <style scoped>
 .v-card {
-  box-shadow: none; /* Remove elevation */
+  box-shadow: none;
 }
 </style>
