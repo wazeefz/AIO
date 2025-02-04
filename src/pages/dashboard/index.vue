@@ -12,7 +12,9 @@
           <DashboardOverview />
         </v-tabs-window-item>
 
-        <v-tabs-window-item value="team"> Team </v-tabs-window-item>
+        <v-tabs-window-item value="team">
+          <TeamMemberList />
+        </v-tabs-window-item>
 
         <v-tabs-window-item value="justification">
           <DashboardJustification />
@@ -26,6 +28,7 @@
 import { ref } from 'vue'
 import DashboardOverview from '@/components/DashboardOverview.vue'
 import DashboardJustification from '@/components/DashboardJustification.vue'
+import TeamMemberList from '@/components/TeamMemberList.vue'
 
 const tab = ref('one')
 </script>

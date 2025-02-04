@@ -150,11 +150,9 @@ import { useFilterStore } from '@/stores/filterStore'
 import { useProjectStore } from '@/stores/projectStore'
 import ProfileCard from '@/components/profileCard.vue'
 import AddProfileModal from '@/components/addProfileModal.vue'
-import { useJobFilter } from '@/plugins/useJobFilter'
 
 const filterStore = useFilterStore()
 const projectStore = useProjectStore()
-const { filterJobs } = useJobFilter()
 
 // Local state
 const isEditing = ref(false)
