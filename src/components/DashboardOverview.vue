@@ -3,49 +3,73 @@
     <v-row class="fill-height">
       <!-- Left Column -->
       <v-col cols="8" class="d-flex flex-column" style="height: 100vh">
-        <!-- Stats Row - Made more compact -->
+        <!-- Stats Row -->
         <v-row dense class="flex-grow-0">
           <v-col cols="3">
             <StatCard
               dense
               title="Revenue"
-              :value="formatCurrency(projectStore.totalRevenue)"
-              subtitle="12% increase"
+              subtitle="Total Revenue"
               icon="mdi-currency-usd"
+              iconColor="primary"
+              :ndx="ndx"
+              valueType="totalRevenue"
             />
           </v-col>
           <v-col cols="3">
             <StatCard
               dense
               title="Projects"
-              :value="`${projectStore.completedProjects}/${projectStore.projectCount}`"
-              subtitle="Completion rate"
+              subtitle="Completion Rate"
               icon="mdi-briefcase"
+              iconColor="success"
+              :ndx="ndx"
+              valueType="projectCount"
             />
           </v-col>
           <v-col cols="3">
             <StatCard
               dense
-              title="Time Spent"
-              :value="`${projectStore.totalHoursSpent} Hrs`"
-              subtitle="8% increase"
-              icon="mdi-clock"
+              title="Completed"
+              subtitle="Finished Projects"
+              icon="mdi-check-circle"
+              iconColor="info"
+              :ndx="ndx"
+              valueType="completedProjects"
             />
           </v-col>
           <v-col cols="3">
             <StatCard
               dense
               title="Resources"
-              :value="`${projectStore.resourceCount}/120`"
-              subtitle="Utilization"
+              subtitle="Total Resources"
               icon="mdi-account-group"
+              iconColor="warning"
+              :ndx="ndx"
+              valueType="resourceCount"
             />
           </v-col>
         </v-row>
 
-        <!-- Projects Table - Takes remaining space -->
+        <!-- Projects Table -->
         <v-row class="flex-grow-1">
-          <DataTable table-type="projects" />
+          <v-col cols="12">
+            <v-card class="fill-height">
+              <v-card-title class="text-subtitle-1">
+                Projects
+                <v-spacer></v-spacer>
+                <div id="dc-data-count" class="text-caption">
+                  <span class="filter-count"></span> selected out of
+                  <span class="total-count"></span> projects
+                </div>
+              </v-card-title>
+              <DataTable
+                table-type="projects"
+                :ndx="ndx"
+                :dimension="projectDimension"
+              />
+            </v-card>
+          </v-col>
         </v-row>
       </v-col>
 
@@ -53,124 +77,212 @@
       <v-col cols="4" class="d-flex flex-column" style="height: 100vh">
         <!-- Project Status Pie Chart -->
         <v-card class="mb-2 flex-grow-0" height="33%">
-          <v-card-title class="text-subtitle-1">Status Distribution</v-card-title>
+          <v-card-title class="text-subtitle-1"
+            >Status Distribution</v-card-title
+          >
           <PieChart
-            :dimension="projectStatusDimension"
-            :group="projectStatusGroup"
-            chartId="project-pie-chart"
+            :dimension="statusDimension"
+            :group="statusGroup"
+            chartId="status-pie-chart"
+            :colors="statusColors"
           />
         </v-card>
 
-        <!-- Target Achievement -->
+        <!-- Department Budget Chart -->
         <v-card class="mb-2 flex-grow-0" height="33%">
-          <v-card-title class="text-subtitle-1">Target Achievement</v-card-title>
+          <v-card-title class="text-subtitle-1"
+            >Budget by Department</v-card-title
+          >
           <BarChart
-            :dimension="targetDimension"
-            :group="targetGroup"
-            chartId="target-bar-chart"
+            :dimension="departmentDimension"
+            :group="departmentBudgetGroup"
+            chartId="department-budget-chart"
           />
         </v-card>
 
-        <!-- Revenue Chart -->
+        <!-- Monthly Revenue Chart -->
         <v-card class="flex-grow-0" height="33%">
-          <v-card-title class="text-subtitle-1">Revenue This Year</v-card-title>
+          <v-card-title class="text-subtitle-1">Monthly Revenue</v-card-title>
           <BarChart
             :dimension="monthDimension"
-            :group="revenueGroup"
-            chartId="revenue-bar-chart"
+            :group="monthlyRevenueGroup"
+            chartId="monthly-revenue-chart"
           />
         </v-card>
       </v-col>
     </v-row>
+
+    <!-- Reset Filters Button -->
+    <v-btn color="primary" class="reset-button" @click="resetAllFilters">
+      Reset Filters
+    </v-btn>
   </v-container>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import StatCard from '@/components/StatCard.vue'
 import BarChart from '@/components/BarChart.vue'
 import PieChart from '@/components/PieChart.vue'
+import DataTable from '@/components/DataTable.vue'
 import * as dc from 'dc'
+import * as d3 from 'd3'
 import crossfilter from 'crossfilter2'
 
 const projectStore = useProjectStore()
+const allDimensions = ref([])
+const dataCount = ref(null)
 
-// Table headers
-const projectHeaders = [
-  { text: 'Project', value: 'name' },
-  { text: 'Progress', value: 'progress' },
-  { text: 'Due Date', value: 'dueDate' },
-  { text: 'Status', value: 'status' },
+// Initialize crossfilter
+const ndx = crossfilter(projectStore.projects)
+const revenueNdx = crossfilter(projectStore.monthlyRevenue)
+
+// Create dimensions
+const projectDimension = ndx.dimension((d) => d.name)
+const statusDimension = ndx.dimension((d) => d.status)
+const departmentDimension = ndx.dimension((d) => d.department)
+const monthDimension = revenueNdx.dimension((d) => d.month)
+
+// Track all dimensions
+allDimensions.value = [
+  projectDimension,
+  statusDimension,
+  departmentDimension,
+  monthDimension,
 ]
 
+// Create groups
+const statusGroup = statusDimension.group()
+const departmentBudgetGroup = departmentDimension
+  .group()
+  .reduceSum((d) => d.budget)
+const monthlyRevenueGroup = monthDimension.group().reduceSum((d) => d.revenue)
+
+// Status colors
 const statusColors = {
-  'In Progress': 'blue',
-  'Finished': 'green',
-  'Unfinished': 'red',
-}
-
-// Crossfilter setup
-const ndxRevenue = crossfilter(projectStore.monthlyRevenue)
-const ndxProjects = crossfilter(projectStore.projects)
-const ndxTargets = crossfilter(projectStore.departmentTargets)
-
-const monthDimension = ndxRevenue.dimension(d => d.month)
-const revenueGroup = monthDimension.group().reduceSum(d => d.revenue)
-
-const projectStatusDimension = ndxProjects.dimension(d => d.status)
-const projectStatusGroup = projectStatusDimension.group()
-
-const targetDimension = ndxTargets.dimension(d => d.department)
-const targetGroup = targetDimension.group().reduceSum(d => d.target)
-
-// Utility functions
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0
-  }).format(value)
-}
-
-// Handle window resize for charts
-const handleResize = () => {
-  dc.renderAll()
+  Finished: '#4CAF50',
+  'In Progress': '#FFA726',
+  Unfinished: '#EF5350',
 }
 
 onMounted(() => {
+  // Initialize data count
+  dataCount.value = dc
+    .dataCount('#dc-data-count')
+    .dimension(ndx)
+    .group(ndx.groupAll())
+
+  // Create a dummy chart to handle resets properly
+  const dummyChart = {
+    render: () => {},
+    redraw: () => {},
+    filterAll: () => {},
+  }
+  dc.registerChart(dummyChart)
+
+  // Render all charts
+  dc.renderAll()
+
+  // Add resize listener
   window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+
+  // Clear filters before unmounting
+  allDimensions.value.forEach((dim) => {
+    if (dim && typeof dim.filterAll === 'function') {
+      dim.filterAll()
+    }
+  })
+
+  // Clear data
+  ndx.remove()
+  revenueNdx.remove()
 })
+
+const handleResize = () => {
+  dc.renderAll()
+}
+
+const resetAllFilters = () => {
+  // Reset all dimensions
+  allDimensions.value.forEach((dim) => {
+    if (dim && typeof dim.filterAll === 'function') {
+      dim.filterAll()
+    }
+  })
+
+  // Reset both crossfilters
+  ndx.remove()
+  revenueNdx.remove()
+
+  // Re-add the data
+  ndx.add(projectStore.projects)
+  revenueNdx.add(projectStore.monthlyRevenue)
+
+  // Redraw all charts
+  dc.redrawAll()
+}
 </script>
 
 <style scoped>
+.v-container {
+  padding: 16px;
+}
+
 .v-card {
   overflow: hidden;
 }
 
-.v-data-table ::v-deep .v-data-table__wrapper {
-  overflow-y: auto;
+.reset-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
 }
 
-/* Ensure cards don't grow beyond their container */
-.v-card {
-  max-height: 100%;
+/* Chart containers */
+:deep(.dc-chart) {
+  float: none;
+  padding: 16px;
 }
 
-/* Remove default margins and padding */
-.container {
-  padding: 8px !important;
+/* Data count styling */
+#dc-data-count {
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.6);
 }
 
-.row {
-  margin: 0 !important;
+/* Row spacing */
+.v-row {
+  margin-bottom: 16px;
 }
 
-.col {
-  padding: 4px !important;
+/* Card title styling */
+.v-card-title {
+  padding: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Dark theme support */
+:deep(.v-theme--dark) {
+  #dc-data-count {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .v-card-title {
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .v-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
 }
 </style>
