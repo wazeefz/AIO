@@ -188,7 +188,6 @@ const calculateVisibleChips = async () => {
   if (!skillsContainer.value) return
 
   const containerWidth = skillsContainer.value.offsetWidth
-  const containerHeight = skillsContainer.value.offsetHeight
   const chipMargin = 8 // margin-right + margin-bottom
   const chipGap = 8 // gap between chips
 

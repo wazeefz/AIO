@@ -103,6 +103,7 @@
     </div>
 
     <v-card-actions>
+      <v-btn color="primary" @click="applyFilters">Apply Filters</v-btn>
       <v-spacer></v-spacer>
       <v-btn color="error" @click="clearFilters">Clear All Filters</v-btn>
     </v-card-actions>
@@ -133,6 +134,14 @@ const salaryError = ref('')
 const title = ref('')
 const selectedDepartments = ref([])
 const selectedEmployment = ref([])
+// Local state for temporary filter values
+const tempFilters = ref({
+  skills: [],
+  salary: '',
+  department: [],
+  employment: [],
+  title: '',
+})
 
 // Static data
 const availableSkills = [
@@ -151,55 +160,13 @@ const getCurrentFilters = () => {
 }
 
 // Event handlers
+// Modified event handlers to update temporary state instead of store
 const handleSkillsChange = () => {
-  try {
-    if (props.isModal) {
-      filterStore.clearModalFilters('skills')
-      selectedSkills.value?.forEach((skill) =>
-        filterStore.addModalFilter('skills', skill)
-      )
-    } else {
-      filterStore.clearTeamFilters('skills')
-      selectedSkills.value?.forEach((skill) =>
-        filterStore.addTeamFilter('skills', skill)
-      )
-    }
-  } catch (error) {
-    console.error('Error handling skills change:', error)
-  }
+  tempFilters.value.skills = selectedSkills.value || []
 }
 
 const handleDepartmentChange = () => {
-  try {
-    if (props.isModal) {
-      filterStore.clearModalFilters('department')
-      selectedDepartments.value?.forEach((dept) =>
-        filterStore.addModalFilter('department', dept)
-      )
-    } else {
-      filterStore.clearTeamFilters('department')
-      selectedDepartments.value?.forEach((dept) =>
-        filterStore.addTeamFilter('department', dept)
-      )
-    }
-  } catch (error) {
-    console.error('Error handling department change:', error)
-  }
-}
-
-// Updated clearFilters function
-const clearFilters = () => {
-  // Clear store filters based on context
-  filterStore.clearFilters(props.isModal ? 'modal' : 'team')
-
-  // Reset local state
-  selectedSkills.value = []
-  salaryMin.value = ''
-  salaryMax.value = ''
-  salaryError.value = ''
-  title.value = ''
-  selectedDepartments.value = []
-  selectedEmployment.value = []
+  tempFilters.value.department = selectedDepartments.value || []
 }
 
 const handleSalaryChange = () => {
@@ -215,14 +182,6 @@ const handleSalaryChange = () => {
       return
     }
 
-    if (props.isModal) {
-      filterStore.clearModalFilters('salary')
-    } else {
-      filterStore.clearTeamFilters('salary')
-    }
-
-    if (!salaryMin.value && !salaryMax.value) return
-
     let range = ''
     if (salaryMin.value && salaryMax.value) {
       range = `RM${salaryMin.value}-RM${salaryMax.value}`
@@ -232,49 +191,101 @@ const handleSalaryChange = () => {
       range = `Up to RM${salaryMax.value}`
     }
 
-    if (props.isModal) {
-      filterStore.addModalFilter('salary', range)
-    } else {
-      filterStore.addTeamFilter('salary', range)
-    }
+    tempFilters.value.salary = range
   } catch (error) {
     console.error('Error handling salary change:', error)
   }
 }
 
 const handleTitleChange = () => {
-  try {
-    if (props.isModal) {
-      filterStore.clearModalFilters('title')
-      if (title.value?.trim()) {
-        filterStore.addModalFilter('title', title.value.trim())
-      }
-    } else {
-      filterStore.clearTeamFilters('title')
-      if (title.value?.trim()) {
-        filterStore.addTeamFilter('title', title.value.trim())
-      }
-    }
-  } catch (error) {
-    console.error('Error handling title change:', error)
-  }
+  tempFilters.value.title = title.value?.trim() || ''
 }
 
 const handleEmploymentChange = () => {
+  tempFilters.value.employment = selectedEmployment.value || []
+}
+
+// New function to apply all filters
+const applyFilters = () => {
   try {
     if (props.isModal) {
-      filterStore.clearModalFilters('employment')
-      selectedEmployment.value?.forEach((type) =>
-        filterStore.addModalFilter('employment', type)
-      )
+      filterStore.clearModalFilters('all')
+
+      // Apply all filters at once
+      if (tempFilters.value.skills.length) {
+        tempFilters.value.skills.forEach((skill) =>
+          filterStore.addModalFilter('skills', skill)
+        )
+      }
+      if (tempFilters.value.department.length) {
+        tempFilters.value.department.forEach((dept) =>
+          filterStore.addModalFilter('department', dept)
+        )
+      }
+      if (tempFilters.value.employment.length) {
+        tempFilters.value.employment.forEach((type) =>
+          filterStore.addModalFilter('employment', type)
+        )
+      }
+      if (tempFilters.value.salary) {
+        filterStore.addModalFilter('salary', tempFilters.value.salary)
+      }
+      if (tempFilters.value.title) {
+        filterStore.addModalFilter('title', tempFilters.value.title)
+      }
     } else {
-      filterStore.clearTeamFilters('employment')
-      selectedEmployment.value?.forEach((type) =>
-        filterStore.addTeamFilter('employment', type)
-      )
+      filterStore.clearTeamFilters('all')
+
+      // Apply all filters at once
+      if (tempFilters.value.skills.length) {
+        tempFilters.value.skills.forEach((skill) =>
+          filterStore.addTeamFilter('skills', skill)
+        )
+      }
+      if (tempFilters.value.department.length) {
+        tempFilters.value.department.forEach((dept) =>
+          filterStore.addTeamFilter('department', dept)
+        )
+      }
+      if (tempFilters.value.employment.length) {
+        tempFilters.value.employment.forEach((type) =>
+          filterStore.addTeamFilter('employment', type)
+        )
+      }
+      if (tempFilters.value.salary) {
+        filterStore.addTeamFilter('salary', tempFilters.value.salary)
+      }
+      if (tempFilters.value.title) {
+        filterStore.addTeamFilter('title', tempFilters.value.title)
+      }
     }
+    emit('close-filter-dialog')
   } catch (error) {
-    console.error('Error handling employment change:', error)
+    console.error('Error applying filters:', error)
+  }
+}
+
+// Modified clear filters function
+const clearFilters = () => {
+  // Clear store filters based on context
+  filterStore.clearFilters(props.isModal ? 'modal' : 'team')
+
+  // Reset local state
+  selectedSkills.value = []
+  salaryMin.value = ''
+  salaryMax.value = ''
+  salaryError.value = ''
+  title.value = ''
+  selectedDepartments.value = []
+  selectedEmployment.value = []
+
+  // Clear temporary filters
+  tempFilters.value = {
+    skills: [],
+    salary: '',
+    department: [],
+    employment: [],
+    title: '',
   }
 }
 
