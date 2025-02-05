@@ -26,13 +26,10 @@
     <!-- For People -->
     <template v-else>
       <div class="table-header">
-        <div class="section-title">
-          <v-icon color="primary" class="mr-2">mdi-account-group</v-icon>
-          <span>People by Department</span>
-        </div>
         <div class="data-count" id="mystats2">
+          <v-icon color="primary" class="mr-2">mdi-account-group</v-icon>
           <span class="filter-count"></span> selected out of
-          <span class="total-count"></span> records
+          <span class="total-count"></span> people
         </div>
         <v-text-field
           v-model="searchText"

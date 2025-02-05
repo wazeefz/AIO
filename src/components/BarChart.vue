@@ -1,6 +1,8 @@
 <template>
   <div class="bar-chart-container">
-    <div :id="chartId"></div>
+    <div class="scrollable-wrapper">
+      <div :id="chartId"></div>
+    </div>
   </div>
 </template>
 
@@ -58,9 +60,9 @@ function generateBarChart() {
   dc.registerChart(chart.value)
 
   chart.value
-    .width(width)
+    .width(width * 1.5) // Set the width to 1.5 times the container width for scrolling
     .height(height)
-    .margins({ top: 20, right: 20, bottom: 50, left: 60 })
+    .margins({ top: 0, right: 10, bottom: 50, left: 55 })
     .dimension(props.dimension)
     .group(props.group)
     .x(d3.scaleBand())
@@ -97,9 +99,9 @@ function generateBarChart() {
   align-items: center;
 }
 
-:deep(.dc-chart) {
+.scrollable-wrapper {
   width: 100%;
-  height: 100%;
+  overflow-x: auto; /* Enable horizontal scrolling */
 }
 
 :deep(.dc-chart .axis text) {

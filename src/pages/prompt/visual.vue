@@ -1,123 +1,85 @@
 <template>
   <v-container fluid class="fill-height pa-2">
     <v-row class="fill-height">
-      <!-- Main Content Column -->
-      <v-col class="d-flex flex-column" style="height: 100vh">
+      <!-- Left Column -->
+      <v-col cols="8" class="d-flex flex-column" style="height: 100vh">
         <!-- Stats Row -->
         <v-row dense class="flex-grow-0">
-          <v-col cols="4">
+          <v-col cols="6">
             <StatCard
               dense
-              title="Total Cost"
-              subtitle="Current Budget"
+              title="Cost"
+              subtitle=""
               icon="mdi-currency-usd"
               iconColor="primary"
               :ndx="ndx"
               valueType="totalWage"
             />
           </v-col>
-          <v-col cols="4">
+          <v-col cols="6">
             <StatCard
               dense
               title="People"
-              subtitle="Total Employees"
+              subtitle=""
               icon="mdi-account-group"
               iconColor="success"
               :ndx="ndx"
               valueType="peopleCount"
             />
           </v-col>
-          <v-col cols="4">
+          <!--<v-col cols="4">
             <StatCard
               dense
               title="Skills"
-              subtitle="Total Skills"
+              subtitle=""
               icon="mdi-lightbulb"
               iconColor="warning"
               :ndx="ndx"
               valueType="skillCount"
             />
-          </v-col>
+          </v-col>-->
         </v-row>
 
-        <!-- Charts and Table Row -->
+        <!-- Projects Table -->
         <v-row class="flex-grow-1">
-          <!-- Left Side Charts -->
-          <v-col cols="6" class="d-flex flex-column" style="height: 100%">
-            <!-- Distribution Charts -->
-            <v-row style="height: 50%">
-              <v-col cols="6" class="fill-height">
-                <v-card class="fill-height">
-                  <v-card-title class="text-subtitle-1"
-                    >Department Distribution</v-card-title
-                  >
-                  <v-card-text class="fill-height pa-0">
-                    <PieChart
-                      :dimension="departmentDimension"
-                      :group="departmentGroup"
-                      chartId="department-pie-chart"
-                      :colors="departmentColors"
-                    />
-                  </v-card-text>
-                </v-card>
-              </v-col>
-              <v-col cols="6" class="fill-height">
-                <v-card class="fill-height">
-                  <v-card-title class="text-subtitle-1"
-                    >Skills Distribution</v-card-title
-                  >
-                  <v-card-text class="fill-height pa-0">
-                    <PieChart
-                      :dimension="skillDimension"
-                      :group="skillGroup"
-                      chartId="skill-pie-chart"
-                      :colors="skillColors"
-                    />
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-
-            <!-- Wage Distribution Chart -->
-            <v-row style="height: 50%">
-              <v-col cols="12" class="fill-height">
-                <v-card class="fill-height">
-                  <v-card-title class="text-subtitle-1"
-                    >Wage Distribution by Department</v-card-title
-                  >
-                  <v-card-text class="fill-height pa-0">
-                    <BarChart
-                      :dimension="departmentDimension"
-                      :group="wageByDepartmentGroup"
-                      chartId="bar-wage-department"
-                    />
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-          </v-col>
-
-          <!-- Right Side Table -->
-          <v-col cols="6" class="fill-height">
-            <v-card class="fill-height">
-              <v-card-title class="text-subtitle-1 d-flex align-center">
-                People Details
-                <v-spacer></v-spacer>
-                <div id="data-count" class="text-caption">
-                  <span class="filter-count"></span> selected out of
-                  <span class="total-count"></span> records
-                </div>
-              </v-card-title>
-              <v-card-text class="fill-height pa-0">
-                <DataTable
-                  table-type="people"
-                  :ndx="ndx"
-                  :dimension="peopleDimension"
-                />
-              </v-card-text>
+          <v-col cols="12">
+            <v-card class="h-100">
+              <DataTable
+                table-type="people"
+                :ndx="ndx"
+                :dimension="peopleDimension"
+              />
             </v-card>
           </v-col>
         </v-row>
+      </v-col>
+
+      <!-- Right Column -->
+      <v-col cols="4" class="d-flex flex-column" style="height: 100vh">
+        <v-card class="mb-2 flex-grow-0" height="45%">
+          <v-card-title class="text-subtitle-1"
+            >Department Distribution</v-card-title
+          >
+          <PieChart
+            :dimension="departmentDimension"
+            :group="departmentGroup"
+            chartId="department-pie-chart"
+            :colors="departmentColors"
+          />
+        </v-card>
+
+        <!-- Department Budget Chart -->
+        <v-card class="mb-2 flex-grow-0" height="45%">
+          <v-card-title class="text-subtitle-1"
+            >Skill Distribution</v-card-title
+          >
+          <PieChart
+            :dimension="skillDimension"
+            :group="skillGroup"
+            chartId="skill-pie-chart"
+            :colors="skillColors"
+          />
+        </v-card>
       </v-col>
     </v-row>
 

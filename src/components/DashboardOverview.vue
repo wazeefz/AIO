@@ -5,44 +5,44 @@
       <v-col cols="8" class="d-flex flex-column" style="height: 100vh">
         <!-- Stats Row -->
         <v-row dense class="flex-grow-0">
-          <v-col cols="3">
+          <v-col cols="4">
             <StatCard
               dense
-              title="Revenue"
-              subtitle="Total Revenue"
+              title="Budget"
+              subtitle=""
               icon="mdi-currency-usd"
               iconColor="primary"
               :ndx="ndx"
               valueType="totalRevenue"
             />
           </v-col>
-          <v-col cols="3">
+          <v-col cols="4">
             <StatCard
               dense
               title="Projects"
-              subtitle="Completion Rate"
+              subtitle=""
               icon="mdi-briefcase"
               iconColor="success"
               :ndx="ndx"
               valueType="projectCount"
             />
           </v-col>
-          <v-col cols="3">
+          <!--<v-col cols="3">
             <StatCard
               dense
               title="Completed"
-              subtitle="Finished Projects"
+              subtitle=""
               icon="mdi-check-circle"
               iconColor="info"
               :ndx="ndx"
               valueType="completedProjects"
             />
-          </v-col>
-          <v-col cols="3">
+          </v-col>-->
+          <v-col cols="4">
             <StatCard
               dense
               title="Resources"
-              subtitle="Total Resources"
+              subtitle=""
               icon="mdi-account-group"
               iconColor="warning"
               :ndx="ndx"
@@ -54,15 +54,7 @@
         <!-- Projects Table -->
         <v-row class="flex-grow-1">
           <v-col cols="12">
-            <v-card class="fill-height">
-              <v-card-title class="text-subtitle-1">
-                Projects
-                <v-spacer></v-spacer>
-                <div id="dc-data-count" class="text-caption">
-                  <span class="filter-count"></span> selected out of
-                  <span class="total-count"></span> projects
-                </div>
-              </v-card-title>
+            <v-card class="h-100">
               <DataTable
                 table-type="projects"
                 :ndx="ndx"
@@ -76,7 +68,7 @@
       <!-- Right Column -->
       <v-col cols="4" class="d-flex flex-column" style="height: 100vh">
         <!-- Project Status Pie Chart -->
-        <v-card class="mb-2 flex-grow-0" height="33%">
+        <v-card class="mb-2 flex-grow-0" height="45%">
           <v-card-title class="text-subtitle-1"
             >Status Distribution</v-card-title
           >
@@ -89,7 +81,7 @@
         </v-card>
 
         <!-- Department Budget Chart -->
-        <v-card class="mb-2 flex-grow-0" height="33%">
+        <v-card class="mb-2 flex-grow-0" height="45%">
           <v-card-title class="text-subtitle-1"
             >Budget by Department</v-card-title
           >
@@ -97,16 +89,6 @@
             :dimension="departmentDimension"
             :group="departmentBudgetGroup"
             chartId="department-budget-chart"
-          />
-        </v-card>
-
-        <!-- Monthly Revenue Chart -->
-        <v-card class="flex-grow-0" height="33%">
-          <v-card-title class="text-subtitle-1">Monthly Revenue</v-card-title>
-          <BarChart
-            :dimension="monthDimension"
-            :group="monthlyRevenueGroup"
-            chartId="monthly-revenue-chart"
           />
         </v-card>
       </v-col>

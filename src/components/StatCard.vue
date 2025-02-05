@@ -16,22 +16,6 @@
         <!-- Title and Trend -->
         <div class="header-section">
           <span class="stat-title">{{ title }}</span>
-          <div class="trend-indicator" v-if="showTrend">
-            <v-icon
-              :size="14"
-              :color="trendDirection > 0 ? 'success' : 'error'"
-            >
-              {{ trendDirection > 0 ? 'mdi-arrow-up' : 'mdi-arrow-down' }}
-            </v-icon>
-            <span
-              :class="[
-                'trend-value',
-                trendDirection > 0 ? 'success--text' : 'error--text',
-              ]"
-            >
-              {{ Math.abs(trendDirection) }}%
-            </span>
-          </div>
         </div>
 
         <!-- Value and Subtitle -->
