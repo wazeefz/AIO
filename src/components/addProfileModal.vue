@@ -11,16 +11,22 @@
       <v-card-text>
         <!-- Filter Button -->
         <div class="d-flex justify-end mb-4">
-          <v-card
-            class="d-inline-flex align-center"
-            rounded="pill"
-            color="#EAE3D6"
-            elevation="0"
-          >
-            <v-btn icon @click="showFilterDialog = true">
-              <v-icon color="#292D32">mdi-tune-vertical</v-icon>
-            </v-btn>
-          </v-card>
+          <v-row>
+            <!-- Results -->
+            <v-col cols="12" md="8">
+              <h2>Active Filters</h2>
+              <!-- Chips component -->
+              <base-chips
+                :chips="filterChips"
+                :closable="true"
+                :use-color-mapping="true"
+                @remove-chip="handleFilterRemoval"
+              />
+            </v-col>
+          </v-row>
+          <v-btn color="#EAE3D6" icon @click="showFilterDialog = true">
+            <v-icon color="#292D32">mdi-tune-vertical</v-icon>
+          </v-btn>
         </div>
 
         <!-- Filter Dialog -->
@@ -35,19 +41,6 @@
         </v-dialog>
 
         <div class="mt-4">
-          <v-row>
-            <!-- Results -->
-            <v-col cols="12" md="8">
-              <h2>Active Filters</h2>
-              <!-- Chips component -->
-              <base-chips
-                :chips="filterChips"
-                :closable="true"
-                :use-color-mapping="true"
-                @remove-chip="handleFilterRemoval"
-              />
-            </v-col>
-          </v-row>
           <h3 class="text-h6 mb-3">
             Available Employees ({{ availableEmployees.length }})
           </h3>
