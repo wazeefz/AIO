@@ -122,7 +122,7 @@
               <p>{{ result.salary }}</p>
 
               <h3 class="text-h6 mt-4">Skills</h3>
-              <base-chips :chips="skillChips" :use-color-mapping="true" />
+              <base-chips :chips="skillChipsData" :use-color-mapping="true" />
             </div>
           </slot>
         </v-card-text>
@@ -168,6 +168,7 @@ const skillsContainer = ref(null)
 const skillChips = ref([])
 const resizeObserver = ref(null)
 
+// Data for skills is here
 const skillChipsData = computed(() => {
   return props.result.skills.map((skill) => ({
     label: skill,
