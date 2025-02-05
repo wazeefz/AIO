@@ -1,9 +1,13 @@
 <template>
-  <v-dialog v-model="localShowModal" max-width="800px">
+  <v-dialog
+    v-model="localShowModal"
+    max-width="800px"
+    @update:model-value="handleDialogUpdate"
+  >
     <v-card>
       <v-card-title class="headline d-flex justify-space-between align-center">
         <span>Add Team Members to {{ currentProject.projectName }}</span>
-        <v-btn icon @click="closeModal">
+        <v-btn icon @click="closeModal" variant="plain">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-card-title>
@@ -150,13 +154,6 @@ const availableEmployees = computed(() => {
   }
 })
 
-const closeModal = () => {
-  localShowModal.value = false
-  selectedProfiles.value = []
-  filterStore.clearModalFilters() // Clear modal filters when closing
-  emit('update:showModal', false)
-}
-
 const showDetail = (employee) => {
   selectedEmployee.value = employee
   showDetailModal.value = true
@@ -198,23 +195,45 @@ const closeFilterDialog = () => {
   showFilterDialog.value = false
 }
 
-watch(
-  () => props.showModal,
-  (newVal) => {
-    localShowModal.value = newVal
-    if (!newVal) {
-      selectedProfiles.value = []
-      filterStore.clearModalFilters() // Clear filters when modal is closed
-    }
+// Add this new function to handle dialog updates to prevent it from not opening if you dont click close button
+const handleDialogUpdate = (value) => {
+  if (!value) {
+    // If the dialog is being closed
+    cleanupModal()
   }
-)
+}
+
+// Create a cleanup function to handle all cleanup operations
+const cleanupModal = () => {
+  selectedProfiles.value = []
+  filterStore.clearModalFilters()
+  showFilterDialog.value = false // Make sure filter dialog is closed
+  showDetailModal.value = false // Make sure detail modal is closed
+  selectedEmployee.value = null
+  emit('update:showModal', false)
+}
+
+// Modify your existing closeModal function to use cleanupModal
+const closeModal = () => {
+  cleanupModal()
+}
 
 watch(
-  () => localShowModal.value,
-  (newVal) => {
-    if (!newVal) {
-      selectedProfiles.value = []
-      filterStore.clearModalFilters() // Clear filters when modal is closed
+  [() => props.showModal, () => localShowModal.value],
+  ([newShowModal, newLocalShowModal], [oldShowModal, oldLocalShowModal]) => {
+    // Only sync from props to local when props changes
+    if (newShowModal !== oldShowModal) {
+      localShowModal.value = newShowModal
+    }
+
+    // Only cleanup when actually closing (both values transitioning to false)
+    if (
+      oldShowModal &&
+      oldLocalShowModal &&
+      !newShowModal &&
+      !newLocalShowModal
+    ) {
+      cleanupModal()
     }
   }
 )

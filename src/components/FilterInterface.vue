@@ -2,7 +2,7 @@
   <v-card class="pa-4">
     <!-- Close button -->
     <div class="d-flex justify-end">
-      <v-btn icon @click="closeFilterDialog">
+      <v-btn icon @click="closeFilterDialog" variant="plain">
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </div>
