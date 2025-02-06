@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 
 export function useChat() {
   const chatHistory = ref([])
@@ -13,16 +13,21 @@ export function useChat() {
   const loadSavedHistory = () => {
     const savedHistory = localStorage.getItem('chatHistory')
     if (savedHistory) {
-      chatHistory.value = JSON.parse(savedHistory)
-      if (chatHistory.value.length > 0) {
-        currentChat.value = { ...chatHistory.value[0] }
+      try {
+        chatHistory.value = JSON.parse(savedHistory)
+        if (chatHistory.value.length > 0) {
+          currentChat.value = JSON.parse(JSON.stringify(chatHistory.value[0]))
+        }
+      } catch (error) {
+        console.error('Error loading chat history:', error)
+        chatHistory.value = []
       }
     }
   }
 
   // Watch for changes and save to localStorage
   watch(
-    chatHistory,
+    () => JSON.parse(JSON.stringify(chatHistory.value)),
     (newHistory) => {
       localStorage.setItem('chatHistory', JSON.stringify(newHistory))
     },
@@ -31,20 +36,33 @@ export function useChat() {
 
   const startNewChat = () => {
     currentChat.value = {
-      id: null,
+      id: Date.now(),
       title: '',
       messages: [],
     }
   }
 
   const loadChat = (chat) => {
-    currentChat.value = { ...chat }
+    currentChat.value = JSON.parse(JSON.stringify(chat))
   }
 
   const deleteChat = (chatId) => {
     chatHistory.value = chatHistory.value.filter((chat) => chat.id !== chatId)
     if (currentChat.value.id === chatId) {
       startNewChat()
+    }
+  }
+
+  const updateChatHistory = () => {
+    const index = chatHistory.value.findIndex(
+      (chat) => chat.id === currentChat.value.id
+    )
+    const chatToUpdate = JSON.parse(JSON.stringify(currentChat.value))
+
+    if (index !== -1) {
+      chatHistory.value[index] = chatToUpdate
+    } else {
+      chatHistory.value.unshift(chatToUpdate)
     }
   }
 
@@ -75,23 +93,18 @@ export function useChat() {
       })
 
       // Update chat history
-      if (!currentChat.value.id) {
-        currentChat.value.id = Date.now()
-        chatHistory.value.unshift({ ...currentChat.value })
-      } else {
-        const index = chatHistory.value.findIndex(
-          (chat) => chat.id === currentChat.value.id
-        )
-        if (index !== -1) {
-          chatHistory.value[index] = { ...currentChat.value }
-        }
-      }
+      updateChatHistory()
     } catch (error) {
       console.error('Error:', error)
     } finally {
       isLoading.value = false
     }
   }
+
+  // Load saved history when component is mounted
+  onMounted(() => {
+    loadSavedHistory()
+  })
 
   return {
     chatHistory,

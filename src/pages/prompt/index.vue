@@ -1,6 +1,6 @@
 <template>
   <div class="chat-container">
-    <!-- <ChatSidebar
+    <ChatSidebar
       :chat-history="chatHistory"
       :current-chat-id="currentChat.id"
       :is-sidebar-collapsed="isSidebarCollapsed"
@@ -8,7 +8,7 @@
       @load-chat="loadChat"
       @delete-chat="deleteChat"
       @toggle-sidebar="toggleSidebar"
-    /> -->
+    />
 
     <div class="main-content">
       <div
@@ -54,8 +54,6 @@ const {
   loadSavedHistory,
 } = useChat()
 
-const { isSidebarCollapsed, toggleSidebar } = useSidebar()
-
 const messagesContainer = ref(null)
 
 const scrollToBottom = () => {
@@ -71,6 +69,14 @@ watch(() => currentChat.value.messages, scrollToBottom, { deep: true })
 onMounted(() => {
   loadSavedHistory()
 })
+
+const handleSearch = (query) => {
+  // Filter your chat history based on the query
+  // This is just an example implementation
+  filteredChatHistory.value = chatHistory.value.filter((chat) =>
+    chat.title.toLowerCase().includes(query.toLowerCase())
+  )
+}
 </script>
 
 <style>
