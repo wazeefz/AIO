@@ -37,7 +37,10 @@
 
       <v-row v-if="selectedProjectId">
         <!-- Results -->
-        <v-col cols="12" md="8">
+        <v-col cols="12" md="11">
+          <v-row class="d-flex justify-end ma-8">
+            <Star />
+          </v-row>
           <!-- Add the three pastel cards here -->
           <div class="container">
             <v-row class="mb-4">
@@ -182,6 +185,7 @@ import { useFilterStore } from '@/stores/filterStore'
 import { useProjectStore } from '@/stores/projectStore'
 import ProfileCard from '@/components/profileCard.vue'
 import AddProfileModal from '@/components/addProfileModal.vue'
+import Star from '@/components/Star.vue'
 
 const filterStore = useFilterStore()
 const projectStore = useProjectStore()
