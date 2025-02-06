@@ -7,12 +7,12 @@
         <v-col cols="4">
           <!-- Without crossfilter -->
           <StatCard
-  dense
-  title="Project"
-  subtitle="AI Team Assembly"
-  icon="mdi-briefcase"
-  iconColor="primary"
-/>
+            dense
+            title="Project"
+            subtitle="AI Team Assembly"
+            icon="mdi-briefcase"
+            iconColor="primary"
+          />
         </v-col>
         <v-col cols="4">
           <StatCard

@@ -51,11 +51,13 @@
             />
           </v-card>
         </v-col>
-        
+
         <!-- Department Budget Chart -->
         <v-col cols="6">
           <v-card>
-            <v-card-title class="text-subtitle-1">Budget by Department</v-card-title>
+            <v-card-title class="text-subtitle-1"
+              >Budget by Department</v-card-title
+            >
             <BarChart
               :dimension="departmentDimension"
               :group="departmentBudgetGroup"

@@ -113,11 +113,13 @@ function calculateValue() {
     case 'projectCount':
       return group.reduceCount().value()
     case 'completedProjects':
-      return props.ndx
-        .dimension((d) => d.status)
-        .group()
-        .all()
-        .find((g) => g.key === 'Finished')?.value || 0
+      return (
+        props.ndx
+          .dimension((d) => d.status)
+          .group()
+          .all()
+          .find((g) => g.key === 'Finished')?.value || 0
+      )
     case 'resourceCount':
       return group.reduceSum((d) => d.cvCount || 1).value()
     case 'totalWage':

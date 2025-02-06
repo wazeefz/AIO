@@ -15,19 +15,21 @@
                 ? 'mdi-file-document-multiple'
                 : 'mdi-account-group'
             }}</v-icon>
-            <span class="filter-count"></span> selected out of 
+            <span class="filter-count"></span> selected out of
             <span class="total-count"></span>
             {{ tableType }}
           </div>
           <v-spacer></v-spacer>
           <v-text-field
-  v-model="search"
-  append-icon="mdi-magnify"
-  :label="tableType === 'projects' ? 'Search Project Name' : 'Search Name'"
-  single-line
-  hide-details
-  class="search-field"
-></v-text-field>
+            v-model="search"
+            append-icon="mdi-magnify"
+            :label="
+              tableType === 'projects' ? 'Search Project Name' : 'Search Name'
+            "
+            single-line
+            hide-details
+            class="search-field"
+          ></v-text-field>
         </v-toolbar>
       </template>
 
@@ -121,7 +123,9 @@
     <v-dialog v-model="dialog" max-width="500px">
       <v-card>
         <v-card-title>
-          <span>Edit {{ tableType === 'projects' ? 'Project' : 'Person' }}</span>
+          <span
+            >Edit {{ tableType === 'projects' ? 'Project' : 'Person' }}</span
+          >
         </v-card-title>
 
         <v-card-text>
@@ -296,10 +300,10 @@ const tableData = computed(() => {
   // Use filterChanged as a dependency to trigger recomputation
   filterChanged.value
   let data = props.dimension.top(Infinity)
-  
+
   // Apply search filter for name
   if (search.value) {
-    data = data.filter(item => {
+    data = data.filter((item) => {
       if (props.tableType === 'projects') {
         // Search in project name
         return item.name.toLowerCase().includes(search.value.toLowerCase())
@@ -311,7 +315,7 @@ const tableData = computed(() => {
       }
     })
   }
-  
+
   return data
 })
 
@@ -386,7 +390,7 @@ onMounted(() => {
     .on('renderlet', () => {
       filterChanged.value++
     })
-  
+
   countChart.value.render()
 
   // Listen for global filter changes
