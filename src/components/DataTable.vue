@@ -1,56 +1,246 @@
 <template>
-  <div class="data-table-wrapper">
-    <!-- For Projects -->
-    <template v-if="tableType === 'projects'">
-      <div class="table-header">
-        <div class="data-count" id="project-stats">
-          <v-icon color="primary" class="mr-2"
-            >mdi-file-document-multiple</v-icon
-          >
-          <span class="filter-count"></span> selected out of
-          <span class="total-count"></span> projects
-        </div>
-        <v-text-field
-          v-model="searchText"
-          density="compact"
-          variant="outlined"
-          label="Search"
-          prepend-inner-icon="mdi-magnify"
-          hide-details
-          class="search-field"
-        ></v-text-field>
-      </div>
-      <div id="project-table" class="dc-table-wrapper"></div>
-    </template>
+  <v-card>
+    <v-data-table
+      height="500"
+      density="default"
+      :headers="headers"
+      :items="tableData"
+      :search="undefined"
+    >
+      <template v-slot:top>
+        <v-toolbar flat>
+          <div class="data-count" :id="countId">
+            <v-icon color="primary" class="mr-2">{{
+              tableType === 'projects'
+                ? 'mdi-file-document-multiple'
+                : 'mdi-account-group'
+            }}</v-icon>
+            <span class="filter-count"></span> selected out of 
+            <span class="total-count"></span>
+            {{ tableType }}
+          </div>
+          <v-spacer></v-spacer>
+          <v-text-field
+  v-model="search"
+  append-icon="mdi-magnify"
+  :label="tableType === 'projects' ? 'Search Project Name' : 'Search Name'"
+  single-line
+  hide-details
+  class="search-field"
+></v-text-field>
+        </v-toolbar>
+      </template>
 
-    <!-- For People -->
-    <template v-else>
-      <div class="table-header">
-        <div class="data-count" id="mystats2">
-          <v-icon color="primary" class="mr-2">mdi-account-group</v-icon>
-          <span class="filter-count"></span> selected out of
-          <span class="total-count"></span> people
-        </div>
-        <v-text-field
-          v-model="searchText"
-          density="compact"
-          variant="outlined"
-          label="Search"
-          prepend-inner-icon="mdi-magnify"
-          hide-details
-          class="search-field"
-        ></v-text-field>
-      </div>
-      <div id="mytable" class="dc-table-wrapper"></div>
-    </template>
-  </div>
+      <!-- Projects Table -->
+      <template v-if="tableType === 'projects'" v-slot:item="{ item }">
+        <tr>
+          <td>
+            <v-btn icon @click="toggleStar(item.id)" class="elevation-0">
+              <v-icon :color="item.starred ? 'yellow-darken-2' : 'grey'">
+                mdi-star
+              </v-icon>
+            </v-btn>
+          </td>
+          <td>{{ item.name }}</td>
+          <td>{{ item.cvCount }}</td>
+          <td>$ {{ formatCurrency(item.budget) }}</td>
+          <td>
+            <v-chip
+              :color="getStatusColor(item.status)"
+              style="width: 120px; justify-content: center"
+            >
+              {{ item.status }}
+            </v-chip>
+          </td>
+          <td>{{ formatDuration(item.duration) }}</td>
+          <td class="d-flex align-center">
+            <v-btn
+              icon="mdi-pencil"
+              size="x-small"
+              color="primary"
+              class="mr-1"
+              @click="editItem(item)"
+            ></v-btn>
+            <v-btn
+              icon="mdi-delete"
+              size="x-small"
+              color="error"
+              @click="deleteItem(item)"
+            ></v-btn>
+          </td>
+        </tr>
+      </template>
+
+      <!-- People Table -->
+      <template v-else v-slot:item="{ item }">
+        <tr>
+          <td>{{ item.first }} {{ item.last }}</td>
+          <td>
+            <v-chip :color="getGenderColor(item.gender)">
+              {{ item.gender }}
+            </v-chip>
+          </td>
+          <td>{{ calculateAge(item.dob) }}</td>
+          <td>
+            <v-chip color="surface-variant">{{ item.department }}</v-chip>
+          </td>
+          <td>
+            <div class="d-flex flex-wrap gap-1">
+              <v-chip
+                v-for="skill in item.skill"
+                :key="skill"
+                size="small"
+                color="primary"
+                variant="outlined"
+              >
+                {{ skill }}
+              </v-chip>
+            </div>
+          </td>
+          <td>$ {{ formatCurrency(item.wage) }}</td>
+          <td class="d-flex align-center">
+            <v-btn
+              icon="mdi-pencil"
+              size="x-small"
+              color="primary"
+              class="mr-1"
+              @click="editItem(item)"
+            ></v-btn>
+            <v-btn
+              icon="mdi-delete"
+              size="x-small"
+              color="error"
+              @click="deleteItem(item)"
+            ></v-btn>
+          </td>
+        </tr>
+      </template>
+    </v-data-table>
+
+    <!-- Edit Dialog -->
+    <v-dialog v-model="dialog" max-width="500px">
+      <v-card>
+        <v-card-title>
+          <span>Edit {{ tableType === 'projects' ? 'Project' : 'Person' }}</span>
+        </v-card-title>
+
+        <v-card-text>
+          <v-container>
+            <v-row>
+              <!-- Project Edit Form -->
+              <template v-if="tableType === 'projects'">
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="editedItem.name"
+                    label="Project Name"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model.number="editedItem.cvCount"
+                    label="CV Count"
+                    type="number"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model.number="editedItem.budget"
+                    label="Budget"
+                    type="number"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-select
+                    v-model="editedItem.status"
+                    :items="['finished', 'unfinished', 'in progress']"
+                    label="Status"
+                  ></v-select>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model.number="editedItem.duration.years"
+                    label="Years"
+                    type="number"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model.number="editedItem.duration.months"
+                    label="Months"
+                    type="number"
+                  ></v-text-field>
+                </v-col>
+              </template>
+
+              <!-- People Edit Form -->
+              <template v-else>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model="editedItem.first"
+                    label="First Name"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model="editedItem.last"
+                    label="Last Name"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-select
+                    v-model="editedItem.gender"
+                    :items="['Male', 'Female']"
+                    label="Gender"
+                  ></v-select>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model="editedItem.dob"
+                    label="Date of Birth"
+                    type="date"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="editedItem.department"
+                    label="Department"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-combobox
+                    v-model="editedItem.skill"
+                    :items="[]"
+                    label="Skills"
+                    multiple
+                    chips
+                  ></v-combobox>
+                </v-col>
+                <v-col cols="12">
+                  <v-text-field
+                    v-model.number="editedItem.wage"
+                    label="Wage"
+                    type="number"
+                    prefix="$"
+                  ></v-text-field>
+                </v-col>
+              </template>
+            </v-row>
+          </v-container>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="error" text @click="closeDialog">Cancel</v-btn>
+          <v-btn color="primary" text @click="save">Save</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </v-card>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import * as d3 from 'd3'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import * as dc from 'dc'
-import 'dc/src/compat/d3v6'
 
 const props = defineProps({
   ndx: {
@@ -68,42 +258,91 @@ const props = defineProps({
   },
 })
 
+const search = ref('')
+const dialog = ref(false)
+const editedItem = ref({})
 const countChart = ref(null)
-const tableChart = ref(null)
-const searchText = ref('')
+const filterChanged = ref(0)
 
-// Watch for search text changes
-watch(searchText, (newValue) => {
-  if (tableChart.value) {
-    const tableRows = document.querySelectorAll('.dc-table-row')
-    tableRows.forEach((row) => {
-      const text = row.textContent.toLowerCase()
-      const isVisible = text.includes(newValue.toLowerCase())
-      row.style.display = isVisible ? '' : 'none'
+const headers = computed(() => {
+  if (props.tableType === 'projects') {
+    return [
+      { title: 'Star', key: 'starred', sortable: false, align: 'start' },
+      { title: 'Project Name', key: 'name', align: 'start' },
+      { title: 'CV Count', key: 'cvCount', align: 'start' },
+      { title: 'Budget', key: 'budget', align: 'start' },
+      { title: 'Status', key: 'status', align: 'start' },
+      { title: 'Duration', key: 'duration', align: 'start' },
+      { title: 'Actions', key: 'actions', sortable: false, align: 'start' },
+    ]
+  } else {
+    return [
+      { title: 'Name', key: 'name', align: 'start' },
+      { title: 'Gender', key: 'gender', align: 'start' },
+      { title: 'Age', key: 'age', align: 'start' },
+      { title: 'Department', key: 'department', align: 'start' },
+      { title: 'Skills', key: 'skills', align: 'start' },
+      { title: 'Wage', key: 'wage', align: 'start' },
+      { title: 'Actions', key: 'actions', sortable: false, align: 'start' },
+    ]
+  }
+})
+
+const countId = computed(() =>
+  props.tableType === 'projects' ? 'project-stats' : 'mystats2'
+)
+
+const tableData = computed(() => {
+  // Use filterChanged as a dependency to trigger recomputation
+  filterChanged.value
+  let data = props.dimension.top(Infinity)
+  
+  // Apply search filter for name
+  if (search.value) {
+    data = data.filter(item => {
+      if (props.tableType === 'projects') {
+        // Search in project name
+        return item.name.toLowerCase().includes(search.value.toLowerCase())
+      } else {
+        // Search in person's first and last name
+        return `${item.first} ${item.last}`
+          .toLowerCase()
+          .includes(search.value.toLowerCase())
+      }
     })
   }
+  
+  return data
 })
 
-onMounted(() => {
-  if (props.tableType === 'projects') {
-    generateProjectCharts()
-  } else {
-    generatePeopleCharts()
-  }
-})
+const formatCurrency = (value) => {
+  return value.toLocaleString('en-US')
+}
 
-onUnmounted(() => {
-  if (countChart.value) {
-    dc.deregisterChart(countChart.value)
-    countChart.value = null
+const getStatusColor = (status) => {
+  const colors = {
+    finished: 'success',
+    unfinished: 'error',
+    'in progress': 'warning',
   }
-  if (tableChart.value) {
-    dc.deregisterChart(tableChart.value)
-    tableChart.value = null
-  }
-})
+  return colors[status.toLowerCase()]
+}
 
-function calculateAge(dob) {
+const getGenderColor = (gender) => {
+  return gender.toLowerCase() === 'male' ? 'primary' : 'secondary'
+}
+
+const formatDuration = (duration) => {
+  const years = duration.years
+    ? `${duration.years} year${duration.years > 1 ? 's' : ''}`
+    : ''
+  const months = duration.months
+    ? `${duration.months} month${duration.months > 1 ? 's' : ''}`
+    : ''
+  return [years, months].filter(Boolean).join(' ')
+}
+
+const calculateAge = (dob) => {
   const birthDate = new Date(dob)
   const today = new Date()
   let age = today.getFullYear() - birthDate.getFullYear()
@@ -117,269 +356,62 @@ function calculateAge(dob) {
   return age
 }
 
-function generateProjectCharts() {
-  const all = props.ndx.groupAll()
-
-  countChart.value = dc.dataCount('#project-stats')
-  tableChart.value = dc.dataTable('#project-table')
-
-  dc.registerChart(countChart.value)
-  dc.registerChart(tableChart.value)
-
-  countChart.value.crossfilter(props.ndx).groupAll(all)
-
-  tableChart.value
-    .dimension(props.dimension)
-    .size(Infinity)
-    .columns([
-      {
-        label: 'Project Name',
-        format: (d) => d.name,
-      },
-      {
-        label: 'Status',
-        format: (d) =>
-          `<span class="status-chip ${d.status.toLowerCase()}">${
-            d.status
-          }</span>`,
-      },
-      {
-        label: 'Department',
-        format: (d) => d.department,
-      },
-      {
-        label: 'Budget',
-        format: (d) =>
-          `<span class="budget">$${d.budget.toLocaleString()}</span>`,
-      },
-    ])
-    .sortBy((d) => d.name)
-    .order(d3.ascending)
-    .on('filtered', () => {
-      dc.redrawAll()
-    })
-
-  countChart.value.render()
-  tableChart.value.render()
+const editItem = (item) => {
+  editedItem.value = { ...item }
+  dialog.value = true
 }
 
-function generatePeopleCharts() {
-  const departmentDimension = props.ndx.dimension((d) => d.department)
-  const all = props.ndx.groupAll()
-
-  countChart.value = dc.dataCount('#mystats2')
-  tableChart.value = dc.dataTable('#mytable')
-
-  dc.registerChart(countChart.value)
-  dc.registerChart(tableChart.value)
-
-  countChart.value.crossfilter(props.ndx).groupAll(all)
-
-  tableChart.value
-    .dimension(departmentDimension)
-    .section((d) => d.department)
-    .size(Infinity)
-    .columns([
-      {
-        label: 'Name',
-        format: (d) => `<span class="name">${d.first} ${d.last}</span>`,
-      },
-      {
-        label: 'Gender',
-        format: (d) =>
-          `<span class="gender-chip ${d.gender.toLowerCase()}">${
-            d.gender
-          }</span>`,
-      },
-      {
-        label: 'Age',
-        format: (d) => calculateAge(d.dob),
-      },
-      {
-        label: 'Department',
-        format: (d) => `<span class="department-chip">${d.department}</span>`,
-      },
-      {
-        label: 'Skills',
-        format: (d) =>
-          `<div class="skills-container">${d.skill
-            .map((s) => `<span class="skill-chip">${s}</span>`)
-            .join('')}</div>`,
-      },
-      {
-        label: 'Wage',
-        format: (d) => `<span class="wage">$${d.wage.toLocaleString()}</span>`,
-      },
-    ])
-    .sortBy((d) => d.first)
-    .order(d3.ascending)
-    .on('filtered', () => {
-      dc.redrawAll()
-    })
-
-  countChart.value.render()
-  tableChart.value.render()
+const deleteItem = (item) => {
+  if (confirm('Are you sure you want to delete this item?')) {
+    // Implement delete functionality
+  }
 }
+
+const closeDialog = () => {
+  dialog.value = false
+  editedItem.value = {}
+}
+
+const save = () => {
+  // Implement save functionality
+  closeDialog()
+}
+
+onMounted(() => {
+  const all = props.ndx.groupAll()
+  countChart.value = dc.dataCount(`#${countId.value}`)
+  countChart.value
+    .crossfilter(props.ndx)
+    .groupAll(all)
+    .on('renderlet', () => {
+      filterChanged.value++
+    })
+  
+  countChart.value.render()
+
+  // Listen for global filter changes
+  props.ndx.onChange(() => {
+    filterChanged.value++
+  })
+})
+
+onUnmounted(() => {
+  if (countChart.value) {
+    dc.deregisterChart(countChart.value)
+    countChart.value = null
+  }
+})
 </script>
 
 <style scoped>
-.data-table-wrapper {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  padding: 16px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.table-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  gap: 16px;
-}
-
-.section-title {
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: var(--v-primary-base);
-  display: flex;
-  align-items: center;
-}
-
-.data-count {
-  font-size: 0.9rem;
-  color: rgba(0, 0, 0, 0.6);
-}
-
 .search-field {
   max-width: 300px;
 }
 
-.dc-table-wrapper {
-  flex-grow: 1;
-  overflow: auto;
-}
-
-:deep(.dc-table) {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-:deep(.dc-table-head) {
-  background-color: #f5f5f5;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-:deep(.dc-table-column) {
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-}
-
-:deep(.dc-table-head .dc-table-column) {
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.87);
-}
-
-:deep(.dc-table-row:hover) {
-  background-color: rgba(0, 0, 0, 0.04);
-}
-
-/* Status chips */
-:deep(.status-chip) {
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-:deep(.status-chip.finished) {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-:deep(.status-chip.in-progress) {
-  background-color: #fff3e0;
-  color: #f57c00;
-}
-
-:deep(.status-chip.unfinished) {
-  background-color: #ffebee;
-  color: #c62828;
-}
-
-/* Gender chips */
-:deep(.gender-chip) {
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 0.85rem;
-}
-
-:deep(.gender-chip.male) {
-  background-color: #e3f2fd;
-  color: #1565c0;
-}
-
-:deep(.gender-chip.female) {
-  background-color: #fce4ec;
-  color: #c2185b;
-}
-
-/* Department chip */
-:deep(.department-chip) {
-  padding: 4px 12px;
-  border-radius: 16px;
-  background-color: #f5f5f5;
-  color: rgba(0, 0, 0, 0.87);
-  font-size: 0.85rem;
-}
-
-/* Skills */
-:deep(.skills-container) {
+.data-count {
+  font-size: 0.9rem;
+  color: rgba(var(--v-theme-on-surface), 0.6);
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-:deep(.skill-chip) {
-  padding: 2px 8px;
-  border-radius: 12px;
-  background-color: #e3f2fd;
-  color: #1565c0;
-  font-size: 0.8rem;
-}
-
-/* Numbers */
-:deep(.budget),
-:deep(.wage) {
-  font-family: 'Roboto Mono', monospace;
-  color: #2e7d32;
-}
-
-/* Dark theme support */
-:deep(.v-theme--dark) {
-  .data-table-wrapper {
-    background: #1e1e1e;
-  }
-
-  .dc-table-head {
-    background-color: #2d2d2d;
-  }
-
-  .dc-table-column {
-    border-bottom-color: rgba(255, 255, 255, 0.12);
-  }
-
-  .dc-table-row:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-
-  .data-count {
-    color: rgba(255, 255, 255, 0.7);
-  }
+  align-items: center;
 }
 </style>

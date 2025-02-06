@@ -1,87 +1,78 @@
 <template>
-  <v-container fluid class="fill-height pa-2">
-    <v-row class="fill-height">
-      <!-- Left Column -->
-      <v-col cols="8" class="d-flex flex-column" style="height: 100vh">
-        <!-- Stats Row -->
-        <v-row dense class="flex-grow-0">
-          <v-col cols="6">
-            <StatCard
-              dense
-              title="Cost"
-              subtitle=""
-              icon="mdi-currency-usd"
-              iconColor="primary"
-              :ndx="ndx"
-              valueType="totalWage"
-            />
-          </v-col>
-          <v-col cols="6">
-            <StatCard
-              dense
-              title="People"
-              subtitle=""
-              icon="mdi-account-group"
-              iconColor="success"
-              :ndx="ndx"
-              valueType="peopleCount"
-            />
-          </v-col>
-          <!--<v-col cols="4">
-            <StatCard
-              dense
-              title="Skills"
-              subtitle=""
-              icon="mdi-lightbulb"
-              iconColor="warning"
-              :ndx="ndx"
-              valueType="skillCount"
-            />
-          </v-col>-->
-        </v-row>
-
-        <!-- Projects Table -->
-        <v-row class="flex-grow-1">
-          <v-col cols="12">
-            <v-card class="h-100">
-              <DataTable
-                table-type="people"
-                :ndx="ndx"
-                :dimension="peopleDimension"
-              />
-            </v-card>
-          </v-col>
-        </v-row>
-      </v-col>
-
-      <!-- Right Column -->
-      <v-col cols="4" class="d-flex flex-column" style="height: 100vh">
-        <v-card class="mb-2 flex-grow-0" height="45%">
-          <v-card-title class="text-subtitle-1"
-            >Department Distribution</v-card-title
-          >
-          <PieChart
-            :dimension="departmentDimension"
-            :group="departmentGroup"
-            chartId="department-pie-chart"
-            :colors="departmentColors"
+  <v-container fluid class="pa-2">
+    <!-- Fixed Content (Above Fold) -->
+    <div class="fixed-content">
+      <!-- Stats Row -->
+      <v-row dense>
+        <v-col cols="4">
+          <!-- Without crossfilter -->
+          <StatCard
+  dense
+  title="Project"
+  subtitle="AI Team Assembly"
+  icon="mdi-briefcase"
+  iconColor="primary"
+/>
+        </v-col>
+        <v-col cols="4">
+          <StatCard
+            dense
+            title="Cost"
+            icon="mdi-currency-usd"
+            iconColor="warning"
+            :ndx="ndx"
+            valueType="totalWage"
           />
-        </v-card>
-
-        <!-- Department Budget Chart -->
-        <v-card class="mb-2 flex-grow-0" height="45%">
-          <v-card-title class="text-subtitle-1"
-            >Skill Distribution</v-card-title
-          >
-          <PieChart
-            :dimension="skillDimension"
-            :group="skillGroup"
-            chartId="skill-pie-chart"
-            :colors="skillColors"
+        </v-col>
+        <v-col cols="4">
+          <StatCard
+            dense
+            title="People"
+            icon="mdi-account-group"
+            iconColor="success"
+            :ndx="ndx"
+            valueType="peopleCount"
           />
-        </v-card>
-      </v-col>
-    </v-row>
+        </v-col>
+      </v-row>
+
+      <!-- Charts Row -->
+      <v-row dense>
+        <v-col cols="6">
+          <v-card>
+            <v-card-title class="text-subtitle-1">Department</v-card-title>
+            <PieChart
+              :dimension="departmentDimension"
+              :group="departmentGroup"
+              chartId="department-pie-chart"
+              :colors="departmentColors"
+            />
+          </v-card>
+        </v-col>
+        <v-col cols="6">
+          <v-card>
+            <v-card-title class="text-subtitle-1">Skill</v-card-title>
+            <PieChart
+              :dimension="skillDimension"
+              :group="skillGroup"
+              chartId="skill-pie-chart"
+              :colors="skillColors"
+            />
+          </v-card>
+        </v-col>
+      </v-row>
+    </div>
+
+    <!-- Scrollable Content (Below Fold) -->
+    <div class="scrollable-content">
+      <v-card>
+        <DataTable
+          table-type="people"
+          :ndx="ndx"
+          :dimension="peopleDimension"
+        />
+      </v-card>
+    </div>
 
     <!-- Reset Filters Button -->
     <v-btn color="primary" class="reset-button" @click="resetAllFilters">
@@ -94,16 +85,13 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useTalentStore } from '@/stores/talent'
 import StatCard from '@/components/StatCard.vue'
-import BarChart from '@/components/BarChart.vue'
 import PieChart from '@/components/PieChart.vue'
 import DataTable from '@/components/DataTable.vue'
 import * as dc from 'dc'
-import * as d3 from 'd3'
 import crossfilter from 'crossfilter2'
 
 const talentStore = useTalentStore()
 const allDimensions = ref([])
-const dataCount = ref(null)
 
 // Initialize crossfilter
 const ndx = crossfilter(talentStore.talents)
@@ -119,9 +107,6 @@ allDimensions.value = [peopleDimension, departmentDimension, skillDimension]
 // Create groups
 const departmentGroup = departmentDimension.group()
 const skillGroup = skillDimension.group()
-const wageByDepartmentGroup = departmentDimension
-  .group()
-  .reduceSum((d) => d.wage)
 
 // Color schemes
 const departmentColors = {
@@ -147,20 +132,6 @@ const skillColors = {
 }
 
 onMounted(() => {
-  // Initialize data count
-  dataCount.value = dc
-    .dataCount('#data-count')
-    .dimension(ndx)
-    .group(ndx.groupAll())
-
-  // Create a dummy chart to handle resets properly
-  const dummyChart = {
-    render: () => {},
-    redraw: () => {},
-    filterAll: () => {},
-  }
-  dc.registerChart(dummyChart)
-
   // Render all charts
   dc.renderAll()
 
@@ -207,13 +178,20 @@ const resetAllFilters = () => {
 
 <style scoped>
 .v-container {
-  padding: 8px !important;
   height: 100vh;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
-.v-card {
-  overflow: hidden;
+.fixed-content {
+  flex: 0 0 auto;
+}
+
+.scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 16px;
 }
 
 .reset-button {
@@ -223,19 +201,11 @@ const resetAllFilters = () => {
   z-index: 100;
 }
 
-/* Chart containers */
 :deep(.dc-chart) {
   float: none;
   padding: 16px;
 }
 
-/* Data count styling */
-#data-count {
-  font-size: 0.875rem;
-  color: rgba(0, 0, 0, 0.6);
-}
-
-/* Row spacing */
 .v-row {
   margin: 0 !important;
 }
@@ -244,35 +214,12 @@ const resetAllFilters = () => {
   padding: 4px !important;
 }
 
-/* Card title styling */
 .v-card-title {
   padding: 12px 16px;
   font-size: 0.875rem !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-/* Card content */
-.v-card-text {
-  padding: 8px !important;
-}
-
-/* Fill height utilities */
-.fill-height {
-  height: 100% !important;
-}
-
-/* Dark theme support */
-:deep(.v-theme--dark) {
-  #data-count {
-    color: rgba(255, 255, 255, 0.7);
-  }
-
-  .v-card-title {
-    border-bottom-color: rgba(255, 255, 255, 0.12);
-  }
-}
-
-/* Responsive adjustments */
 @media (max-width: 960px) {
   .v-col {
     flex: 0 0 100%;

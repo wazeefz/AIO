@@ -1,98 +1,81 @@
 <template>
-  <v-container fluid class="fill-height pa-2">
-    <v-row class="fill-height">
-      <!-- Left Column -->
-      <v-col cols="8" class="d-flex flex-column" style="height: 100vh">
-        <!-- Stats Row -->
-        <v-row dense class="flex-grow-0">
-          <v-col cols="4">
-            <StatCard
-              dense
-              title="Budget"
-              subtitle=""
-              icon="mdi-currency-usd"
-              iconColor="primary"
-              :ndx="ndx"
-              valueType="totalRevenue"
-            />
-          </v-col>
-          <v-col cols="4">
-            <StatCard
-              dense
-              title="Projects"
-              subtitle=""
-              icon="mdi-briefcase"
-              iconColor="success"
-              :ndx="ndx"
-              valueType="projectCount"
-            />
-          </v-col>
-          <!--<v-col cols="3">
-            <StatCard
-              dense
-              title="Completed"
-              subtitle=""
-              icon="mdi-check-circle"
-              iconColor="info"
-              :ndx="ndx"
-              valueType="completedProjects"
-            />
-          </v-col>-->
-          <v-col cols="4">
-            <StatCard
-              dense
-              title="Resources"
-              subtitle=""
-              icon="mdi-account-group"
-              iconColor="warning"
-              :ndx="ndx"
-              valueType="resourceCount"
-            />
-          </v-col>
-        </v-row>
+  <v-container fluid class="pa-2 dashboard-container">
+    <!-- Fixed Content (Above Fold) -->
+    <div class="fixed-content">
+      <!-- Stats Row -->
+      <v-row dense>
+        <v-col cols="4">
+          <!-- With crossfilter -->
+          <StatCard
+            dense
+            title="Budget"
+            icon="mdi-currency-usd"
+            iconColor="primary"
+            :ndx="ndx"
+            valueType="totalRevenue"
+          />
+        </v-col>
+        <v-col cols="4">
+          <StatCard
+            dense
+            title="Projects"
+            icon="mdi-briefcase"
+            iconColor="success"
+            :ndx="ndx"
+            valueType="projectCount"
+          />
+        </v-col>
+        <v-col cols="4">
+          <StatCard
+            dense
+            title="Resources"
+            icon="mdi-account-group"
+            iconColor="warning"
+            :ndx="ndx"
+            valueType="resourceCount"
+          />
+        </v-col>
+      </v-row>
 
-        <!-- Projects Table -->
-        <v-row class="flex-grow-1">
-          <v-col cols="12">
-            <v-card class="h-100">
-              <DataTable
-                table-type="projects"
-                :ndx="ndx"
-                :dimension="projectDimension"
-              />
-            </v-card>
-          </v-col>
-        </v-row>
-      </v-col>
-
-      <!-- Right Column -->
-      <v-col cols="4" class="d-flex flex-column" style="height: 100vh">
+      <!-- Charts Row -->
+      <v-row dense>
         <!-- Project Status Pie Chart -->
-        <v-card class="mb-2 flex-grow-0" height="45%">
-          <v-card-title class="text-subtitle-1"
-            >Status Distribution</v-card-title
-          >
-          <PieChart
-            :dimension="statusDimension"
-            :group="statusGroup"
-            chartId="status-pie-chart"
-            :colors="statusColors"
-          />
-        </v-card>
-
+        <v-col cols="6">
+          <v-card>
+            <v-card-title class="text-subtitle-1">Status</v-card-title>
+            <PieChart
+              :dimension="statusDimension"
+              :group="statusGroup"
+              chartId="status-pie-chart"
+              :colors="statusColors"
+            />
+          </v-card>
+        </v-col>
+        
         <!-- Department Budget Chart -->
-        <v-card class="mb-2 flex-grow-0" height="45%">
-          <v-card-title class="text-subtitle-1"
-            >Budget by Department</v-card-title
-          >
-          <BarChart
-            :dimension="departmentDimension"
-            :group="departmentBudgetGroup"
-            chartId="department-budget-chart"
-          />
-        </v-card>
-      </v-col>
-    </v-row>
+        <v-col cols="6">
+          <v-card>
+            <v-card-title class="text-subtitle-1">Budget by Department</v-card-title>
+            <BarChart
+              :dimension="departmentDimension"
+              :group="departmentBudgetGroup"
+              chartId="department-budget-chart"
+            />
+          </v-card>
+        </v-col>
+      </v-row>
+    </div>
+
+    <!-- Scrollable Content (Below Fold) -->
+    <div class="scrollable-content">
+      <v-card>
+        <DataTable
+          table-type="projects"
+          :ndx="ndx"
+          :dimension="projectDimension"
+        />
+      </v-card>
+    </div>
 
     <!-- Reset Filters Button -->
     <v-btn color="primary" class="reset-button" @click="resetAllFilters">
@@ -211,12 +194,21 @@ const resetAllFilters = () => {
 </script>
 
 <style scoped>
-.v-container {
-  padding: 16px;
+.dashboard-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.v-card {
-  overflow: hidden;
+.fixed-content {
+  flex: 0 0 auto;
+}
+
+.scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 16px;
 }
 
 .reset-button {
@@ -226,41 +218,32 @@ const resetAllFilters = () => {
   z-index: 100;
 }
 
-/* Chart containers */
 :deep(.dc-chart) {
   float: none;
   padding: 16px;
 }
 
-/* Data count styling */
-#dc-data-count {
-  font-size: 0.875rem;
-  color: rgba(0, 0, 0, 0.6);
-}
-
-/* Row spacing */
 .v-row {
-  margin-bottom: 16px;
+  margin: 0 !important;
 }
 
-/* Card title styling */
+.v-col {
+  padding: 4px !important;
+}
+
 .v-card-title {
-  padding: 16px;
+  padding: 12px 16px;
+  font-size: 0.875rem !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 /* Dark theme support */
 :deep(.v-theme--dark) {
-  #dc-data-count {
-    color: rgba(255, 255, 255, 0.7);
-  }
-
   .v-card-title {
     border-bottom-color: rgba(255, 255, 255, 0.12);
   }
 }
 
-/* Responsive adjustments */
 @media (max-width: 960px) {
   .v-col {
     flex: 0 0 100%;

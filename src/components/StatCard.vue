@@ -13,25 +13,16 @@
 
       <!-- Content Section -->
       <div class="content-section">
-        <!-- Title and Trend -->
+        <!-- Title -->
         <div class="header-section">
           <span class="stat-title">{{ title }}</span>
         </div>
 
-        <!-- Value and Subtitle -->
+        <!-- Value or Subtitle -->
         <div class="value-section">
-          <span class="stat-value">{{ computedValue }}</span>
-          <span class="stat-subtitle">{{ subtitle }}</span>
+          <span v-if="hasValue" class="stat-value">{{ computedValue }}</span>
+          <span v-else class="stat-value">{{ subtitle }}</span>
         </div>
-
-        <!-- Progress Bar (Optional) -->
-        <v-progress-linear
-          v-if="progress !== undefined"
-          :value="progress"
-          :color="progressColor"
-          height="2"
-          class="stat-progress"
-        ></v-progress-linear>
       </div>
     </div>
   </v-card>
@@ -58,26 +49,19 @@ const props = defineProps({
     type: String,
     default: 'primary',
   },
-  progress: {
-    type: Number,
-    default: undefined,
-  },
-  progressColor: {
-    type: String,
-    default: 'primary',
-  },
   dense: {
     type: Boolean,
     default: false,
   },
   ndx: {
     type: Object,
-    required: true,
+    default: null,
   },
   valueType: {
     type: String,
-    required: true,
+    default: null,
     validator: (value) =>
+      !value ||
       [
         'totalRevenue',
         'projectCount',
@@ -89,18 +73,16 @@ const props = defineProps({
         'skillCount',
       ].includes(value),
   },
-  formatOptions: {
-    type: Object,
-    default: () => ({}),
-  },
 })
 
 const hover = ref(false)
-const previousValue = ref(null)
 const currentValue = ref(null)
 const dummyChart = ref(null)
 
-// Compute the displayed value based on valueType and current filters
+const hasValue = computed(() => {
+  return props.ndx && props.valueType
+})
+
 const computedValue = computed(() => {
   if (!currentValue.value) return '0'
 
@@ -120,52 +102,32 @@ const computedValue = computed(() => {
   }
 })
 
-// Compute trend direction and percentage
-const trendDirection = computed(() => {
-  if (!previousValue.value || !currentValue.value) return 0
-  return Math.round(
-    ((currentValue.value - previousValue.value) / previousValue.value) * 100
-  )
-})
-
-const showTrend = computed(() => {
-  return previousValue.value !== null && currentValue.value !== null
-})
-
-// Calculate values based on valueType
 function calculateValue() {
+  if (!props.ndx || !props.valueType) return null
+
   const group = props.ndx.groupAll()
 
   switch (props.valueType) {
     case 'totalRevenue':
       return group.reduceSum((d) => d.budget || 0).value()
-
     case 'projectCount':
       return group.reduceCount().value()
-
     case 'completedProjects':
-      return (
-        props.ndx
-          .dimension((d) => d.status)
-          .group()
-          .all()
-          .find((g) => g.key === 'Finished')?.value || 0
-      )
-
+      return props.ndx
+        .dimension((d) => d.status)
+        .group()
+        .all()
+        .find((g) => g.key === 'Finished')?.value || 0
     case 'resourceCount':
       return group.reduceSum((d) => d.cvCount || 1).value()
-
     case 'totalWage':
       return group.reduceSum((d) => d.wage || 0).value()
-
     case 'peopleCount':
       return group.reduceCount().value()
-
     case 'avgWage':
       const total = group.reduceSum((d) => d.wage || 0).value()
       const count = group.reduceCount().value()
       return count ? total / count : 0
-
     case 'skillCount':
       if (props.ndx.dimension((d) => d.skill)) {
         return props.ndx
@@ -175,63 +137,54 @@ function calculateValue() {
           .reduce((sum, g) => sum + g.value, 0)
       }
       return 0
-
     default:
       return 0
   }
 }
 
-// Formatting functions
 function formatCurrency(value) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-    ...props.formatOptions,
   }).format(value)
 }
 
 function formatNumber(value) {
-  return new Intl.NumberFormat('en-US', props.formatOptions).format(value)
+  return new Intl.NumberFormat('en-US').format(value)
 }
 
-// Update values when filters change
 function updateValues() {
-  previousValue.value = currentValue.value
-  currentValue.value = calculateValue()
+  if (props.ndx && props.valueType) {
+    currentValue.value = calculateValue()
+  }
 }
 
-// Setup DC.js chart for reactivity
 onMounted(() => {
-  dummyChart.value = {
-    render: () => {
-      updateValues()
-    },
-    redraw: () => {
-      updateValues()
-    },
-    filterAll: () => {
-      updateValues()
-    },
+  if (props.ndx && props.valueType) {
+    dummyChart.value = {
+      render: updateValues,
+      redraw: updateValues,
+      filterAll: updateValues,
+    }
+    dc.registerChart(dummyChart.value)
+    updateValues()
   }
-
-  dc.registerChart(dummyChart.value)
-  updateValues()
 })
 
 onUnmounted(() => {
   if (dummyChart.value) {
     dc.deregisterChart(dummyChart.value)
-    dummyChart.value = null
   }
 })
 
-// Watch for filter changes
 watch(
-  () => props.ndx.allFiltered(),
+  () => props.ndx?.allFiltered(),
   () => {
-    updateValues()
+    if (props.ndx && props.valueType) {
+      updateValues()
+    }
   }
 )
 </script>
@@ -251,7 +204,6 @@ watch(
   gap: 12px;
 }
 
-/* Icon Section */
 .icon-section {
   display: flex;
   align-items: center;
@@ -266,7 +218,6 @@ watch(
   );
 }
 
-/* Color variants */
 .icon-section.primary {
   --gradient-start: #1976d2;
   --gradient-end: #64b5f6;
@@ -282,27 +233,12 @@ watch(
   --gradient-end: #ffb74d;
 }
 
-.icon-section.error {
-  --gradient-start: #c62828;
-  --gradient-end: #ef5350;
-}
-
-.icon-section.info {
-  --gradient-start: #0288d1;
-  --gradient-end: #4fc3f7;
-}
-
-/* Content Section */
 .content-section {
   flex-grow: 1;
-  min-width: 0; /* Prevents flex item from overflowing */
+  min-width: 0;
 }
 
-/* Header Section */
 .header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 4px;
 }
 
@@ -312,10 +248,8 @@ watch(
   color: var(--v-medium-emphasis-color, rgba(0, 0, 0, 0.6));
 }
 
-/* Value Section */
 .value-section {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
 }
 
@@ -323,39 +257,8 @@ watch(
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--v-high-emphasis-color, rgba(0, 0, 0, 0.87));
-  margin-right: 8px;
-  white-space: nowrap;
 }
 
-.stat-subtitle {
-  font-size: 0.75rem;
-  color: var(--v-medium-emphasis-color, rgba(0, 0, 0, 0.6));
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Trend Indicator */
-.trend-indicator {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background-color: var(--v-surface-variant, rgba(0, 0, 0, 0.05));
-}
-
-.trend-value {
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-/* Progress Bar */
-.stat-progress {
-  margin-top: 6px;
-}
-
-/* Dark Theme Support */
 :deep(.v-theme--dark) {
   .stat-card {
     background-color: var(--v-surface-variant, #1e1e1e);
@@ -368,17 +271,8 @@ watch(
   .stat-value {
     color: rgba(255, 255, 255, 0.87);
   }
-
-  .stat-subtitle {
-    color: rgba(255, 255, 255, 0.6);
-  }
-
-  .trend-indicator {
-    background-color: rgba(255, 255, 255, 0.05);
-  }
 }
 
-/* Responsive Adjustments */
 @media (max-width: 600px) {
   .stat-card-wrapper {
     padding: 8px;
