@@ -1,25 +1,24 @@
 <template>
-  <v-main>
-    <div>
-      <!-- Sidebar Section -->
-      <SideNav />
+  <v-layout>
+    <!-- Sidebar Section -->
+    <SideNav2 />
 
-      <!-- Main Content Section -->
-      <div class="content w-100">
-        <v-container height="100%" width="100%">
-          <router-view />
-        </v-container>
-      </div>
-    </div>
-  </v-main>
+    <!-- Main Content Section -->
+    <v-main class="content">
+      <v-container>
+        <router-view />
+      </v-container>
+    </v-main>
+  </v-layout>
 </template>
 
 <script setup>
-import SideNav from '@/components/SideNav.vue'
+import SideNav2 from '@/components/layout/SideNav2.vue'
 </script>
 
 <style scoped>
 .content {
   height: 100vh;
+  width: 100%;
 }
 </style>

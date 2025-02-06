@@ -11,6 +11,7 @@ import vuetify from './plugins/vuetify'
 //CSS
 import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
+import '@/styles/settings.scss' // Import the SCSS settings
 
 // Components
 import App from './App.vue'
