@@ -148,8 +148,8 @@ import BaseChips from '@/components/Chips.vue'
 import FilterInterface from '@/components/FilterInterface.vue'
 import { useFilterStore } from '@/stores/filterStore'
 import { useProjectStore } from '@/stores/projectStore'
-import ProfileCard from '@/components/profileCard.vue'
-import AddProfileModal from '@/components/addProfileModal.vue'
+import ProfileCard from '@/components/ProfileCard.vue'
+import AddProfileModal from '@/components/AddProfileModal.vue'
 import { useJobFilter } from '@/plugins/useJobFilter'
 
 const filterStore = useFilterStore()

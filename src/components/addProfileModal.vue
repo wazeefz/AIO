@@ -116,7 +116,7 @@ import { ref, computed, watch } from 'vue'
 import { useFilterStore } from '@/stores/filterStore'
 import { useProjectStore } from '@/stores/projectStore'
 import FilterInterface from '@/components/FilterInterface.vue'
-import ProfileCard from '@/components/profileCard.vue'
+import ProfileCard from '@/components/ProfileCard.vue'
 import BaseChips from '@/components/Chips.vue'
 
 const props = defineProps({

@@ -1,9 +1,9 @@
 <template>
   <ProjectSelection />
   <ActionButton />
-  <h2>Team Members ({{ filteredTeamMembers.length }})</h2>
+  <!--<h2>Team Members ({{ filteredTeamMembers.length }})</h2>
 
-  <!-- ProfileCard Component -->
+  ProfileCard Component
   <v-row class="gap-4">
     <v-col
       v-for="result in filteredTeamMembers"
@@ -16,12 +16,12 @@
         :is-editing="isEditing"
         @click="handleModalOpen(result)"
         @modal-closed="handleModalClose"
-        @remove-profile="handleRemoveItem"
+        @remove-profile="handleRemoveItem(result.id)"
       />
     </v-col>
   </v-row>
 
-  <!-- Filter Dialog -->
+  <!-- Filter Dialog 
   <v-dialog v-model="showFilterDialog" max-width="800px" persistent>
     <v-card>
       <v-card-text>
@@ -39,7 +39,7 @@
         </v-btn>
       </v-card-actions>
     </v-card>
-  </v-dialog>
+  </v-dialog> -->
 </template>
 
 <script setup>
@@ -86,12 +86,10 @@ const clearAllFilters = () => {
 }
 
 const handleModalOpen = (result) => {
-  // Handle modal open logic here
   console.log('Modal opened for:', result)
 }
 
 const handleModalClose = () => {
-  // Handle modal close logic here
   console.log('Modal closed')
 }
 </script>

@@ -20,7 +20,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useFilterStore } from '@/stores/filterStore'
 
-// Define props for customization
 const props = defineProps({
   variant: {
     type: String,
@@ -32,11 +31,11 @@ const props = defineProps({
   },
   label: {
     type: String,
-    default: 'Select Item', // Default label
+    default: 'Select Item',
   },
   title: {
     type: String,
-    default: 'Filter', // Default title
+    default: 'Filter',
   },
   items: {
     type: Array,
@@ -50,20 +49,39 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  // Add isTeamFilter prop to determine which filter set to use
+  isTeamFilter: {
+    type: Boolean,
+    default: true,
+  },
 })
 
 const filterStore = useFilterStore()
 const selectedItems = ref(props.multiple ? [] : null)
 
 const handleChange = (selected) => {
-  filterStore.clearFilters(props.filterType)
+  // Use the appropriate clear method based on isTeamFilter prop
+  if (props.isTeamFilter) {
+    filterStore.clearTeamFilters(props.filterType)
+  } else {
+    filterStore.clearModalFilters(props.filterType)
+  }
+
   if (selected) {
     if (props.multiple) {
       selected.forEach((item) => {
-        filterStore.addFilter(props.filterType, item)
+        if (props.isTeamFilter) {
+          filterStore.addTeamFilter(props.filterType, item)
+        } else {
+          filterStore.addModalFilter(props.filterType, item)
+        }
       })
     } else {
-      filterStore.addFilter(props.filterType, selected)
+      if (props.isTeamFilter) {
+        filterStore.addTeamFilter(props.filterType, selected)
+      } else {
+        filterStore.addModalFilter(props.filterType, selected)
+      }
     }
   }
 }

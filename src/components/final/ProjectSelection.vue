@@ -10,6 +10,7 @@
     :chips="true"
     clearable
     filterType="project"
+    :isTeamFilter="true"
     @update:model-value="handleProjectChange"
   />
 </template>
@@ -34,7 +35,9 @@ const projectItems = computed(() =>
 
 const handleProjectChange = (projectId) => {
   projectStore.setCurrentProject(projectId)
-  filterStore.clearFilters() // Clear filters when project changes
+  // Clear both team and modal filters when project changes
+  filterStore.clearTeamFilters()
+  filterStore.clearModalFilters()
 }
 
 onMounted(() => {

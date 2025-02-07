@@ -58,6 +58,14 @@ const toggleFilter = () => {
 <style scoped>
 .action-buttons-card {
   padding: 4px 8px;
+  background: linear-gradient(
+    150deg,
+    #e0d5c5 3%,
+    #f5eee6 23%,
+    #e0d5c5 60%,
+    #b1a184 90%,
+    #8a7460 95%
+  ) !important;
 }
 
 .custom-edit-btn {
