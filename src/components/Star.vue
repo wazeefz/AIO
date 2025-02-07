@@ -1,21 +1,8 @@
 <template>
-  <div class="star" :class="{ active: isActive }" @click="toggleStar"></div>
+  <div class="star"></div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      isActive: false,
-    }
-  },
-  methods: {
-    toggleStar() {
-      this.isActive = !this.isActive
-    },
-  },
-}
-</script>
+<script></script>
 
 <style scoped>
 .star {
