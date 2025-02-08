@@ -37,7 +37,6 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue'
 import { useChat } from '@/composables/useChat'
-import { useSidebar } from '@/composables/useSidebar'
 import ChatSidebar from '@/components/ChatSidebar.vue'
 import ChatMessage from '@/components/ChatMessage.vue'
 import ChatInput from '@/components/ChatInput.vue'
