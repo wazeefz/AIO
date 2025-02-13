@@ -33,19 +33,19 @@ onMounted(() => {
   window.addEventListener('resize', handleResize)
 })
 
-onUnmounted(() => {
-  if (chart.value) {
-    dc.deregisterChart(chart.value)
-    chart.value.destroy()
-  }
-  window.removeEventListener('resize', handleResize)
-})
+// onUnmounted(() => {
+//   if (chart.value) {
+//     dc.deregisterChart(chart.value)
+//     chart.value.destroy()
+//   }
+//   window.removeEventListener('resize', handleResize)
+// })
 
 const handleResize = () => {
   if (chart.value) {
     const container = document.getElementById(props.chartId)
-    const width = container.offsetWidth
-    const height = container.offsetHeight
+    const width = container?.offsetWidth
+    const height = container?.offsetHeight
 
     chart.value.width(width).height(height).render()
   }
@@ -53,8 +53,8 @@ const handleResize = () => {
 
 function generateBarChart() {
   const container = document.getElementById(props.chartId)
-  const width = container.offsetWidth
-  const height = container.offsetHeight
+  const width = container?.offsetWidth
+  const height = container?.offsetHeight
 
   chart.value = dc.barChart(`#${props.chartId}`)
   dc.registerChart(chart.value)

@@ -175,11 +175,11 @@ onMounted(() => {
   }
 })
 
-onUnmounted(() => {
-  if (dummyChart.value) {
-    dc.deregisterChart(dummyChart.value)
-  }
-})
+// onUnmounted(() => {
+//   if (dummyChart.value) {
+//     dc.deregisterChart(dummyChart.value)
+//   }
+// })
 
 watch(
   () => props.ndx?.allFiltered(),

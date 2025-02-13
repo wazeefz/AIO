@@ -399,12 +399,12 @@ onMounted(() => {
   })
 })
 
-onUnmounted(() => {
-  if (countChart.value) {
-    dc.deregisterChart(countChart.value)
-    countChart.value = null
-  }
-})
+// onUnmounted(() => {
+//   if (countChart.value) {
+//     dc.deregisterChart(countChart.value)
+//     countChart.value = null
+//   }
+// })
 </script>
 
 <style scoped>

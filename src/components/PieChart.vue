@@ -36,19 +36,19 @@ onMounted(() => {
   window.addEventListener('resize', handleResize)
 })
 
-onUnmounted(() => {
-  if (chart.value) {
-    dc.deregisterChart(chart.value)
-    chart.value.destroy()
-  }
-  window.removeEventListener('resize', handleResize)
-})
+// onUnmounted(() => {
+//   if (chart.value) {
+//     dc.deregisterChart(chart.value)
+//     chart.value.destroy()
+//   }
+//   window.removeEventListener('resize', handleResize)
+// })
 
 const handleResize = () => {
   if (chart.value) {
     const container = document.getElementById(props.chartId)
-    const width = container.offsetWidth
-    const height = container.offsetHeight
+    const width = container?.offsetWidth
+    const height = container?.offsetHeight
     const radius = Math.min(width, height) / 2.2
 
     chart.value
@@ -62,8 +62,8 @@ const handleResize = () => {
 
 function generatePieChart() {
   const container = document.getElementById(props.chartId)
-  const width = container.offsetWidth * 0.6
-  const height = container.offsetHeight * 0.6
+  const width = container?.offsetWidth * 0.6
+  const height = container?.offsetHeight * 0.6
   const radius = Math.min(width, height) / 2.2
 
   chart.value = dc.pieChart(`#${props.chartId}`)
