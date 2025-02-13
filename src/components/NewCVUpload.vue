@@ -176,18 +176,31 @@
             <!-- Actions -->
             <v-card-actions class="pa-4">
               <v-spacer></v-spacer>
-              <v-btn
+
+              <!-- For testing purpose only to comment out disable props -->
+
+              <!-- <v-btn
                 v-if="activeTab === 'single'"
                 :color="primaryColor"
                 :disabled="!hasCompletedUploads || uploadedFiles.length > 1"
                 @click="handleContinue('single')"
+              > -->
+              <v-btn
+                v-if="activeTab === 'single'"
+                :color="primaryColor"
+                @click="handleContinue('single')"
               >
                 Continue to Employee Info
               </v-btn>
-              <v-btn
+              <!-- <v-btn
                 v-else
                 :color="primaryColor"
                 :disabled="!hasCompletedUploads || uploadedFiles.length === 0"
+                @click="handleContinue('bulk')"
+              > -->
+              <v-btn
+                v-else
+                :color="primaryColor"
                 @click="handleContinue('bulk')"
               >
                 Continue to Bulk Processing
@@ -399,10 +412,11 @@ const showErrorMessage = (message) => {
 }
 
 const handleContinue = (mode) => {
+  console.log('mode :', mode)
   if (mode === 'single') {
     window.location.href = '/upload-cv/employee-info'
   } else {
-    window.location.href = '/upload-cv/bulk-processing'
+    window.location.href = '/upload-cv/bulk-employee-info'
   }
 }
 
