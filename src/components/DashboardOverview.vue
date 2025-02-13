@@ -1,204 +1,255 @@
 <template>
-  <div>
-    <!-- Top Stats Section -->
-    <v-row>
-      <v-col cols="3">
-        <StatCard
-          title="Total Revenue"
-          value="$53,009"
-          subtitle="12% increase"
-          icon="mdi-currency-usd"
-        />
-      </v-col>
-      <v-col cols="3">
-        <StatCard
-          title="Projects"
-          value="95/100"
-          subtitle="10% decrease"
-          icon="mdi-briefcase"
-        />
-      </v-col>
-      <v-col cols="3">
-        <StatCard
-          title="Time Spent"
-          value="1022 Hrs"
-          subtitle="8% increase"
-          icon="mdi-clock"
-        />
-      </v-col>
-      <v-col cols="3">
-        <StatCard
-          title="Resources"
-          value="101/120"
-          subtitle="2% increase"
-          icon="mdi-account-group"
-        />
-      </v-col>
-    </v-row>
+  <v-container fluid class="pa-2 dashboard-container">
+    <!-- Fixed Content (Above Fold) -->
+    <div class="fixed-content">
+      <!-- Stats Row -->
+      <v-row dense>
+        <v-col cols="4">
+          <!-- With crossfilter -->
+          <StatCard
+            dense
+            title="Budget"
+            icon="mdi-currency-usd"
+            iconColor="primary"
+            :ndx="ndx"
+            valueType="totalRevenue"
+          />
+        </v-col>
+        <v-col cols="4">
+          <StatCard
+            dense
+            title="Projects"
+            icon="mdi-briefcase"
+            iconColor="success"
+            :ndx="ndx"
+            valueType="projectCount"
+          />
+        </v-col>
+        <v-col cols="4">
+          <StatCard
+            dense
+            title="Resources"
+            icon="mdi-account-group"
+            iconColor="warning"
+            :ndx="ndx"
+            valueType="resourceCount"
+          />
+        </v-col>
+      </v-row>
 
-    <!-- Recent Project Table -->
-    <v-row>
-      <v-col cols="8">
-        <v-card>
-          <v-card-title>Recent Projects</v-card-title>
-          <v-data-table
-            :headers="projectHeaders"
-            :items="projects"
-            class="elevation-1"
-          >
-            <template v-slot:[`item.progress`]="{ item }">
-              <v-progress-linear
-                :value="item.progress"
-                height="8"
-                color="primary"
-              ></v-progress-linear>
-            </template>
-            <template v-slot:[`item.status`]="{ item }">
-              <v-chip :color="statusColors[item.status]" dark>{{
-                item.status
-              }}</v-chip>
-            </template>
-          </v-data-table>
-        </v-card>
-      </v-col>
-      <!-- All Projects Pie Chart -->
-      <v-col cols="4">
-        <v-card>
-          <v-card-title>All Projects</v-card-title>
-          <PieChart
-            :dimension="projectStatusDimension"
-            :group="projectStatusGroup"
-            chartId="project-pie-chart"
-          />
-        </v-card>
-      </v-col>
-    </v-row>
+      <!-- Charts Row -->
+      <v-row dense>
+        <!-- Project Status Pie Chart -->
+        <v-col cols="6">
+          <v-card>
+            <v-card-title class="text-subtitle-1">Status</v-card-title>
+            <PieChart
+              :dimension="statusDimension"
+              :group="statusGroup"
+              chartId="status-pie-chart"
+              :colors="statusColors"
+            />
+          </v-card>
+        </v-col>
 
-    <v-row>
-      <!-- Target Chart -->
-      <v-col cols="6">
-        <v-card>
-          <v-card-title>Target Achievement</v-card-title>
-          <BarChart
-            :dimension="targetDimension"
-            :group="targetGroup"
-            title="Target by Department"
-            chartId="target-bar-chart"
-          />
-        </v-card>
-      </v-col>
-      <!-- Revenue Chart -->
-      <v-col>
-        <v-card>
-          <v-card-title>Revenue This Year</v-card-title>
-          <BarChart
-            :dimension="monthDimension"
-            :group="revenueGroup"
-            title="Revenue by Month"
-            chartId="revenue-bar-chart"
-          />
-        </v-card>
-      </v-col>
-    </v-row>
-  </div>
+        <!-- Department Budget Chart -->
+        <v-col cols="6">
+          <v-card>
+            <v-card-title class="text-subtitle-1"
+              >Budget by Department</v-card-title
+            >
+            <BarChart
+              :dimension="departmentDimension"
+              :group="departmentBudgetGroup"
+              chartId="department-budget-chart"
+            />
+          </v-card>
+        </v-col>
+      </v-row>
+    </div>
+
+    <!-- Scrollable Content (Below Fold) -->
+    <div class="scrollable-content">
+      <v-card>
+        <DataTable
+          table-type="projects"
+          :ndx="ndx"
+          :dimension="projectDimension"
+        />
+      </v-card>
+    </div>
+
+    <!-- Reset Filters Button -->
+    <v-btn color="primary" class="reset-button" @click="resetAllFilters">
+      Reset Filters
+    </v-btn>
+  </v-container>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useProjectStore } from '@/stores/project'
 import StatCard from '@/components/StatCard.vue'
 import BarChart from '@/components/BarChart.vue'
 import PieChart from '@/components/PieChart.vue'
+import DataTable from '@/components/DataTable.vue'
 import * as dc from 'dc'
+import * as d3 from 'd3'
 import crossfilter from 'crossfilter2'
 
-// Recent Projects Table Data
-const projectHeaders = [
-  { text: 'Project', value: 'name' },
-  { text: 'Progress', value: 'progress' },
-  { text: 'Due Date', value: 'dueDate' },
-  { text: 'Status', value: 'status' },
+const projectStore = useProjectStore()
+const allDimensions = ref([])
+const dataCount = ref(null)
+
+// Initialize crossfilter
+const ndx = crossfilter(projectStore.projects)
+const revenueNdx = crossfilter(projectStore.monthlyRevenue)
+
+// Create dimensions
+const projectDimension = ndx.dimension((d) => d.name)
+const statusDimension = ndx.dimension((d) => d.status)
+const departmentDimension = ndx.dimension((d) => d.department)
+const monthDimension = revenueNdx.dimension((d) => d.month)
+
+// Track all dimensions
+allDimensions.value = [
+  projectDimension,
+  statusDimension,
+  departmentDimension,
+  monthDimension,
 ]
 
-const projects = [
-  {
-    name: 'Website Redesign',
-    progress: 80,
-    dueDate: '2023-08-23',
-    status: 'In Progress',
-  },
-  {
-    name: 'Internal CMS Tools',
-    progress: 100,
-    dueDate: '2023-06-22',
-    status: 'Finished',
-  },
-  {
-    name: 'E-Commerce App Phase 01',
-    progress: 20,
-    dueDate: '2023-06-01',
-    status: 'Unfinished',
-  },
-  {
-    name: 'Netflix UX Evaluation',
-    progress: 20,
-    dueDate: '2023-06-01',
-    status: 'In Progress',
-  },
-]
+// Create groups
+const statusGroup = statusDimension.group()
+const departmentBudgetGroup = departmentDimension
+  .group()
+  .reduceSum((d) => d.budget)
+const monthlyRevenueGroup = monthDimension.group().reduceSum((d) => d.revenue)
 
+// Status colors
 const statusColors = {
-  'In Progress': 'blue',
-  Finished: 'green',
-  Unfinished: 'red',
+  Finished: '#4CAF50',
+  'In Progress': '#FFA726',
+  Unfinished: '#EF5350',
 }
 
-// Crossfilter for Charts
-const revenueData = [
-  { month: 'Jan', revenue: 200 },
-  { month: 'Feb', revenue: 300 },
-  { month: 'Mar', revenue: 400 },
-  { month: 'Apr', revenue: 500 },
-  { month: 'May', revenue: 600 },
-  { month: 'Jun', revenue: 700 },
-  { month: 'Jul', revenue: 800 },
-  { month: 'Aug', revenue: 700 },
-  { month: 'Sep', revenue: 600 },
-  { month: 'Oct', revenue: 700 },
-  { month: 'Nov', revenue: 800 },
-  { month: 'Dec', revenue: 900 },
-]
+onMounted(() => {
+  // Initialize data count
+  dataCount.value = dc
+    .dataCount('#dc-data-count')
+    .dimension(ndx)
+    .group(ndx.groupAll())
 
-const projectData = [
-  { status: 'In Progress', count: 40 },
-  { status: 'Finished', count: 50 },
-  { status: 'Unfinished', count: 10 },
-]
+  // Create a dummy chart to handle resets properly
+  const dummyChart = {
+    render: () => {},
+    redraw: () => {},
+    filterAll: () => {},
+  }
+  dc.registerChart(dummyChart)
 
-const targetData = [
-  { department: 'Marketing', target: 80 },
-  { department: 'Development', target: 70 },
-  { department: 'Design', target: 90 },
-  { department: 'Sales', target: 100 },
-]
+  // Render all charts
+  dc.renderAll()
 
-const ndx = crossfilter(revenueData)
-const ndxProjects = crossfilter(projectData)
-const ndxTargets = crossfilter(targetData)
+  // Add resize listener
+  window.addEventListener('resize', handleResize)
+})
 
-const monthDimension = ndx.dimension((d) => d.month)
-const revenueGroup = monthDimension.group().reduceSum((d) => d.revenue)
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
 
-const projectStatusDimension = ndxProjects.dimension((d) => d.status)
-const projectStatusGroup = projectStatusDimension
-  .group()
-  .reduceSum((d) => d.count)
+  // Clear filters before unmounting
+  allDimensions.value.forEach((dim) => {
+    if (dim && typeof dim.filterAll === 'function') {
+      dim.filterAll()
+    }
+  })
 
-const targetDimension = ndxTargets.dimension((d) => d.department)
-const targetGroup = targetDimension.group().reduceSum((d) => d.target)
+  // Clear data
+  ndx.remove()
+  revenueNdx.remove()
+})
+
+const handleResize = () => {
+  dc.renderAll()
+}
+
+const resetAllFilters = () => {
+  // Reset all dimensions
+  allDimensions.value.forEach((dim) => {
+    if (dim && typeof dim.filterAll === 'function') {
+      dim.filterAll()
+    }
+  })
+
+  // Reset both crossfilters
+  ndx.remove()
+  revenueNdx.remove()
+
+  // Re-add the data
+  ndx.add(projectStore.projects)
+  revenueNdx.add(projectStore.monthlyRevenue)
+
+  // Redraw all charts
+  dc.redrawAll()
+}
 </script>
 
 <style scoped>
-.elevation-1 {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.dashboard-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fixed-content {
+  flex: 0 0 auto;
+}
+
+.scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 16px;
+}
+
+.reset-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+}
+
+:deep(.dc-chart) {
+  float: none;
+  padding: 16px;
+}
+
+.v-row {
+  margin: 0 !important;
+}
+
+.v-col {
+  padding: 4px !important;
+}
+
+.v-card-title {
+  padding: 12px 16px;
+  font-size: 0.875rem !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Dark theme support */
+:deep(.v-theme--dark) {
+  .v-card-title {
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+  }
+}
+
+@media (max-width: 960px) {
+  .v-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
 }
 </style>

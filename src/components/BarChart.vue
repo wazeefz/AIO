@@ -1,17 +1,15 @@
 <template>
-  <div>
-    <div>
-      <b>{{ title }}</b>
+  <div class="bar-chart-container">
+    <div class="scrollable-wrapper">
+      <div :id="chartId"></div>
     </div>
-    <div :id="chartId"></div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import * as dc from 'dc'
 import * as d3 from 'd3'
-import 'dc/src/compat/d3v6'
 
 const props = defineProps({
   dimension: {
@@ -22,34 +20,91 @@ const props = defineProps({
     type: Object,
     required: true,
   },
-  title: String,
-  chartId: String,
+  chartId: {
+    type: String,
+    required: true,
+  },
 })
 
-const barChart = ref(null)
+const chart = ref(null)
 
 onMounted(() => {
   generateBarChart()
+  window.addEventListener('resize', handleResize)
 })
 
+onUnmounted(() => {
+  if (chart.value) {
+    dc.deregisterChart(chart.value)
+    chart.value.destroy()
+  }
+  window.removeEventListener('resize', handleResize)
+})
+
+const handleResize = () => {
+  if (chart.value) {
+    const container = document.getElementById(props.chartId)
+    const width = container.offsetWidth
+    const height = container.offsetHeight
+
+    chart.value.width(width).height(height).render()
+  }
+}
+
 function generateBarChart() {
-  barChart.value = dc.barChart(`#${props.chartId}`)
-  barChart.value
-    .width(500)
-    .height(300)
-    .x(d3.scaleBand())
-    .xUnits(dc.units.ordinal)
+  const container = document.getElementById(props.chartId)
+  const width = container.offsetWidth
+  const height = container.offsetHeight
+
+  chart.value = dc.barChart(`#${props.chartId}`)
+  dc.registerChart(chart.value)
+
+  chart.value
+    .width(width * 1.5) // Set the width to 1.5 times the container width for scrolling
+    .height(height)
+    .margins({ top: 0, right: 10, bottom: 50, left: 55 })
     .dimension(props.dimension)
     .group(props.group)
+    .x(d3.scaleBand())
+    .xUnits(dc.units.ordinal)
     .elasticY(true)
     .renderHorizontalGridLines(true)
-    .renderVerticalGridLines(true)
+    .brushOn(false)
     .barPadding(0.1)
     .outerPadding(0.05)
-    .on('filtered', function (chart) {
+    .on('filtered', () => {
       dc.redrawAll()
     })
 
-  barChart.value.render()
+  // Format y-axis labels as currency
+  chart.value.yAxis().tickFormat((d) => `$${d3.format(',')(d)}`)
+
+  // Rotate x-axis labels
+  chart.value.on('renderlet', function (chart) {
+    chart
+      .selectAll('.x text')
+      .attr('transform', 'translate(-10,10) rotate(-45)')
+  })
+
+  chart.value.render()
 }
 </script>
+
+<style scoped>
+.bar-chart-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.scrollable-wrapper {
+  width: 100%;
+  overflow-x: auto; /* Enable horizontal scrolling */
+}
+
+:deep(.dc-chart .axis text) {
+  font-size: 12px;
+}
+</style>
