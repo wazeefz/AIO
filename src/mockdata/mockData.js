@@ -8,6 +8,7 @@ export const employeesData = [
     salary: 'RM10,000',
     department: 'Developer',
     employment: 'Full Time',
+    profilePicture: 'https://via.placeholder.com/150',
   },
   {
     id: 102,
@@ -33,6 +34,8 @@ export const employeesData = [
     salary: 'RM10,000',
     department: 'Designer',
     employment: 'External',
+    profilePicture:
+      'C:UsersChan Zheng ShaoOneDriveDesktopGithub RepoAIOsrcassetsWAZEEF!!.jpg',
   },
   {
     id: 103,
@@ -42,6 +45,7 @@ export const employeesData = [
     salary: 'RM15,000',
     department: 'Developer',
     employment: 'Part Time',
+    profilePicture: 'https://via.placeholder.com/150',
   },
   {
     id: 201,
@@ -51,6 +55,7 @@ export const employeesData = [
     salary: 'RM6,000',
     department: 'Developer',
     employment: 'Intern',
+    profilePicture: 'https://via.placeholder.com/150',
   },
   {
     id: 202,
@@ -60,6 +65,7 @@ export const employeesData = [
     salary: 'RM6,000',
     department: 'Designer',
     employment: 'Contractual',
+    profilePicture: 'https://via.placeholder.com/150',
   },
 ]
 

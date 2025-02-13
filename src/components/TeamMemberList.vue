@@ -242,7 +242,15 @@ const handleProfilesAdded = (selectedEmployees) => {
   try {
     if (currentProject.value) {
       const memberIds = selectedEmployees.map((emp) => emp.id)
-      projectStore.addTeamMembers(currentProject.value.id, memberIds)
+      // Only add the new members that aren't already in the team
+      const currentTeamIds = currentProject.value.team
+      const newMemberIds = memberIds.filter(
+        (id) => !currentTeamIds.includes(id)
+      )
+
+      if (newMemberIds.length > 0) {
+        projectStore.addTeamMembers(currentProject.value.id, newMemberIds)
+      }
     }
     showAddProfileModal.value = false
   } catch (e) {

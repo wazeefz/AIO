@@ -58,51 +58,14 @@
               <ProfileCard
                 :result="employee"
                 :selectable="true"
+                :is-add-mode="true"
                 @click="showDetail(employee)"
+                @modal-closed="closeDetailModal"
+                @confirm-add-profile="confirmAddProfile"
               />
             </v-col>
           </v-row>
         </div>
-
-        <!-- Detailed Profile Card Modal -->
-        <v-dialog v-model="showDetailModal" max-width="600px" persistent>
-          <v-card>
-            <v-card-title
-              class="headline d-flex justify-space-between align-center"
-            >
-              <span>{{ selectedEmployee?.name }}</span>
-              <v-btn icon @click="closeDetailModal">
-                <v-icon>mdi-close</v-icon>
-              </v-btn>
-            </v-card-title>
-
-            <v-card-text>
-              <p><strong>Title:</strong> {{ selectedEmployee?.title }}</p>
-              <p>
-                <strong>Department:</strong> {{ selectedEmployee?.department }}
-              </p>
-              <p><strong>Salary:</strong> {{ selectedEmployee?.salary }}</p>
-              <p>
-                <strong>Employment Type:</strong>
-                {{ selectedEmployee?.employment }}
-              </p>
-              <p><strong>Skills:</strong></p>
-              <v-chip
-                v-for="skill in selectedEmployee?.skills"
-                :key="skill"
-                class="mr-2 mb-2"
-              >
-                {{ skill }}
-              </v-chip>
-            </v-card-text>
-
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn color="error" @click="closeDetailModal">Cancel</v-btn>
-              <v-btn color="primary" @click="confirmAddProfile">Confirm</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -154,24 +117,14 @@ const availableEmployees = computed(() => {
   }
 })
 
-const showDetail = (employee) => {
-  selectedEmployee.value = employee
-  showDetailModal.value = true
-}
-
-const closeDetailModal = () => {
-  showDetailModal.value = false
-  selectedEmployee.value = null
-}
-
-const confirmAddProfile = () => {
-  selectedProfiles.value.push(selectedEmployee.value)
-  emit('profiles-added', selectedProfiles.value)
-  closeDetailModal()
-}
-
 const handleFiltersApplied = () => {
   emit('filter-chips-updated', filterStore.activeModalFilters)
+}
+
+const confirmAddProfile = (employee) => {
+  // Just emit the single employee being added
+  emit('profiles-added', [employee])
+  closeDetailModal()
 }
 
 const filterChips = computed(() => {
@@ -216,6 +169,16 @@ const cleanupModal = () => {
 // Modify your existing closeModal function to use cleanupModal
 const closeModal = () => {
   cleanupModal()
+}
+
+const closeDetailModal = () => {
+  showDetailModal.value = false
+  selectedEmployee.value = null
+}
+
+const showDetail = (employee) => {
+  selectedEmployee.value = employee
+  showDetailModal.value = true
 }
 
 watch(

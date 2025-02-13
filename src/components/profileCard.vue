@@ -1,5 +1,18 @@
 <template>
   <div class="profile-card-container">
+    <!-- Team Lead Badge -->
+    <div v-if="result.isTeamLead" class="team-lead-badge">
+      <v-tooltip text="Team Lead">
+        <template v-slot:activator="{ props }">
+          <v-icon
+            v-bind="props"
+            icon="mdi-account-multiple"
+            color="white"
+            size="20"
+          ></v-icon>
+        </template>
+      </v-tooltip>
+    </div>
     <!-- Remove Button with confirmation dialog -->
     <v-btn
       v-if="isEditing && !selectable"
@@ -34,24 +47,45 @@
       rounded="lg"
     >
       <v-card-text class="pa-6">
-        <!-- Card Header -->
-        <slot name="card-header" :result="result">
-          <v-card-title class="text-h5 font-weight-medium pa-0 text-white mb-1">
-            {{ result.name }}
-          </v-card-title>
-          <v-card-subtitle class="pa-0 text-white mb-2">
-            {{ result.title }}
-          </v-card-subtitle>
-          <v-card-subtitle class="pa-0 text-white mb-2">
-            {{ result.department }}
-          </v-card-subtitle>
-          <v-card-subtitle class="pa-0 text-white mb-4">
-            {{ result.salary }}
-          </v-card-subtitle>
-          <v-card-subtitle class="pa-0 text-white mb-4">
-            {{ result.employment }}
-          </v-card-subtitle>
-        </slot>
+        <div class="d-flex">
+          <!-- Profile Image -->
+          <div class="profile-image-container mr-4">
+            <v-avatar size="80">
+              <v-img
+                :src="result.avatar"
+                :alt="result.name"
+                cover
+                class="profile-image"
+              ></v-img>
+            </v-avatar>
+          </div>
+
+          <!-- Profile Info -->
+          <div class="profile-info">
+            <slot name="card-header" :result="result">
+              <div class="text-h5 font-weight-medium text-white mt-1">
+                {{ result.name }}
+              </div>
+              <v-divider
+                class="my-4"
+                bg-color="white"
+                thickness="2"
+              ></v-divider>
+              <div class="text-subtitle-1 text-white mb-2">
+                {{ result.title }}
+              </div>
+              <div class="d-flex align-center mb-2">
+                <v-icon size="small" color="white" class="mr-1"
+                  >mdi-currency-usd</v-icon
+                >
+                <span class="text-white">{{ result.salary }} </span>
+              </div>
+              <div class="text-subtitle-2 text-white mb-4">
+                Department: {{ result.department }}
+              </div>
+            </slot>
+          </div>
+        </div>
 
         <!-- Skills Slot -->
         <slot name="skills" :skills="skillChips">
@@ -130,10 +164,17 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <slot name="modal-actions" :close="closeModal" :result="result">
-            <!-- Default actions -->
-            <v-btn color="primary" variant="text" @click="closeModal">
-              Close
-            </v-btn>
+            <!-- Check if it's being called by addProfileModal -->
+            <template v-if="isAddMode">
+              <v-btn color="error" @click="closeModal">Cancel</v-btn>
+              <v-btn color="primary" @click="handleConfirmAdd">Confirm</v-btn>
+            </template>
+            <!-- Default close button for normal view -->
+            <template v-else>
+              <v-btn color="primary" variant="text" @click="closeModal">
+                Close
+              </v-btn>
+            </template>
           </slot>
         </v-card-actions>
       </v-card>
@@ -158,9 +199,18 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isAddMode: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['modal-opened', 'modal-closed', 'remove-profile'])
+const emit = defineEmits([
+  'modal-opened',
+  'modal-closed',
+  'remove-profile',
+  'confirm-add-profile',
+])
 const showModal = ref(false)
 const showConfirmDialog = ref(false)
 const visibleCount = ref(props.result.skills.length)
@@ -273,6 +323,11 @@ const confirmRemove = (event) => {
 const confirmAndRemove = () => {
   showConfirmDialog.value = false
   emit('remove-profile', props.result.id)
+}
+
+const handleConfirmAdd = () => {
+  emit('confirm-add-profile', props.result)
+  closeModal()
 }
 </script>
 
