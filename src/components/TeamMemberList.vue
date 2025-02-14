@@ -109,7 +109,10 @@
                 sm="6"
               >
                 <ProfileCard
-                  :result="result"
+                  :result="{
+                    ...result,
+                    isTeamLead: currentProject.isTeamLead === result.id,
+                  }"
                   :is-editing="isEditing"
                   @click="handleModalOpen"
                   @modal-closed="handleModalClose"

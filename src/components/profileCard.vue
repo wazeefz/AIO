@@ -1,18 +1,5 @@
 <template>
   <div class="profile-card-container">
-    <!-- Team Lead Badge -->
-    <div v-if="result.isTeamLead" class="team-lead-badge">
-      <v-tooltip text="Team Lead">
-        <template v-slot:activator="{ props }">
-          <v-icon
-            v-bind="props"
-            icon="mdi-account-multiple"
-            color="white"
-            size="20"
-          ></v-icon>
-        </template>
-      </v-tooltip>
-    </div>
     <!-- Remove Button with confirmation dialog -->
     <v-btn
       v-if="isEditing && !selectable"
@@ -48,6 +35,19 @@
     >
       <v-card-text class="pa-6">
         <div class="d-flex">
+          <!-- Team Lead Badge -->
+          <div v-if="result.isTeamLead" class="team-lead-badge">
+            <v-tooltip text="Team Lead">
+              <template v-slot:activator="{ props }">
+                <v-icon
+                  v-bind="props"
+                  icon="mdi-account-multiple"
+                  color="white"
+                  size="20"
+                ></v-icon>
+              </template>
+            </v-tooltip>
+          </div>
           <!-- Profile Image -->
           <div class="profile-image-container mr-4">
             <v-avatar size="80" :rounded="true" class="rounded-lg">
@@ -254,69 +254,92 @@ const calculateVisibleChips = async () => {
   if (!skillsContainer.value) return
 
   const containerWidth = skillsContainer.value.offsetWidth
-  const chipMargin = 8 // gap between chips
+  const chipGap = 8
+  const overflowChipWidth = 60
 
-  // Reset to show all chips initially
+  // Always start by showing all chips
   visibleCount.value = skillChipsData.value.length
   await nextTick()
 
-  // Get all chip elements including the overflow chip
-  const chipElements = skillsContainer.value.querySelectorAll('.skill-chip')
-  let currentRowWidth = 0
-  let lastVisibleIndex = skillChipsData.value.length
+  // Get all chip elements
+  const chipElements = Array.from(
+    skillsContainer.value.querySelectorAll('.skill-chip')
+  )
 
-  for (let i = 0; i < chipElements.length; i++) {
-    const chip = chipElements[i]
-    const chipWidth = chip.offsetWidth + chipMargin
+  // Early return if no chips
+  if (chipElements.length === 0) return
 
-    if (currentRowWidth + chipWidth > containerWidth) {
-      lastVisibleIndex = i
-      break
-    }
-    currentRowWidth += chipWidth
+  // Calculate total width needed for each chip
+  const chipWidths = chipElements.map((chip) => chip.offsetWidth + chipGap)
+  const totalWidth = chipWidths.reduce((sum, width) => sum + width, 0)
+
+  // If all chips fit, show them all
+  if (totalWidth <= containerWidth) {
+    visibleCount.value = chipElements.length
+    return
   }
 
-  // Adjust visible count to ensure overflow chip fits
-  if (lastVisibleIndex < skillChipsData.value.length) {
-    const overflowChipWidth = 60 // Approximate width of "+X" chip
+  // Otherwise, calculate how many fit with overflow chip
+  let availableWidth = containerWidth - overflowChipWidth
+  let totalUsedWidth = 0
+  let visibleChips = 0
 
-    // Keep reducing visible count until we can fit the overflow chip
-    while (lastVisibleIndex > 0) {
-      const lastChip = chipElements[lastVisibleIndex - 1]
-      if (currentRowWidth + overflowChipWidth <= containerWidth) {
-        break
-      }
-      lastVisibleIndex--
-      currentRowWidth -= lastChip.offsetWidth + chipMargin
-    }
-
-    visibleCount.value = Math.max(1, lastVisibleIndex)
+  for (const chipWidth of chipWidths) {
+    if (totalUsedWidth + chipWidth > availableWidth) break
+    totalUsedWidth += chipWidth
+    visibleChips++
   }
+
+  // Ensure at least one chip is visible
+  visibleCount.value = Math.max(1, visibleChips)
 }
 
-// Initialize resize observer
+// Initialize resize observer with debounce
 onMounted(() => {
   if (skillsContainer.value) {
+    let timeoutId = null
     resizeObserver.value = new ResizeObserver(() => {
-      calculateVisibleChips()
+      // Clear any existing timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+      // Set new timeout
+      timeoutId = setTimeout(() => {
+        // Reset visible count before recalculating
+        visibleCount.value = skillChipsData.value.length
+        nextTick(() => {
+          calculateVisibleChips()
+        })
+      }, 100) // Debounce time of 100ms
     })
     resizeObserver.value.observe(skillsContainer.value)
   }
   calculateVisibleChips()
 })
 
-// Cleanup
-onBeforeUnmount(() => {
-  if (resizeObserver.value) {
-    resizeObserver.value.disconnect()
+// Watch for container width changes
+watch(
+  () => skillsContainer.value?.offsetWidth,
+  (newWidth, oldWidth) => {
+    if (skillsContainer.value && newWidth !== oldWidth) {
+      // Reset visible count before recalculating
+      visibleCount.value = skillChipsData.value.length
+      nextTick(() => {
+        calculateVisibleChips()
+      })
+    }
   }
-})
+)
 
 // Watch for changes in skills data
 watch(
   () => props.result.skills,
   () => {
-    calculateVisibleChips()
+    // Reset visible count before recalculating
+    visibleCount.value = skillChipsData.value.length
+    nextTick(() => {
+      calculateVisibleChips()
+    })
   },
   { deep: true }
 )
@@ -509,5 +532,15 @@ const handleConfirmAdd = () => {
 /*For profile picture rounding */
 .rounded-lg {
   border-radius: 16px !important;
+}
+
+.team-lead-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 4px;
+  border-radius: 4px;
 }
 </style>

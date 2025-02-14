@@ -78,6 +78,7 @@ export const projectsData = [
     startDate: '2023-01-01',
     endDate: '2023-12-31',
     team: [101, 102, 103], // Reference to employee IDs
+    isTeamLead: 103,
   },
   {
     id: 2,
@@ -87,6 +88,7 @@ export const projectsData = [
     startDate: '2023-06-01',
     endDate: '2024-06-01',
     team: [201, 202],
+    isTeamLead: 201,
   },
 ]
 
