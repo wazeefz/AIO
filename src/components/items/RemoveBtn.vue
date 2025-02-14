@@ -1,19 +1,21 @@
+<!-- RemoveBtn.vue -->
+
 <template>
-  <div>
-    <!-- Remove Button -->
+  <div class="profile-card-container">
+    <!-- Remove Button with confirmation dialog -->
     <v-btn
-      v-if="isEditing"
-      icon
-      color="error"
-      class="remove-button"
+      v-if="isEditing && !selectable"
+      icon="mdi-close"
+      variant="text"
+      size="small"
+      :class="remove - button"
       @click.stop="confirmRemove"
     >
-      <v-icon>mdi-close</v-icon>
     </v-btn>
-
+    <!-- <button :class="remove - button" @click.stop="confirmRemove">×</button> -->
     <!-- Confirmation Dialog -->
-    <v-dialog v-model="showConfirmDialog" max-width="300">
-      <v-card>
+    <v-dialog v-model="showConfirmDialog" max-width="415">
+      <v-card class="rounded-lg">
         <v-card-title class="text-h6"> Confirm Removal </v-card-title>
         <v-card-text> Are you sure you want to remove this item? </v-card-text>
         <v-card-actions>
@@ -34,7 +36,15 @@ import { ref } from 'vue'
 const props = defineProps({
   isEditing: {
     type: Boolean,
-    default: false,
+    default: true,
+  },
+  customClass: {
+    type: String,
+    default: 'default-remove-button',
+  },
+  useDefaultStyle: {
+    type: Boolean,
+    default: true,
   },
 })
 
@@ -53,7 +63,11 @@ const confirmAndRemove = () => {
 </script>
 
 <style scoped>
-.remove-button {
+.profile-card-container {
+  position: relative;
+}
+
+.remove-button.default-remove-button {
   position: absolute;
   top: -12px;
   right: -12px;
@@ -63,7 +77,7 @@ const confirmAndRemove = () => {
   transition: transform 0.2s ease;
 }
 
-.remove-button:hover {
+.remove-button.default-remove-button:hover {
   transform: scale(1.1);
 }
 </style>

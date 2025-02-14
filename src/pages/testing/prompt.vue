@@ -1,3 +1,5 @@
+<!-- Prompt Page by default -->
+
 <template>
   <div class="chat-container">
     <ChatSidebar
@@ -37,7 +39,7 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue'
 import { useChat } from '@/composables/useChat'
-import ChatSidebar from '@/components/ChatSidebar.vue'
+import ChatSidebar from '@/components//items/ChatSidebar.vue'
 import ChatMessage from '@/components/items/ChatMessage.vue'
 import ChatInput from '@/components/items/ChatInput.vue'
 import PromptPageDefault from '@/components/PromptPageDefault.vue'
