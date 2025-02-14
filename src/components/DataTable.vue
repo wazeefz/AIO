@@ -15,9 +15,9 @@
                 ? 'mdi-file-document-multiple'
                 : 'mdi-account-group'
             }}</v-icon>
-            <span class="filter-count"></span> selected out of
+            <span class="filter-count"></span> &nbspselected out of&nbsp
             <span class="total-count"></span>
-            {{ tableType }}
+            &nbsp{{ tableType }}
           </div>
           <v-spacer></v-spacer>
           <v-text-field
