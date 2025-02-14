@@ -39,9 +39,8 @@
 
       <!-- Charts Row -->
       <v-row dense>
-        <!-- Project Status Pie Chart -->
-        <v-col cols="6">
-          <v-card>
+        <v-col cols="4">
+          <v-card class="chart-card">
             <v-card-title class="text-subtitle-1">Status</v-card-title>
             <PieChart
               :dimension="statusDimension"
@@ -52,9 +51,8 @@
           </v-card>
         </v-col>
 
-        <!-- Department Budget Chart -->
-        <v-col cols="6">
-          <v-card>
+        <v-col cols="8">
+          <v-card class="chart-card">
             <v-card-title class="text-subtitle-1"
               >Budget by Department</v-card-title
             >
@@ -210,7 +208,7 @@ const resetAllFilters = () => {
 .scrollable-content {
   flex: 1;
   overflow-y: auto;
-  margin-top: 16px;
+  margin-top: 8px;
 }
 
 .reset-button {
@@ -230,7 +228,7 @@ const resetAllFilters = () => {
 }
 
 .v-col {
-  padding: 4px !important;
+  padding: 2px !important;
 }
 
 .v-card-title {
@@ -251,5 +249,30 @@ const resetAllFilters = () => {
     flex: 0 0 100%;
     max-width: 100%;
   }
+}
+
+.chart-card {
+  height: 300px;
+  max-height: 350px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-card .v-card-title {
+  flex: 0 0 auto;
+  padding: 8px 16px; /* Reduced padding */
+}
+
+.chart-card :deep(.pie-chart-container),
+.chart-card :deep(.bar-chart-container) {
+  flex: 1;
+  min-height: 0;
+}
+
+/* This will make the chart components take up the remaining space */
+.chart-card :deep(.pie-chart-container),
+.chart-card :deep(.bar-chart-container) {
+  flex: 1;
+  min-height: 0; /* Important for Firefox */
 }
 </style>

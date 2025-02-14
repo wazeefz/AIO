@@ -1,5 +1,5 @@
 <template>
-  <div class="pie-chart-container">
+  <div class="pie-chart-container" ref="containerRef">
     <div :id="chartId"></div>
   </div>
 </template>
@@ -25,46 +25,53 @@ const props = defineProps({
   },
   colors: {
     type: Object,
-    //random colors?
   },
 })
 
 const chart = ref(null)
+const containerRef = ref(null)
+
+const debounce = (fn, delay) => {
+  let timeoutId
+  return (...args) => {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => fn.apply(this, args), delay)
+  }
+}
 
 onMounted(() => {
   generatePieChart()
-  window.addEventListener('resize', handleResize)
+  window.addEventListener('resize', debouncedResize)
 })
 
-// onUnmounted(() => {
-//   if (chart.value) {
-//     dc.deregisterChart(chart.value)
-//     chart.value.destroy()
-//   }
-//   window.removeEventListener('resize', handleResize)
-// })
-
 const handleResize = () => {
-  if (chart.value) {
-    const container = document.getElementById(props.chartId)
-    const width = container?.offsetWidth
-    const height = container?.offsetHeight
-    const radius = Math.min(width, height) / 2.2
+  if (chart.value && containerRef.value) {
+    const container = containerRef.value
+    const width = container.clientWidth
+    const height = container.clientHeight
+    const radius = Math.min(width, height) / 3
 
     chart.value
       .width(width)
       .height(height)
       .radius(radius)
       .innerRadius(radius / 2)
-      .render()
+      .cx(width / 2)
+      .cy(height / 2)
+
+    chart.value.redraw()
   }
 }
 
+const debouncedResize = debounce(handleResize, 250)
+
 function generatePieChart() {
-  const container = document.getElementById(props.chartId)
-  const width = container?.offsetWidth * 0.6
-  const height = container?.offsetHeight * 0.6
-  const radius = Math.min(width, height) / 2.2
+  if (!containerRef.value) return
+
+  const container = containerRef.value
+  const width = container.clientWidth
+  const height = container.clientHeight
+  const radius = Math.min(width, height) / 3
 
   chart.value = dc.pieChart(`#${props.chartId}`)
   dc.registerChart(chart.value)
@@ -84,14 +91,6 @@ function generatePieChart() {
         .domain(Object.keys(props.colors))
         .range(Object.values(props.colors))
     )
-    /*.legend(
-      dc
-        .legend()
-        .x(1)
-        .y(10)
-        .gap(5)
-        .legendText((d) => d.name)
-    )*/
     .externalLabels(radius * 0.2)
     .drawPaths(true)
     .label((d) => {
@@ -112,7 +111,6 @@ function generatePieChart() {
       dc.redrawAll()
     })
 
-  // Custom label positioning and styling
   chart.value.on('pretransition', function (chart) {
     chart
       .selectAll('text.pie-slice')
@@ -139,7 +137,12 @@ function generatePieChart() {
 .pie-chart-container {
   width: 100%;
   height: 100%;
+  min-height: 200px;
+  max-height: 350px;
+  position: relative;
+  display: flex;
   align-items: center;
   justify-content: center;
+  padding: 12px;
 }
 </style>
