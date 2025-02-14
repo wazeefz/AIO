@@ -24,7 +24,7 @@
     >
     </v-btn>
 
-    <!-- Confirmation Dialog -->
+    <!-- Confirmation Dialog for Removal-->
     <v-dialog v-model="showConfirmDialog" max-width="300">
       <v-card>
         <v-card-title class="text-h6"> Confirm Removal </v-card-title>
@@ -50,9 +50,9 @@
         <div class="d-flex">
           <!-- Profile Image -->
           <div class="profile-image-container mr-4">
-            <v-avatar size="80">
+            <v-avatar size="80" :rounded="true" class="rounded-lg">
               <v-img
-                :src="result.avatar"
+                :src="profileImageUrl"
                 :alt="result.name"
                 cover
                 class="profile-image"
@@ -83,42 +83,41 @@
               <div class="text-subtitle-2 text-white mb-4">
                 Department: {{ result.department }}
               </div>
+              <!-- Skills Slot -->
+              <slot name="skills" :skills="skillChips">
+                <div
+                  ref="skillsContainer"
+                  class="d-flex flex-wrap gap-2 skills-container"
+                >
+                  <template
+                    v-for="(skill, index) in visibleSkills"
+                    :key="skill.label"
+                  >
+                    <v-chip
+                      ref="skillChips"
+                      variant="elevated"
+                      class="mr-2 mb-2 skill-chip"
+                      color="#2d2d2d"
+                      text-color="white"
+                    >
+                      {{ skill.label }}
+                    </v-chip>
+                  </template>
+                  <v-chip
+                    v-if="hiddenSkillsCount > 0"
+                    ref="overflowChip"
+                    variant="elevated"
+                    class="mr-2 mb-2 overflow-chip"
+                    color="#2d2d2d"
+                    text-color="white"
+                  >
+                    +{{ hiddenSkillsCount }}
+                  </v-chip>
+                </div>
+              </slot>
             </slot>
           </div>
         </div>
-
-        <!-- Skills Slot -->
-        <slot name="skills" :skills="skillChips">
-          <div
-            ref="skillsContainer"
-            class="d-flex flex-wrap gap-2 skills-container"
-          >
-            <template
-              v-for="(skill, index) in visibleSkills"
-              :key="skill.label"
-            >
-              <v-chip
-                ref="skillChips"
-                variant="elevated"
-                class="mr-2 mb-2 skill-chip"
-                color="#2d2d2d"
-                text-color="white"
-              >
-                {{ skill.label }}
-              </v-chip>
-            </template>
-            <v-chip
-              v-if="hiddenSkillsCount > 0"
-              ref="overflowChip"
-              variant="elevated"
-              class="mr-2 mb-2 overflow-chip"
-              color="#2d2d2d"
-              text-color="white"
-            >
-              +{{ hiddenSkillsCount }}
-            </v-chip>
-          </div>
-        </slot>
       </v-card-text>
     </v-card>
 
@@ -128,15 +127,30 @@
         <!-- Modal Header Slot -->
         <slot name="modal-header" :result="result" :close="closeModal">
           <div class="d-flex align-center justify-space-between pa-4">
+            <!-- Profile Image -->
+            <div class="profile-image-container">
+              <v-avatar size="80" :rounded="true" class="rounded-lg">
+                <v-img
+                  :src="profileImageUrl"
+                  :alt="result.name"
+                  cover
+                  class="profile-image"
+                ></v-img>
+              </v-avatar>
+            </div>
+            <div class="mb-14">
+              <v-btn
+                icon="mdi-close"
+                variant="text"
+                size="small"
+                @click="closeModal"
+              ></v-btn>
+            </div>
+          </div>
+          <div class="d-flex align-center justify-space-between pl-4">
             <v-card-title class="text-h5 pa-0">
               {{ result.name }}
             </v-card-title>
-            <v-btn
-              icon="mdi-close"
-              variant="text"
-              size="small"
-              @click="closeModal"
-            ></v-btn>
           </div>
         </slot>
 
@@ -185,6 +199,8 @@
 <script setup>
 import BaseChips from '@/components/Chips.vue'
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
+// Import a default placeholder image stored locally
+import placeholderImage from '@/assets/profilePic/placeholder.png'
 
 const props = defineProps({
   result: {
@@ -238,42 +254,42 @@ const calculateVisibleChips = async () => {
   if (!skillsContainer.value) return
 
   const containerWidth = skillsContainer.value.offsetWidth
-  const chipMargin = 8 // margin-right + margin-bottom
-  const chipGap = 8 // gap between chips
+  const chipMargin = 8 // gap between chips
 
   // Reset to show all chips initially
   visibleCount.value = skillChipsData.value.length
   await nextTick()
 
   // Get all chip elements including the overflow chip
-  const chipElements = skillsContainer.value.querySelectorAll(
-    '.skill-chip, .overflow-chip'
-  )
+  const chipElements = skillsContainer.value.querySelectorAll('.skill-chip')
   let currentRowWidth = 0
-  let currentRow = 1
-  let maxRows = 1 // Maximum number of rows allowed
   let lastVisibleIndex = skillChipsData.value.length
 
   for (let i = 0; i < chipElements.length; i++) {
     const chip = chipElements[i]
-    const chipWidth = chip.offsetWidth + chipMargin + chipGap
+    const chipWidth = chip.offsetWidth + chipMargin
 
     if (currentRowWidth + chipWidth > containerWidth) {
-      currentRow++
-      currentRowWidth = chipWidth
-    } else {
-      currentRowWidth += chipWidth
-    }
-
-    if (currentRow > maxRows) {
-      lastVisibleIndex = i - 1
+      lastVisibleIndex = i
       break
     }
+    currentRowWidth += chipWidth
   }
 
   // Adjust visible count to ensure overflow chip fits
   if (lastVisibleIndex < skillChipsData.value.length) {
-    // Reserve space for overflow chip
+    const overflowChipWidth = 60 // Approximate width of "+X" chip
+
+    // Keep reducing visible count until we can fit the overflow chip
+    while (lastVisibleIndex > 0) {
+      const lastChip = chipElements[lastVisibleIndex - 1]
+      if (currentRowWidth + overflowChipWidth <= containerWidth) {
+        break
+      }
+      lastVisibleIndex--
+      currentRowWidth -= lastChip.offsetWidth + chipMargin
+    }
+
     visibleCount.value = Math.max(1, lastVisibleIndex)
   }
 }
@@ -304,6 +320,42 @@ watch(
   },
   { deep: true }
 )
+
+// Local method to get profile picture
+const profileImageUrl = computed(() => {
+  try {
+    console.log('Profile Picture Prop:', props.result.profilePicture) // Debugging: Log the prop value
+
+    // If profilePicture is undefined or null, return the placeholder
+    if (!props.result.profilePicture) {
+      console.warn('Profile picture is undefined or null. Using placeholder.')
+      return placeholderImage
+    }
+
+    // If it's a URL (starts with http/https)
+    if (props.result.profilePicture.match(/^https?:\/\//)) {
+      console.log('Profile picture is a URL:', props.result.profilePicture)
+      return props.result.profilePicture
+    }
+
+    // For local assets, use the direct import
+    try {
+      const imagePath = `../assets/profilePic/${props.result.profilePicture}`
+      console.log('Attempting to load local image:', imagePath) // Debugging: Log the image path
+
+      const imageUrl = new URL(imagePath, import.meta.url).href
+      console.log('Local image URL:', imageUrl) // Debugging: Log the generated URL
+
+      return imageUrl
+    } catch (error) {
+      console.error('Error loading local image:', error)
+      return placeholderImage
+    }
+  } catch (error) {
+    console.error('Error in profileImageUrl:', error)
+    return placeholderImage
+  }
+})
 
 const openModal = () => {
   showModal.value = true
@@ -452,5 +504,10 @@ const handleConfirmAdd = () => {
 .overflow-chip {
   min-width: 45px;
   text-align: center;
+}
+
+/*For profile picture rounding */
+.rounded-lg {
+  border-radius: 16px !important;
 }
 </style>
