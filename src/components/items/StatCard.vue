@@ -1,78 +1,292 @@
 <template>
-  <v-card class="stat-card" outlined>
-    <v-card-title class="stat-card-title">
-      <v-icon :size="48" class="stat-card-icon">{{ icon }}</v-icon>
-      <div class="stat-card-content">
-        <h3 class="stat-card-value">{{ value }}</h3>
-        <h4 class="stat-card-title-text">{{ title }}</h4>
-        <p class="stat-card-subtitle">{{ subtitle }}</p>
+  <v-card
+    :class="['stat-card', { dense: dense }]"
+    :elevation="hover ? 2 : 1"
+    @mouseenter="hover = true"
+    @mouseleave="hover = false"
+  >
+    <div class="stat-card-wrapper">
+      <!-- Icon Section -->
+      <div class="icon-section" :class="iconColor">
+        <v-icon :size="20" color="white">{{ icon }}</v-icon>
       </div>
-    </v-card-title>
+
+      <!-- Content Section -->
+      <div class="content-section">
+        <!-- Title -->
+        <div class="header-section">
+          <span class="stat-title">{{ title }}</span>
+        </div>
+
+        <!-- Value or Subtitle -->
+        <div class="value-section">
+          <span v-if="hasValue" class="stat-value">{{ computedValue }}</span>
+          <span v-else class="stat-value">{{ subtitle }}</span>
+        </div>
+      </div>
+    </div>
   </v-card>
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import * as dc from 'dc'
 
-// Props for the StatCard component
-defineProps({
+const props = defineProps({
   title: {
-    type: String,
-    required: true,
-  },
-  value: {
     type: String,
     required: true,
   },
   subtitle: {
     type: String,
-    required: false,
     default: '',
   },
   icon: {
     type: String,
     required: true,
   },
+  iconColor: {
+    type: String,
+    default: 'primary',
+  },
+  dense: {
+    type: Boolean,
+    default: false,
+  },
+  ndx: {
+    type: Object,
+    default: null,
+  },
+  valueType: {
+    type: String,
+    default: null,
+    validator: (value) =>
+      !value ||
+      [
+        'totalRevenue',
+        'projectCount',
+        'completedProjects',
+        'resourceCount',
+        'totalWage',
+        'peopleCount',
+        'avgWage',
+        'skillCount',
+      ].includes(value),
+  },
 })
+
+const hover = ref(false)
+const currentValue = ref(null)
+const dummyChart = ref(null)
+
+const hasValue = computed(() => {
+  return props.ndx && props.valueType
+})
+
+const computedValue = computed(() => {
+  if (!currentValue.value) return '0'
+
+  switch (props.valueType) {
+    case 'totalRevenue':
+    case 'totalWage':
+    case 'avgWage':
+      return formatCurrency(currentValue.value)
+    case 'projectCount':
+    case 'completedProjects':
+    case 'resourceCount':
+    case 'peopleCount':
+    case 'skillCount':
+      return formatNumber(currentValue.value)
+    default:
+      return currentValue.value
+  }
+})
+
+function calculateValue() {
+  if (!props.ndx || !props.valueType) return null
+
+  const group = props.ndx.groupAll()
+
+  switch (props.valueType) {
+    case 'totalRevenue':
+      return group.reduceSum((d) => d.budget || 0).value()
+    case 'projectCount':
+      return group.reduceCount().value()
+    case 'completedProjects':
+      return (
+        props.ndx
+          .dimension((d) => d.status)
+          .group()
+          .all()
+          .find((g) => g.key === 'Finished')?.value || 0
+      )
+    case 'resourceCount':
+      return group.reduceSum((d) => d.cvCount || 1).value()
+    case 'totalWage':
+      return group.reduceSum((d) => d.wage || 0).value()
+    case 'peopleCount':
+      return group.reduceCount().value()
+    case 'avgWage':
+      const total = group.reduceSum((d) => d.wage || 0).value()
+      const count = group.reduceCount().value()
+      return count ? total / count : 0
+    case 'skillCount':
+      if (props.ndx.dimension((d) => d.skill)) {
+        return props.ndx
+          .dimension((d) => d.skill)
+          .group()
+          .all()
+          .reduce((sum, g) => sum + g.value, 0)
+      }
+      return 0
+    default:
+      return 0
+  }
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
+function formatNumber(value) {
+  return new Intl.NumberFormat('en-US').format(value)
+}
+
+function updateValues() {
+  if (props.ndx && props.valueType) {
+    currentValue.value = calculateValue()
+  }
+}
+
+onMounted(() => {
+  if (props.ndx && props.valueType) {
+    dummyChart.value = {
+      render: updateValues,
+      redraw: updateValues,
+      filterAll: updateValues,
+    }
+    dc.registerChart(dummyChart.value)
+    updateValues()
+  }
+})
+
+// onUnmounted(() => {
+//   if (dummyChart.value) {
+//     dc.deregisterChart(dummyChart.value)
+//   }
+// })
+
+watch(
+  () => props.ndx?.allFiltered(),
+  () => {
+    if (props.ndx && props.valueType) {
+      updateValues()
+    }
+  }
+)
 </script>
 
 <style scoped>
 .stat-card {
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  padding: 16px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  background: var(--v-background-base, #ffffff);
 }
 
-.stat-card-title {
+.stat-card-wrapper {
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 16px;
+  padding: 12px;
+  gap: 12px;
 }
 
-.stat-card-icon {
-  color: var(--v-primary-base);
-}
-
-.stat-card-content {
+.icon-section {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: linear-gradient(
+    135deg,
+    var(--gradient-start),
+    var(--gradient-end)
+  );
 }
 
-.stat-card-value {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin: 0;
+.icon-section.primary {
+  --gradient-start: #1976d2;
+  --gradient-end: #64b5f6;
 }
 
-.stat-card-title-text {
-  font-size: 1.25rem;
-  margin: 0;
+.icon-section.success {
+  --gradient-start: #2e7d32;
+  --gradient-end: #81c784;
 }
 
-.stat-card-subtitle {
-  font-size: 0.875rem;
-  color: var(--v-secondary-darken4);
+.icon-section.warning {
+  --gradient-start: #f57c00;
+  --gradient-end: #ffb74d;
+}
+
+.content-section {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.header-section {
+  margin-bottom: 4px;
+}
+
+.stat-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--v-medium-emphasis-color, rgba(0, 0, 0, 0.6));
+}
+
+.value-section {
+  display: flex;
+  align-items: baseline;
+}
+
+.stat-value {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--v-high-emphasis-color, rgba(0, 0, 0, 0.87));
+}
+
+:deep(.v-theme--dark) {
+  .stat-card {
+    background-color: var(--v-surface-variant, #1e1e1e);
+  }
+
+  .stat-title {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .stat-value {
+    color: rgba(255, 255, 255, 0.87);
+  }
+}
+
+@media (max-width: 600px) {
+  .stat-card-wrapper {
+    padding: 8px;
+  }
+
+  .icon-section {
+    min-width: 28px;
+    height: 28px;
+  }
+
+  .stat-value {
+    font-size: 1rem;
+  }
 }
 </style>
