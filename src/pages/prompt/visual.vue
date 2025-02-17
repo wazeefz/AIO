@@ -5,7 +5,6 @@
       <!-- Stats Row -->
       <v-row dense>
         <v-col cols="4">
-          <!-- Without crossfilter -->
           <StatCard
             dense
             title="Project"
@@ -17,17 +16,17 @@
         <v-col cols="4">
           <StatCard
             dense
-            title="Cost"
+            title="Total Salary"
             icon="mdi-currency-usd"
             iconColor="warning"
             :ndx="ndx"
-            valueType="totalWage"
+            valueType="totalSalary"
           />
         </v-col>
         <v-col cols="4">
           <StatCard
             dense
-            title="People"
+            title="Employees"
             icon="mdi-account-group"
             iconColor="success"
             :ndx="ndx"
@@ -38,9 +37,9 @@
 
       <!-- Charts Row -->
       <v-row dense>
-        <v-col cols="6">
+        <v-col cols="4">
           <v-card>
-            <v-card-title class="text-subtitle-1">Department</v-card-title>
+            <v-card-title class="text-subtitle-1">Department Distribution</v-card-title>
             <PieChart
               :dimension="departmentDimension"
               :group="departmentGroup"
@@ -49,14 +48,25 @@
             />
           </v-card>
         </v-col>
-        <v-col cols="6">
+        <v-col cols="4">
           <v-card>
-            <v-card-title class="text-subtitle-1">Skill</v-card-title>
+            <v-card-title class="text-subtitle-1">Employment Type</v-card-title>
             <PieChart
-              :dimension="skillDimension"
-              :group="skillGroup"
-              chartId="skill-pie-chart"
-              :colors="skillColors"
+              :dimension="employmentTypeDimension"
+              :group="employmentTypeGroup"
+              chartId="employment-type-pie-chart"
+              :colors="employmentTypeColors"
+            />
+          </v-card>
+        </v-col>
+        <v-col cols="4">
+          <v-card>
+            <v-card-title class="text-subtitle-1">Gender Distribution</v-card-title>
+            <PieChart
+              :dimension="genderDimension"
+              :group="genderGroup"
+              chartId="gender-pie-chart"
+              :colors="genderColors"
             />
           </v-card>
         </v-col>
@@ -66,8 +76,7 @@
     <!-- Scrollable Content (Below Fold) -->
     <div class="scrollable-content">
       <v-card>
-        <DataTable
-          table-type="people"
+        <TalentTable
           :ndx="ndx"
           :dimension="peopleDimension"
         />
@@ -86,7 +95,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useTalentStore } from '@/stores/talent'
 import StatCard from '@/components/StatCard.vue'
 import PieChart from '@/components/PieChart.vue'
-import DataTable from '@/components/DataTable.vue'
+import TalentTable from '@/components/kTalentTable.vue'
 import * as dc from 'dc'
 import crossfilter from 'crossfilter2'
 
@@ -97,59 +106,61 @@ const allDimensions = ref([])
 const ndx = crossfilter(talentStore.talents)
 
 // Create dimensions
-const peopleDimension = ndx.dimension((d) => d.first)
-const departmentDimension = ndx.dimension((d) => d.department)
-const skillDimension = ndx.dimension((d) => d.skill, true)
+const peopleDimension = ndx.dimension(d => d.first_name)
+const departmentDimension = ndx.dimension(d => d.department_id)
+const employmentTypeDimension = ndx.dimension(d => d.employment_type)
+const genderDimension = ndx.dimension(d => d.gender)
 
 // Track all dimensions
-allDimensions.value = [peopleDimension, departmentDimension, skillDimension]
+allDimensions.value = [
+  peopleDimension,
+  departmentDimension,
+  employmentTypeDimension,
+  genderDimension
+]
 
 // Create groups
 const departmentGroup = departmentDimension.group()
-const skillGroup = skillDimension.group()
+const employmentTypeGroup = employmentTypeDimension.group()
+const genderGroup = genderDimension.group()
 
 // Color schemes
 const departmentColors = {
-  IT: '#1976D2',
-  Design: '#E91E63',
-  Management: '#FFA000',
-  Marketing: '#388E3C',
-  Data: '#5E35B1',
-  HR: '#00ACC1',
-  Development: '#43A047',
-  Sales: '#FB8C00',
+  1: '#1976D2', // IT
+  2: '#E91E63', // Design
+  3: '#FFA000', // Management
+  4: '#388E3C', // Marketing
+  5: '#5E35B1', // Data
+  6: '#00ACC1', // HR
 }
 
-const skillColors = {
-  Vue: '#42b883',
-  Python: '#306998',
-  Node: '#68a063',
-  Javascript: '#f7df1e',
-  CRM: '#ff6b6b',
-  SEO: '#00bcd4',
-  Excel: '#217346',
-  Word: '#2b579a',
+const employmentTypeColors = {
+  'FULL_TIME': '#42b883',
+  'PART_TIME': '#ff6b6b',
+  'CONTRACT': '#306998',
+  'TEMPORARY': '#68a063'
+}
+
+const genderColors = {
+  'MALE': '#2196F3',
+  'FEMALE': '#E91E63',
+  'OTHER': '#9C27B0'
 }
 
 onMounted(() => {
-  // Render all charts
   dc.renderAll()
-
-  // Add resize listener
   window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-
-  // Clear filters before unmounting
-  allDimensions.value.forEach((dim) => {
+  
+  allDimensions.value.forEach(dim => {
     if (dim && typeof dim.filterAll === 'function') {
       dim.filterAll()
     }
   })
-
-  // Clear data
+  
   ndx.remove()
 })
 
@@ -158,20 +169,14 @@ const handleResize = () => {
 }
 
 const resetAllFilters = () => {
-  // Reset all dimensions
-  allDimensions.value.forEach((dim) => {
+  allDimensions.value.forEach(dim => {
     if (dim && typeof dim.filterAll === 'function') {
       dim.filterAll()
     }
   })
 
-  // Reset crossfilter
   ndx.remove()
-
-  // Re-add the data
   ndx.add(talentStore.talents)
-
-  // Redraw all charts
   dc.redrawAll()
 }
 </script>

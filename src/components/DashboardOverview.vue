@@ -12,7 +12,7 @@
             icon="mdi-currency-usd"
             iconColor="primary"
             :ndx="ndx"
-            valueType="totalRevenue"
+            valueType="totalBudget"
           />
         </v-col>
         <v-col cols="4">
@@ -53,14 +53,14 @@
 
         <v-col cols="8">
           <v-card class="chart-card">
-            <v-card-title class="text-subtitle-1"
-              >Budget by Department</v-card-title
-            >
-            <BarChart
-              :dimension="departmentDimension"
-              :group="departmentBudgetGroup"
-              chartId="department-budget-chart"
-            />
+            <v-card-title class="text-subtitle-1">Budget by Status</v-card-title>
+              <BarChart
+                :dimension="statusDimension"
+                :group="budgetByStatusGroup"
+                chartId="status-budget-chart"
+                chartType="budget"
+                barColor="#1976D2"
+              />
           </v-card>
         </v-col>
       </v-row>
@@ -69,8 +69,7 @@
     <!-- Scrollable Content (Below Fold) -->
     <div class="scrollable-content">
       <v-card>
-        <DataTable
-          table-type="projects"
+        <ProjectTable
           :ndx="ndx"
           :dimension="projectDimension"
         />
@@ -90,7 +89,7 @@ import { useProjectStore } from '@/stores/project'
 import StatCard from '@/components/StatCard.vue'
 import BarChart from '@/components/BarChart.vue'
 import PieChart from '@/components/PieChart.vue'
-import DataTable from '@/components/DataTable.vue'
+import ProjectTable from '@/components/kProjectTable.vue'
 import * as dc from 'dc'
 import * as d3 from 'd3'
 import crossfilter from 'crossfilter2'
@@ -108,6 +107,8 @@ const projectDimension = ndx.dimension((d) => d.name)
 const statusDimension = ndx.dimension((d) => d.status)
 const departmentDimension = ndx.dimension((d) => d.department)
 const monthDimension = revenueNdx.dimension((d) => d.month)
+const budgetDimension = ndx.dimension((d) => d.budget)
+const teamSizeDimension = ndx.dimension((d) => d.team_size)
 
 // Track all dimensions
 allDimensions.value = [
@@ -115,6 +116,8 @@ allDimensions.value = [
   statusDimension,
   departmentDimension,
   monthDimension,
+  budgetDimension,
+  teamSizeDimension,
 ]
 
 // Create groups
@@ -123,12 +126,22 @@ const departmentBudgetGroup = departmentDimension
   .group()
   .reduceSum((d) => d.budget)
 const monthlyRevenueGroup = monthDimension.group().reduceSum((d) => d.revenue)
+const budgetByStatusGroup = statusDimension.group().reduce(
+  // Add
+  (p, v) => p + (v.budget || 0),
+  // Remove
+  (p, v) => p - (v.budget || 0),
+  // Initial
+  () => 0
+);
+const teamSizeGroup = teamSizeDimension.group()
 
 // Status colors
 const statusColors = {
-  Finished: '#4CAF50',
-  'In Progress': '#FFA726',
-  Unfinished: '#EF5350',
+  'IN_PROGRESS': '#FFA726',
+  'COMPLETED': '#4CAF50',
+  'ON_HOLD': '#EF5350',
+  'CANCELLED': '#9E9E9E'
 }
 
 onMounted(() => {
@@ -136,22 +149,22 @@ onMounted(() => {
   dataCount.value = dc
     .dataCount('#dc-data-count')
     .dimension(ndx)
-    .group(ndx.groupAll())
+    .group(ndx.groupAll());
 
   // Create a dummy chart to handle resets properly
   const dummyChart = {
     render: () => {},
     redraw: () => {},
     filterAll: () => {},
-  }
-  dc.registerChart(dummyChart)
+  };
+  dc.registerChart(dummyChart);
 
   // Render all charts
-  dc.renderAll()
+  dc.renderAll();
 
   // Add resize listener
-  window.addEventListener('resize', handleResize)
-})
+  window.addEventListener('resize', handleResize);
+});
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
@@ -172,25 +185,29 @@ const handleResize = () => {
   dc.renderAll()
 }
 
+const redrawCharts = () => {
+  dc.redrawAll();
+};
+
 const resetAllFilters = () => {
   // Reset all dimensions
   allDimensions.value.forEach((dim) => {
     if (dim && typeof dim.filterAll === 'function') {
-      dim.filterAll()
+      dim.filterAll();
     }
-  })
+  });
 
   // Reset both crossfilters
-  ndx.remove()
-  revenueNdx.remove()
+  ndx.remove();
+  revenueNdx.remove();
 
   // Re-add the data
-  ndx.add(projectStore.projects)
-  revenueNdx.add(projectStore.monthlyRevenue)
+  ndx.add(projectStore.projects);
+  revenueNdx.add(projectStore.monthlyRevenue);
 
   // Redraw all charts
-  dc.redrawAll()
-}
+  dc.redrawAll();
+};
 </script>
 
 <style scoped>
