@@ -5,5 +5,5 @@
 </template>
 
 <script setup>
-import TeamMemberList from '@/components/TeamMemberList.vue'
+import TeamMemberList from '@/components/items/TeamMemberList.vue'
 </script>
