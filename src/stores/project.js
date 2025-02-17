@@ -1,92 +1,13 @@
 import { defineStore } from 'pinia'
 
+const API_URL = 'http://localhost:8000'
+
 export const useProjectStore = defineStore('project', {
   state: () => ({
-    projects: [
-      {
-        project_id: 1, //id
-        name: 'Website Redesign',
-        starred: false,
-        cv_count: 2,
-        progress: 80,
-        due_date: '2023-08-23',
-        status: 'IN_PROGRESS',
-        budget: 53000.00,
-        user_id: 1,
-        start_date: '2023-01-15',
-        created_at: '2023-01-01',
-        required_skills: [1, 2, 3], // Assuming skill IDs
-        min_experience_years: 3,
-        team_size: 5,
-        project_description: 'Complete redesign of company website with modern UI/UX principles'
-      },
-      {
-        project_id: 2,
-        name: 'Internal CMS Tools',
-        starred: false,
-        cv_count: 2,
-        progress: 100,
-        due_date: '2023-06-22',
-        status: 'COMPLETED',
-        budget: 45000.00,
-        user_id: 2,
-        start_date: '2023-02-01',
-        created_at: '2023-01-15',
-        required_skills: [4, 5],
-        min_experience_years: 2,
-        team_size: 3,
-        project_description: 'Development of internal content management system tools'
-      },
-      {
-        project_id: 3,
-        name: 'E-Commerce App Phase 01',
-        starred: false,
-        cv_count: 2,
-        progress: 20,
-        due_date: '2023-06-01',
-        status: 'ON_HOLD',
-        budget: 75000.00,
-        user_id: 1,
-        start_date: '2023-03-01',
-        created_at: '2023-02-15',
-        required_skills: [1, 6, 7],
-        min_experience_years: 4,
-        team_size: 7,
-        project_description: 'First phase of e-commerce application development'
-      },
-      {
-        project_id: 4,
-        name: 'Netflix UX Evaluation',
-        starred: false,
-        cv_count: 2,
-        progress: 60,
-        due_date: '2023-06-01',
-        status: 'IN_PROGRESS',
-        budget: 35000.00,
-        user_id: 3,
-        start_date: '2023-04-01',
-        created_at: '2023-03-15',
-        required_skills: [8, 9],
-        min_experience_years: 5,
-        team_size: 4,
-        project_description: 'Comprehensive UX evaluation of Netflix platform'
-      }
-    ],
-    // Revenue tracking (if needed)
-    monthlyRevenue: [
-      { month: 'Jan', revenue: 200000.00 },
-      { month: 'Feb', revenue: 300000.00 },
-      { month: 'Mar', revenue: 400000.00 },
-      { month: 'Apr', revenue: 500000.00 },
-      { month: 'May', revenue: 600000.00 },
-      { month: 'Jun', revenue: 700000.00 },
-      { month: 'Jul', revenue: 800000.00 },
-      { month: 'Aug', revenue: 700000.00 },
-      { month: 'Sep', revenue: 600000.00 },
-      { month: 'Oct', revenue: 700000.00 },
-      { month: 'Nov', revenue: 800000.00 },
-      { month: 'Dec', revenue: 900000.00 }
-    ]
+    projects: [],
+    monthlyRevenue: [],
+    isLoading: false,
+    error: null,
   }),
 
   getters: {
@@ -94,89 +15,143 @@ export const useProjectStore = defineStore('project', {
       return state.monthlyRevenue.reduce((sum, month) => sum + month.revenue, 0)
     },
     projectCount: (state) => state.projects.length,
-    
-    completedProjects: (state) => 
-      state.projects.filter(p => p.status === 'COMPLETED').length,
-    
+
+    completedProjects: (state) =>
+      state.projects.filter((p) => p.status === 'COMPLETED').length,
+
     activeProjects: (state) =>
-      state.projects.filter(p => p.status === 'IN_PROGRESS').length,
-    
+      state.projects.filter((p) => p.status === 'IN_PROGRESS').length,
+
     totalBudget: (state) =>
       state.projects.reduce((sum, project) => sum + (project.budget || 0), 0),
-    
+
     averageTeamSize: (state) => {
-      const total = state.projects.reduce((sum, project) => sum + project.team_size, 0)
+      const total = state.projects.reduce(
+        (sum, project) => sum + project.team_size,
+        0
+      )
       return state.projects.length ? total / state.projects.length : 0
     },
-    
+
     projectsByStatus: (state) => {
       const status = {}
-      state.projects.forEach(project => {
+      state.projects.forEach((project) => {
         status[project.status] = (status[project.status] || 0) + 1
       })
       return status
     },
-    
+
     projectsBySkill: (state) => {
       const skills = {}
-      state.projects.forEach(project => {
-        project.required_skills.forEach(skillId => {
+      state.projects.forEach((project) => {
+        project.required_skills.forEach((skillId) => {
           skills[skillId] = (skills[skillId] || 0) + 1
         })
       })
       return skills
-    }
+    },
   },
 
   actions: {
-    addProject(project) {
-      // Ensure required fields are present
-      const requiredFields = ['name', 'status', 'project_description']
-      const missingFields = requiredFields.filter(field => !project[field])
-      
-      if (missingFields.length > 0) {
-        throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
+    async fetchProjects() {
+      this.isLoading = true
+      try {
+        const response = await fetch(`${API_URL}/projects/`)
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        this.projects = await response.json()
+        this.error = null
+      } catch (error) {
+        this.error = error.message
+        console.error('Error fetching projects:', error)
+      } finally {
+        this.isLoading = false
       }
-
-      // Set default values
-      const newProject = {
-        project_id: this.projects.length + 1, // In real app, this would come from the backend
-        starred: false,
-        cv_count: 0,
-        progress: 0,
-        created_at: new Date().toISOString().split('T')[0],
-        ...project
-      }
-
-      this.projects.push(newProject)
     },
 
-    updateProject(updatedProject) {
-      const index = this.projects.findIndex(p => p.project_id === updatedProject.project_id)
-      if (index !== -1) {
-        this.projects[index] = {
-          ...this.projects[index],
-          ...updatedProject
+    async addProject(project) {
+      try {
+        const response = await fetch(`${API_URL}/projects/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(project),
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const newProject = await response.json()
+        this.projects.push(newProject)
+        return newProject
+      } catch (error) {
+        console.error('Error adding project:', error)
+        throw error
+      }
+    },
+
+    async updateProject(updatedProject) {
+      try {
+        const response = await fetch(
+          `${API_URL}/projects/${updatedProject.project_id}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedProject),
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const updated = await response.json()
+        const index = this.projects.findIndex(
+          (p) => p.project_id === updatedProject.project_id
+        )
+        if (index !== -1) {
+          this.projects[index] = updated
+        }
+        return updated
+      } catch (error) {
+        console.error('Error updating project:', error)
+        throw error
+      }
+    },
+
+    async deleteProject(projectId) {
+      try {
+        const response = await fetch(`${API_URL}/projects/${projectId}`, {
+          method: 'DELETE',
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        this.projects = this.projects.filter((p) => p.project_id !== projectId)
+      } catch (error) {
+        console.error('Error deleting project:', error)
+        throw error
+      }
+    },
+
+    async toggleProjectStar(projectId) {
+      const project = this.projects.find((p) => p.project_id === projectId)
+      if (project) {
+        try {
+          const updatedProject = { ...project, starred: !project.starred }
+          await this.updateProject(updatedProject)
+        } catch (error) {
+          console.error('Error toggling project star:', error)
+          throw error
         }
       }
     },
-
-    deleteProject(projectId) {
-      this.projects = this.projects.filter(p => p.project_id !== projectId)
-    },
-
-    toggleProjectStar(projectId) {
-      const project = this.projects.find(p => p.project_id === projectId)
-      if (project) {
-        project.starred = !project.starred
-      }
-    },
-
-    updateProjectProgress(projectId, progress) {
-      const project = this.projects.find(p => p.project_id === projectId)
-      if (project) {
-        project.progress = Math.max(0, Math.min(100, progress))
-      }
-    }
-  }
+  },
 })

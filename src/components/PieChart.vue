@@ -5,7 +5,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import * as dc from 'dc'
 import * as d3 from 'd3'
 import 'dc/src/compat/d3v6'
@@ -25,6 +25,7 @@ const props = defineProps({
   },
   colors: {
     type: Object,
+    required: true,
   },
 })
 
@@ -39,8 +40,23 @@ const debounce = (fn, delay) => {
   }
 }
 
+// Watch for changes in dimension and group
+watch(
+  [() => props.dimension, () => props.group],
+  ([newDimension, newGroup]) => {
+    if (newDimension && newGroup && chart.value) {
+      chart.value.dimension(newDimension).group(newGroup)
+      dc.redrawAll()
+    }
+  },
+  { immediate: true }
+)
+
 onMounted(() => {
-  generatePieChart()
+  // Only generate chart if dimension and group are available
+  if (props.dimension && props.group) {
+    generatePieChart()
+  }
   window.addEventListener('resize', debouncedResize)
 })
 
@@ -66,16 +82,25 @@ const handleResize = () => {
 const debouncedResize = debounce(handleResize, 250)
 
 function generatePieChart() {
-  if (!containerRef.value) return
+  if (!containerRef.value || !props.dimension || !props.group) return
 
   const container = containerRef.value
   const width = container.clientWidth
   const height = container.clientHeight
   const radius = Math.min(width, height) / 3
 
-  chart.value = dc.pieChart(`#${props.chartId}`)
-  dc.registerChart(chart.value)
+  // Cleanup existing chart if any
+  if (chart.value) {
+    chart.value.on('filtered', null)
+    dc.deregisterChart(chart.value)
+  }
 
+  chart.value = dc.pieChart(`#${props.chartId}`)
+
+  // Set dimension and group first
+  chart.value.dimension(props.dimension).group(props.group)
+
+  // Then configure the rest
   chart.value
     .width(width)
     .height(height)
@@ -83,8 +108,6 @@ function generatePieChart() {
     .innerRadius(radius / 2)
     .cx(width / 2)
     .cy(height / 2)
-    .dimension(props.dimension)
-    .group(props.group)
     .colors(
       d3
         .scaleOrdinal()
@@ -94,6 +117,7 @@ function generatePieChart() {
     .externalLabels(radius * 0.2)
     .drawPaths(true)
     .label((d) => {
+      if (!props.group) return ''
       const percentage = (
         (d.value / props.group.all().reduce((a, b) => a + b.value, 0)) *
         100
@@ -101,6 +125,7 @@ function generatePieChart() {
       return percentage > 5 ? `${d.key}` : ''
     })
     .title((d) => {
+      if (!props.group) return ''
       const percentage = (
         (d.value / props.group.all().reduce((a, b) => a + b.value, 0)) *
         100
@@ -129,6 +154,7 @@ function generatePieChart() {
       .style('fill', 'none')
   })
 
+  dc.registerChart(chart.value)
   chart.value.render()
 }
 </script>

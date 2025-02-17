@@ -5,7 +5,6 @@
       <!-- Stats Row -->
       <v-row dense>
         <v-col cols="4">
-          <!-- With crossfilter -->
           <StatCard
             dense
             title="Budget"
@@ -43,8 +42,9 @@
           <v-card class="chart-card">
             <v-card-title class="text-subtitle-1">Status</v-card-title>
             <PieChart
-              :dimension="statusDimension"
-              :group="statusGroup"
+              v-if="dimensions.status && groups.status"
+              :dimension="dimensions.status"
+              :group="groups.status"
               chartId="status-pie-chart"
               :colors="statusColors"
             />
@@ -53,14 +53,17 @@
 
         <v-col cols="8">
           <v-card class="chart-card">
-            <v-card-title class="text-subtitle-1">Budget by Status</v-card-title>
-              <BarChart
-                :dimension="statusDimension"
-                :group="budgetByStatusGroup"
-                chartId="status-budget-chart"
-                chartType="budget"
-                barColor="#1976D2"
-              />
+            <v-card-title class="text-subtitle-1"
+              >Budget by Status</v-card-title
+            >
+            <BarChart
+              v-if="dimensions.status && groups.budgetByStatus"
+              :dimension="dimensions.status"
+              :group="groups.budgetByStatus"
+              chartId="status-budget-chart"
+              chartType="budget"
+              barColor="#1976D2"
+            />
           </v-card>
         </v-col>
       </v-row>
@@ -70,8 +73,9 @@
     <div class="scrollable-content">
       <v-card>
         <ProjectTable
+          v-if="ndx && dimensions.project"
           :ndx="ndx"
-          :dimension="projectDimension"
+          :dimension="dimensions.project"
         />
       </v-card>
     </div>
@@ -84,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import StatCard from '@/components/StatCard.vue'
 import BarChart from '@/components/BarChart.vue'
@@ -97,74 +101,128 @@ import crossfilter from 'crossfilter2'
 const projectStore = useProjectStore()
 const allDimensions = ref([])
 const dataCount = ref(null)
+const ndx = ref(null)
+const revenueNdx = ref(null)
 
-// Initialize crossfilter
-const ndx = crossfilter(projectStore.projects)
-const revenueNdx = crossfilter(projectStore.monthlyRevenue)
+const isLoading = ref(true)
 
-// Create dimensions
-const projectDimension = ndx.dimension((d) => d.name)
-const statusDimension = ndx.dimension((d) => d.status)
-const departmentDimension = ndx.dimension((d) => d.department)
-const monthDimension = revenueNdx.dimension((d) => d.month)
-const budgetDimension = ndx.dimension((d) => d.budget)
-const teamSizeDimension = ndx.dimension((d) => d.team_size)
+// Reactive references for dimensions and groups
+const dimensions = ref({
+  project: null,
+  status: null,
+  department: null,
+  month: null,
+  budget: null,
+  teamSize: null,
+})
 
-// Track all dimensions
-allDimensions.value = [
-  projectDimension,
-  statusDimension,
-  departmentDimension,
-  monthDimension,
-  budgetDimension,
-  teamSizeDimension,
-]
+const groups = ref({
+  status: null,
+  budgetByStatus: null,
+  departmentBudget: null,
+  monthlyRevenue: null,
+  teamSize: null,
+})
 
-// Create groups
-const statusGroup = statusDimension.group()
-const departmentBudgetGroup = departmentDimension
-  .group()
-  .reduceSum((d) => d.budget)
-const monthlyRevenueGroup = monthDimension.group().reduceSum((d) => d.revenue)
-const budgetByStatusGroup = statusDimension.group().reduce(
-  // Add
-  (p, v) => p + (v.budget || 0),
-  // Remove
-  (p, v) => p - (v.budget || 0),
-  // Initial
-  () => 0
-);
-const teamSizeGroup = teamSizeDimension.group()
-
-// Status colors
+// Status colors (keep the same)
 const statusColors = {
-  'IN_PROGRESS': '#FFA726',
-  'COMPLETED': '#4CAF50',
-  'ON_HOLD': '#EF5350',
-  'CANCELLED': '#9E9E9E'
+  IN_PROGRESS: '#FFA726',
+  COMPLETED: '#4CAF50',
+  ON_HOLD: '#EF5350',
+  CANCELLED: '#9E9E9E',
 }
 
-onMounted(() => {
-  // Initialize data count
-  dataCount.value = dc
-    .dataCount('#dc-data-count')
-    .dimension(ndx)
-    .group(ndx.groupAll());
+// Initialize crossfilter and dimensions
+const initializeCrossfilter = () => {
+  if (!projectStore.projects.length) return
 
-  // Create a dummy chart to handle resets properly
-  const dummyChart = {
-    render: () => {},
-    redraw: () => {},
-    filterAll: () => {},
-  };
-  dc.registerChart(dummyChart);
+  try {
+    // Initialize main crossfilter
+    ndx.value = crossfilter(projectStore.projects)
 
-  // Render all charts
-  dc.renderAll();
+    // Create dimensions
+    dimensions.value = {
+      project: ndx.value.dimension((d) => d.name),
+      status: ndx.value.dimension((d) => d.status),
+      department: ndx.value.dimension((d) => d.department),
+      budget: ndx.value.dimension((d) => d.budget),
+      teamSize: ndx.value.dimension((d) => d.team_size),
+    }
+
+    // Create groups
+    groups.value = {
+      status: dimensions.value.status.group(),
+      budgetByStatus: dimensions.value.status.group().reduce(
+        (p, v) => p + (v.budget || 0),
+        (p, v) => p - (v.budget || 0),
+        () => 0
+      ),
+      teamSize: dimensions.value.teamSize.group(),
+    }
+
+    // Track all dimensions for reset functionality
+    allDimensions.value = Object.values(dimensions.value)
+
+    isLoading.value = false
+  } catch (error) {
+    console.error('Error initializing crossfilter:', error)
+    isLoading.value = false
+  }
+}
+
+// Watch for changes in project store data
+watch(
+  () => projectStore.projects,
+  (newProjects) => {
+    if (newProjects.length > 0) {
+      // Reset existing crossfilter if it exists
+      if (ndx.value) {
+        ndx.value.remove()
+      }
+
+      // Reinitialize crossfilter with new data
+      initializeCrossfilter()
+
+      // Redraw all charts
+      dc.redrawAll()
+    }
+  },
+  { deep: true }
+)
+
+onMounted(async () => {
+  try {
+    // Fetch projects data
+    await projectStore.fetchProjects()
+
+    // Initialize crossfilter after data is loaded
+    initializeCrossfilter()
+
+    if (ndx.value) {
+      // Initialize data count
+      dataCount.value = dc
+        .dataCount('#dc-data-count')
+        .dimension(ndx.value)
+        .group(ndx.value.groupAll())
+
+      // Create a dummy chart to handle resets properly
+      const dummyChart = {
+        render: () => {},
+        redraw: () => {},
+        filterAll: () => {},
+      }
+      dc.registerChart(dummyChart)
+
+      // Render all charts
+      dc.renderAll()
+    }
+  } catch (error) {
+    console.error('Error in mounting:', error)
+  }
 
   // Add resize listener
-  window.addEventListener('resize', handleResize);
-});
+  window.addEventListener('resize', handleResize)
+})
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
@@ -177,37 +235,45 @@ onUnmounted(() => {
   })
 
   // Clear data
-  ndx.remove()
-  revenueNdx.remove()
+  if (ndx.value) {
+    ndx.value.remove()
+  }
 })
 
 const handleResize = () => {
   dc.renderAll()
 }
 
-const redrawCharts = () => {
-  dc.redrawAll();
-};
-
 const resetAllFilters = () => {
   // Reset all dimensions
   allDimensions.value.forEach((dim) => {
     if (dim && typeof dim.filterAll === 'function') {
-      dim.filterAll();
+      dim.filterAll()
     }
-  });
+  })
 
-  // Reset both crossfilters
-  ndx.remove();
-  revenueNdx.remove();
-
-  // Re-add the data
-  ndx.add(projectStore.projects);
-  revenueNdx.add(projectStore.monthlyRevenue);
+  // Reset crossfilter
+  if (ndx.value) {
+    ndx.value.remove()
+    ndx.value.add(projectStore.projects)
+  }
 
   // Redraw all charts
-  dc.redrawAll();
-};
+  dc.redrawAll()
+}
+
+// Expose necessary refs and functions
+defineExpose({
+  ndx,
+  dimensions,
+  groups,
+  statusColors,
+  resetAllFilters,
+})
+
+const showLoadingIndicator = computed(() => {
+  return isLoading.value || !ndx.value
+})
 </script>
 
 <style scoped>

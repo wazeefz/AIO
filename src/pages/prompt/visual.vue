@@ -1,7 +1,15 @@
 <template>
   <v-container fluid class="pa-2">
+    <v-overlay :model-value="isLoading">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
+    </v-overlay>
+
+    <v-alert v-if="error" type="error" closable class="mb-4">
+      {{ error }}
+    </v-alert>
+
     <!-- Fixed Content (Above Fold) -->
-    <div class="fixed-content">
+    <div v-if="isDataReady" class="fixed-content">
       <!-- Stats Row -->
       <v-row dense>
         <v-col cols="4">
@@ -39,10 +47,13 @@
       <v-row dense>
         <v-col cols="4">
           <v-card>
-            <v-card-title class="text-subtitle-1">Department Distribution</v-card-title>
+            <v-card-title class="text-subtitle-1"
+              >Department Distribution</v-card-title
+            >
             <PieChart
-              :dimension="departmentDimension"
-              :group="departmentGroup"
+              v-if="dimensions.department && groups.department"
+              :dimension="dimensions.department"
+              :group="groups.department"
               chartId="department-pie-chart"
               :colors="departmentColors"
             />
@@ -52,8 +63,9 @@
           <v-card>
             <v-card-title class="text-subtitle-1">Employment Type</v-card-title>
             <PieChart
-              :dimension="employmentTypeDimension"
-              :group="employmentTypeGroup"
+              v-if="dimensions.employmentType && groups.employmentType"
+              :dimension="dimensions.employmentType"
+              :group="groups.employmentType"
               chartId="employment-type-pie-chart"
               :colors="employmentTypeColors"
             />
@@ -61,10 +73,13 @@
         </v-col>
         <v-col cols="4">
           <v-card>
-            <v-card-title class="text-subtitle-1">Gender Distribution</v-card-title>
+            <v-card-title class="text-subtitle-1"
+              >Gender Distribution</v-card-title
+            >
             <PieChart
-              :dimension="genderDimension"
-              :group="genderGroup"
+              v-if="dimensions.gender && groups.gender"
+              :dimension="dimensions.gender"
+              :group="groups.gender"
               chartId="gender-pie-chart"
               :colors="genderColors"
             />
@@ -74,24 +89,30 @@
     </div>
 
     <!-- Scrollable Content (Below Fold) -->
-    <div class="scrollable-content">
+    <div v-if="isDataReady" class="scrollable-content">
       <v-card>
         <TalentTable
+          v-if="ndx && dimensions.people"
           :ndx="ndx"
-          :dimension="peopleDimension"
+          :dimension="dimensions.people"
         />
       </v-card>
     </div>
 
     <!-- Reset Filters Button -->
-    <v-btn color="primary" class="reset-button" @click="resetAllFilters">
+    <v-btn
+      v-if="isDataReady"
+      color="primary"
+      class="reset-button"
+      @click="resetAllFilters"
+    >
       Reset Filters
     </v-btn>
   </v-container>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useTalentStore } from '@/stores/talent'
 import StatCard from '@/components/StatCard.vue'
 import PieChart from '@/components/PieChart.vue'
@@ -101,28 +122,26 @@ import crossfilter from 'crossfilter2'
 
 const talentStore = useTalentStore()
 const allDimensions = ref([])
+const ndx = ref(null)
+const isDataReady = ref(false)
 
-// Initialize crossfilter
-const ndx = crossfilter(talentStore.talents)
+// Reactive references for dimensions and groups
+const dimensions = ref({
+  people: null,
+  department: null,
+  employmentType: null,
+  gender: null,
+})
 
-// Create dimensions
-const peopleDimension = ndx.dimension(d => d.first_name)
-const departmentDimension = ndx.dimension(d => d.department_id)
-const employmentTypeDimension = ndx.dimension(d => d.employment_type)
-const genderDimension = ndx.dimension(d => d.gender)
+const groups = ref({
+  department: null,
+  employmentType: null,
+  gender: null,
+})
 
-// Track all dimensions
-allDimensions.value = [
-  peopleDimension,
-  departmentDimension,
-  employmentTypeDimension,
-  genderDimension
-]
-
-// Create groups
-const departmentGroup = departmentDimension.group()
-const employmentTypeGroup = employmentTypeDimension.group()
-const genderGroup = genderDimension.group()
+// Computed properties
+const isLoading = computed(() => talentStore.isLoading)
+const error = computed(() => talentStore.error)
 
 // Color schemes
 const departmentColors = {
@@ -135,33 +154,113 @@ const departmentColors = {
 }
 
 const employmentTypeColors = {
-  'FULL_TIME': '#42b883',
-  'PART_TIME': '#ff6b6b',
-  'CONTRACT': '#306998',
-  'TEMPORARY': '#68a063'
+  FULL_TIME: '#42b883',
+  PART_TIME: '#ff6b6b',
+  CONTRACT: '#306998',
+  TEMPORARY: '#68a063',
 }
 
 const genderColors = {
-  'MALE': '#2196F3',
-  'FEMALE': '#E91E63',
-  'OTHER': '#9C27B0'
+  MALE: '#2196F3',
+  FEMALE: '#E91E63',
+  OTHER: '#9C27B0',
 }
 
-onMounted(() => {
-  dc.renderAll()
+// Initialize crossfilter and dimensions
+const initializeCrossfilter = () => {
+  if (!talentStore.talents.length) return
+
+  try {
+    // Initialize crossfilter
+    ndx.value = crossfilter(talentStore.talents)
+
+    // Create dimensions
+    dimensions.value = {
+      people: ndx.value.dimension((d) => d.first_name),
+      department: ndx.value.dimension((d) => d.department_id),
+      employmentType: ndx.value.dimension((d) => d.employment_type),
+      gender: ndx.value.dimension((d) => d.gender),
+    }
+
+    // Create groups
+    groups.value = {
+      department: dimensions.value.department.group(),
+      employmentType: dimensions.value.employmentType.group(),
+      gender: dimensions.value.gender.group(),
+    }
+
+    // Track all dimensions for reset functionality
+    allDimensions.value = Object.values(dimensions.value)
+
+    isDataReady.value = true
+  } catch (error) {
+    console.error('Error initializing crossfilter:', error)
+    isDataReady.value = false
+  }
+}
+
+// Watch for changes in talent store data
+watch(
+  () => talentStore.talents,
+  (newTalents) => {
+    if (newTalents.length > 0) {
+      // Reset existing crossfilter if it exists
+      if (ndx.value) {
+        ndx.value.remove()
+      }
+
+      // Reinitialize crossfilter with new data
+      initializeCrossfilter()
+
+      // Redraw all charts
+      dc.redrawAll()
+    }
+  },
+  { deep: true }
+)
+
+onMounted(async () => {
+  try {
+    // Fetch talents data
+    await talentStore.fetchTalents()
+
+    // Initialize crossfilter after data is loaded
+    initializeCrossfilter()
+
+    if (ndx.value) {
+      // Create a dummy chart to handle resets properly
+      const dummyChart = {
+        render: () => {},
+        redraw: () => {},
+        filterAll: () => {},
+      }
+      dc.registerChart(dummyChart)
+
+      // Render all charts
+      dc.renderAll()
+    }
+  } catch (error) {
+    console.error('Error in mounting:', error)
+  }
+
+  // Add resize listener
   window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-  
-  allDimensions.value.forEach(dim => {
+
+  // Clear filters before unmounting
+  allDimensions.value.forEach((dim) => {
     if (dim && typeof dim.filterAll === 'function') {
       dim.filterAll()
     }
   })
-  
-  ndx.remove()
+
+  // Clear data
+  if (ndx.value) {
+    ndx.value.remove()
+  }
 })
 
 const handleResize = () => {
@@ -169,14 +268,20 @@ const handleResize = () => {
 }
 
 const resetAllFilters = () => {
-  allDimensions.value.forEach(dim => {
+  // Reset all dimensions
+  allDimensions.value.forEach((dim) => {
     if (dim && typeof dim.filterAll === 'function') {
       dim.filterAll()
     }
   })
 
-  ndx.remove()
-  ndx.add(talentStore.talents)
+  // Reset crossfilter
+  if (ndx.value) {
+    ndx.value.remove()
+    ndx.value.add(talentStore.talents)
+  }
+
+  // Redraw all charts
   dc.redrawAll()
 }
 </script>
@@ -223,6 +328,13 @@ const resetAllFilters = () => {
   padding: 12px 16px;
   font-size: 0.875rem !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Dark theme support */
+:deep(.v-theme--dark) {
+  .v-card-title {
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+  }
 }
 
 @media (max-width: 960px) {

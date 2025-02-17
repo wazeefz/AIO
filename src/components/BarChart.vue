@@ -7,9 +7,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import * as dc from 'dc'
 import * as d3 from 'd3'
+import 'dc/src/compat/d3v6'
+
+// Chart registry to track active charts
+const chartRegistry = new Set()
 
 const props = defineProps({
   dimension: {
@@ -27,17 +31,18 @@ const props = defineProps({
   chartType: {
     type: String,
     default: 'budget',
-    validator: (value) => ['budget', 'salary', 'count'].includes(value)
+    validator: (value) => ['budget', 'salary', 'count'].includes(value),
   },
   barColor: {
     type: String,
-    default: '#5c6bc0'
-  }
+    default: '#5c6bc0',
+  },
 })
 
 const chart = ref(null)
 const containerRef = ref(null)
 const scrollRef = ref(null)
+const isInitialized = ref(false)
 
 const debounce = (fn, delay) => {
   let timeoutId
@@ -47,7 +52,6 @@ const debounce = (fn, delay) => {
   }
 }
 
-// Format value based on chart type
 const formatValue = (value, type) => {
   if (!value) return type === 'count' ? '0' : '$0'
   switch (type) {
@@ -61,7 +65,6 @@ const formatValue = (value, type) => {
   }
 }
 
-// Get y-axis label based on chart type
 const getYAxisLabel = (type) => {
   switch (type) {
     case 'budget':
@@ -75,134 +78,223 @@ const getYAxisLabel = (type) => {
   }
 }
 
-function generateBarChart() {
-  if (!containerRef.value || !scrollRef.value) return
-
-  const container = containerRef.value
-  const scrollWrapper = scrollRef.value
-  const containerWidth = container.clientWidth
-  const containerHeight = container.clientHeight
-
-  const numberOfBars = props.group.all().length
-  const minBarWidth = 40
-  const calculatedWidth = Math.max(containerWidth, numberOfBars * minBarWidth)
-
-  chart.value = dc.barChart(`#${props.chartId}`)
-
-  const xScale = d3.scaleBand()
-    .domain(props.group.all().map(d => d.key))
-    .range([0, calculatedWidth - 80])
-
-  chart.value
-    .width(calculatedWidth)
-    .height(containerHeight - 20)
-    .margins({ top: 30, right: 20, bottom: 50, left: 60 })
-    .dimension(props.dimension)
-    .group(props.group)
-    .x(xScale)
-    .xUnits(() => props.group.all().length)
-    .elasticY(true)
-    .renderHorizontalGridLines(true)
-    .brushOn(false)
-    .barPadding(0.2)
-    .title(d => `${formatStatus(d.key)}: ${formatValue(d.value, props.chartType)}`)
-    // Enable clicking on bars for filtering
-    .renderLabel(true)
-    .transitionDuration(500)
-    // Add click handler for filtering
-    .on('renderlet', function(chart) {
-      chart.selectAll('rect.bar').on('click', function(event, d) {
-        // Toggle filter
-        chart.filter(d.x);
-        dc.redrawAll();
-      });
-    });
-
-  // Configure axes
-  chart.value.yAxis()
-    .tickFormat(d => formatValue(d, props.chartType))
-    .ticks(5)
-
-  chart.value.xAxis()
-    .tickFormat(formatStatus)
-
-  // Add pretransition event
-  chart.value.on('pretransition', function(chart) {
-    // Style bars
-    chart.selectAll('.bar')
-      .style('fill', props.barColor)
-      .style('stroke', 'none')
-      .style('cursor', 'pointer') // Add pointer cursor
-      // Add hover effect
-      .on('mouseover', function() {
-        d3.select(this).style('opacity', 0.8)
-      })
-      .on('mouseout', function() {
-        d3.select(this).style('opacity', 1)
-      })
-
-    // Rotate x-axis labels
-    chart.selectAll('.x.axis text')
-      .style('text-anchor', 'end')
-      .attr('dx', '-.8em')
-      .attr('dy', '.15em')
-      .attr('transform', 'rotate(-45)')
-
-    // Add y-axis label
-    const svg = d3.select(`#${props.chartId} svg`)
-    svg.selectAll('.y-axis-label').remove()
-    
-    svg.append('text')
-      .attr('class', 'y-axis-label')
-      .attr('transform', 'rotate(-90)')
-      .attr('y', 20)
-      .attr('x', -(containerHeight / 2))
-      .attr('text-anchor', 'middle')
-      .text(getYAxisLabel(props.chartType))
-  })
-
-  // Register and render the chart
-  dc.registerChart(chart.value)
-  chart.value.render()
-}
-
 const formatStatus = (status) => {
   if (!status) return ''
-  return status.split('_')
-    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+  return status
+    .split('_')
+    .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
     .join(' ')
 }
 
+function cleanupChart() {
+  if (chart.value) {
+    try {
+      chart.value.on('renderlet', null)
+      chart.value.on('pretransition', null)
+
+      if (chartRegistry.has(chart.value)) {
+        //dc.deregisterChart(chart.value)
+        chartRegistry.delete(chart.value)
+      }
+
+      chart.value = null
+    } catch (error) {
+      console.error('Error cleaning up chart:', error)
+    }
+  }
+}
+
+function generateBarChart() {
+  if (
+    !containerRef.value ||
+    !scrollRef.value ||
+    !props.dimension ||
+    !props.group
+  )
+    return
+
+  try {
+    const groupData = props.group.all()
+    if (!groupData || !groupData.length) return
+
+    const container = containerRef.value
+    const scrollWrapper = scrollRef.value
+    const containerWidth = container.clientWidth
+    const containerHeight = container.clientHeight
+
+    const numberOfBars = groupData.length
+    const minBarWidth = 40
+    const calculatedWidth = Math.max(containerWidth, numberOfBars * minBarWidth)
+
+    // Cleanup existing chart
+    cleanupChart()
+
+    // Create new chart
+    chart.value = dc.barChart(`#${props.chartId}`)
+
+    const xScale = d3
+      .scaleBand()
+      .domain(groupData.map((d) => d.key))
+      .range([0, calculatedWidth - 80])
+
+    // Configure chart
+    chart.value
+      .dimension(props.dimension)
+      .group(props.group)
+      .width(calculatedWidth)
+      .height(containerHeight - 20)
+      .margins({ top: 30, right: 20, bottom: 100, left: 120 })
+      .x(xScale)
+      .xUnits(() => numberOfBars)
+      .elasticY(true)
+      .renderHorizontalGridLines(true)
+      .brushOn(false)
+      .barPadding(0.2)
+      .title(
+        (d) =>
+          `${formatStatus(d.key)}: ${formatValue(d.value, props.chartType)}`
+      )
+      .renderLabel(true)
+      .transitionDuration(500)
+
+    // Configure axes
+    chart.value
+      .yAxis()
+      .tickFormat((d) => formatValue(d, props.chartType))
+      .ticks(5)
+
+    chart.value.xAxis().tickFormat(formatStatus)
+
+    // Add click handler
+    chart.value.on('renderlet', function (chart) {
+      chart.selectAll('rect.bar').on('click', function (event, d) {
+        chart.filter(d.x)
+        dc.redrawAll()
+      })
+    })
+
+    // Add styling and interactions
+    chart.value.on('pretransition', function (chart) {
+      // Style bars
+      chart
+        .selectAll('.bar')
+        .style('fill', props.barColor)
+        .style('stroke', 'none')
+        .style('cursor', 'pointer')
+        .on('mouseover', function () {
+          d3.select(this).style('opacity', 0.8)
+        })
+        .on('mouseout', function () {
+          d3.select(this).style('opacity', 1)
+        })
+
+      // Rotate x-axis labels
+      chart
+        .selectAll('.x.axis text')
+        .style('text-anchor', 'end')
+        .attr('dx', '-.8em')
+        .attr('dy', '.15em')
+        .attr('transform', 'rotate(-45)')
+
+      // Add y-axis label
+      const svg = d3.select(`#${props.chartId} svg`)
+      svg.selectAll('.y-axis-label').remove()
+
+      svg
+        .append('text')
+        .attr('class', 'y-axis-label')
+        .attr('transform', 'rotate(-90)')
+        .attr('y', 20)
+        .attr('x', -(containerHeight / 2))
+        .attr('text-anchor', 'middle')
+        .text(getYAxisLabel(props.chartType))
+    })
+
+    // Register chart
+    dc.registerChart(chart.value)
+    chartRegistry.add(chart.value)
+
+    chart.value.render()
+    isInitialized.value = true
+  } catch (error) {
+    console.error('Error generating bar chart:', error)
+  }
+}
+
+function updateChart() {
+  if (!chart.value || !props.dimension || !props.group) return
+
+  try {
+    const groupData = props.group.all()
+    if (!groupData || !groupData.length) return
+
+    cleanupChart()
+    generateBarChart()
+  } catch (error) {
+    console.error('Error updating bar chart:', error)
+  }
+}
+
 const handleResize = async () => {
-  if (!chart.value || !containerRef.value) return
+  if (!chart.value || !containerRef.value || !props.group) return
 
-  const container = containerRef.value
-  const containerWidth = container.clientWidth
-  const containerHeight = container.clientHeight
+  try {
+    const container = containerRef.value
+    const containerWidth = container.clientWidth
+    const containerHeight = container.clientHeight
 
-  const numberOfBars = props.group.all().length
-  const minBarWidth = 40
-  const calculatedWidth = Math.max(containerWidth, numberOfBars * minBarWidth)
+    const groupData = props.group.all()
+    const numberOfBars = groupData.length
+    const minBarWidth = 40
+    const calculatedWidth = Math.max(containerWidth, numberOfBars * minBarWidth)
 
-  const xScale = d3.scaleBand()
-    .domain(props.group.all().map(d => d.key))
-    .range([0, calculatedWidth - 80])
+    const xScale = d3
+      .scaleBand()
+      .domain(groupData.map((d) => d.key))
+      .range([0, calculatedWidth - 80])
 
-  chart.value
-    .width(calculatedWidth)
-    .height(containerHeight - 20)
-    .x(xScale)
+    chart.value
+      .width(calculatedWidth)
+      .height(containerHeight - 20)
+      .x(xScale)
 
-  chart.value.rescale()
-  chart.value.redraw()
+    chart.value.rescale()
+    chart.value.redraw()
+  } catch (error) {
+    console.error('Error resizing chart:', error)
+  }
 }
 
 const debouncedResize = debounce(handleResize, 250)
 
+// Watch for dimension and group changes
+watch(
+  [() => props.dimension, () => props.group],
+  ([newDimension, newGroup]) => {
+    if (newDimension && newGroup) {
+      nextTick(() => {
+        if (isInitialized.value) {
+          updateChart()
+        } else {
+          generateBarChart()
+        }
+      })
+    }
+  },
+  { immediate: true }
+)
+
 onMounted(async () => {
   await nextTick()
-  generateBarChart()
+  if (props.dimension && props.group) {
+    generateBarChart()
+  }
   window.addEventListener('resize', debouncedResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', debouncedResize)
+  cleanupChart()
 })
 </script>
 
@@ -210,7 +302,7 @@ onMounted(async () => {
 .bar-chart-container {
   width: 100%;
   height: 100%;
-  min-height: 250px; /* Increased minimum height */
+  min-height: 250px;
   display: flex;
   flex-direction: column;
   background-color: var(--v-background-base, white);
@@ -221,7 +313,7 @@ onMounted(async () => {
   flex: 1;
   overflow-x: auto;
   overflow-y: hidden;
-  min-height: 200px; /* Added minimum height */
+  min-height: 200px;
 }
 
 :deep(.dc-chart) {

@@ -9,13 +9,6 @@
     >
       <template v-slot:top>
         <v-toolbar flat>
-          <div class="data-count" :id="countId">
-            <v-icon color="primary" class="mr-2">mdi-briefcase</v-icon>
-            <span class="filter-count"></span> &nbspselected out of&nbsp
-            <span class="total-count"></span>
-            &nbspprojects
-          </div>
-          <v-spacer></v-spacer>
           <v-text-field
             v-model="search"
             append-icon="mdi-magnify"
@@ -30,7 +23,11 @@
       <template v-slot:item="{ item }">
         <tr>
           <td>
-            <v-btn icon @click="toggleStar(item.project_id)" class="elevation-0">
+            <v-btn
+              icon
+              @click="toggleStar(item.project_id)"
+              class="elevation-0"
+            >
               <v-icon :color="item.starred ? 'yellow-darken-2' : 'grey'">
                 mdi-star
               </v-icon>
@@ -93,7 +90,7 @@
                 <v-text-field
                   v-model="editedItem.name"
                   label="Project Name"
-                  :rules="[v => !!v || 'Project name is required']"
+                  :rules="[(v) => !!v || 'Project name is required']"
                 ></v-text-field>
               </v-col>
               <v-col cols="6">
@@ -148,7 +145,7 @@
                 <v-textarea
                   v-model="editedItem.project_description"
                   label="Project Description"
-                  :rules="[v => !!v || 'Description is required']"
+                  :rules="[(v) => !!v || 'Description is required']"
                 ></v-textarea>
               </v-col>
             </v-row>
@@ -200,14 +197,20 @@ const defaultProject = {
   budget: 0,
   team_size: 1,
   project_description: '',
-  due_date: new Date().toISOString().split('T')[0]
+  due_date: new Date().toISOString().split('T')[0],
 }
 
 // Computed
 const countId = computed(() => 'project-stats')
 
 const headers = computed(() => [
-  { title: 'Star', key: 'starred', sortable: false, align: 'start', width: '50px' },
+  {
+    title: 'Star',
+    key: 'starred',
+    sortable: false,
+    align: 'start',
+    width: '50px',
+  },
   { title: 'Project Name', key: 'name', align: 'start' },
   { title: 'CV Count', key: 'cv_count', align: 'start', width: '100px' },
   { title: 'Progress', key: 'progress', align: 'start', width: '150px' },
@@ -215,7 +218,13 @@ const headers = computed(() => [
   { title: 'Status', key: 'status', align: 'start', width: '120px' },
   { title: 'Due Date', key: 'due_date', align: 'start' },
   { title: 'Team Size', key: 'team_size', align: 'start', width: '100px' },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'center', width: '100px' }
+  {
+    title: 'Actions',
+    key: 'actions',
+    sortable: false,
+    align: 'center',
+    width: '100px',
+  },
 ])
 
 const tableData = computed(() => {
@@ -223,7 +232,7 @@ const tableData = computed(() => {
   let data = props.dimension.top(Infinity)
 
   if (search.value) {
-    data = data.filter(item => 
+    data = data.filter((item) =>
       item.name.toLowerCase().includes(search.value.toLowerCase())
     )
   }
@@ -238,24 +247,25 @@ const formatCurrency = (value) => {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   }).format(value)
 }
 
 const formatStatus = (status) => {
   if (!status) return ''
-  return status.split('_')
-    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+  return status
+    .split('_')
+    .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
     .join(' ')
 }
 
 const getStatusColor = (status) => {
   if (!status) return 'default'
   const colors = {
-    'IN_PROGRESS': 'warning',
-    'COMPLETED': 'success',
-    'ON_HOLD': 'error',
-    'CANCELLED': 'grey'
+    IN_PROGRESS: 'warning',
+    COMPLETED: 'success',
+    ON_HOLD: 'error',
+    CANCELLED: 'grey',
   }
   return colors[status] || 'default'
 }
@@ -298,7 +308,9 @@ const closeDialog = () => {
 const save = () => {
   // Validate required fields
   const requiredFields = ['name', 'status', 'project_description']
-  const missingFields = requiredFields.filter(field => !editedItem.value[field])
+  const missingFields = requiredFields.filter(
+    (field) => !editedItem.value[field]
+  )
 
   if (missingFields.length > 0) {
     alert(`Please fill in all required fields: ${missingFields.join(', ')}`)
