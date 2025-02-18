@@ -52,6 +52,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 const email = ref('')
 const password = ref('')
@@ -59,16 +60,37 @@ const errorMessage = ref('')
 const loading = ref(false)
 const router = useRouter()
 
-const submitLogin = () => {
-  // Store name and set isAuthenticated to true in localStorage
-  localStorage.setItem('name', email.value) // You can store email as 'name' if that's intended
-  localStorage.setItem('isAuthenticated', true)
+const submitLogin = async () => {
+  try {
+    loading.value = true
+    const response = await axios.post('http://127.0.0.1:8000/login/', {
+      email: email.value,
+      password: password.value,
+    })
 
-  // Redirect user after login
-  router.push('/dashboard')
+    // Store token and user information
+    const { access_token, user_name } = response.data
+    localStorage.setItem('token', access_token)
+    localStorage.setItem('name', user_name)
+    localStorage.setItem('isAuthenticated', 'true')
+
+    // Clear any existing error messages
+    errorMessage.value = ''
+
+    // Redirect to dashboard
+    router.push('/dashboard')
+  } catch (error) {
+    loading.value = false
+    if (error.response) {
+      errorMessage.value = error.response.data.detail || 'Login failed'
+    } else {
+      errorMessage.value = 'An error occurred while trying to log in'
+    }
+    console.error('Login error:', error)
+  }
 }
 
 const goToSignUp = () => {
-  router.push('/signup') // Navigate to the signup page
+  router.push('/signup')
 }
 </script>

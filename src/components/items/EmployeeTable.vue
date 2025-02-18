@@ -311,7 +311,9 @@
 
         <!-- Actions Column -->
         <template v-slot:item.actions="{ item }">
-          <div class="d-flex gap-2">
+          <EditBtn @click="editItem(item)" />
+          <RemoveBtn color="#DB848C" @remove="deleteItem(item)" />
+          <!-- <div class="d-flex gap-2">
             <v-btn
               icon="mdi-pencil"
               variant="text"
@@ -326,13 +328,13 @@
               color="error"
               @click="deleteItem(item)"
             />
-          </div>
+          </div> -->
         </template>
       </v-data-table>
     </v-card>
 
     <!-- Continue Button -->
-    <div class="d-flex justify-end mt-6">
+    <!-- <div class="d-flex justify-end mt-6">
       <v-btn
         color="#B1A184"
         size="large"
@@ -342,10 +344,10 @@
       >
         Continue
       </v-btn>
-    </div>
+    </div> -->
 
     <!-- Delete Dialog -->
-    <v-dialog v-model="showDeleteDialog" max-width="400">
+    <!-- <v-dialog v-model="showDeleteDialog" max-width="400">
       <v-card>
         <v-card-title>Confirm Delete</v-card-title>
         <v-card-text>Are you sure you want to delete this entry?</v-card-text>
@@ -363,10 +365,10 @@
           </v-btn>
         </v-card-actions>
       </v-card>
-    </v-dialog>
+    </v-dialog> -->
   </v-container>
 
-  <!-- Add this new Confirmation Dialog -->
+  <!-- Add this new Confirmation Dialog
   <v-dialog v-model="showConfirmationDialog" max-width="400">
     <v-card>
       <v-card-title class="d-flex justify-space-between align-center pa-4">
@@ -410,7 +412,7 @@
         </v-btn>
       </v-card-actions>
     </v-card>
-  </v-dialog>
+  </v-dialog> -->
 </template>
 
 <script setup>

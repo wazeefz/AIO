@@ -1,253 +1,257 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from typing import List
 from pydantic import BaseModel, EmailStr
-from datetime import datetime
-
-from . import database, models
+from typing import Optional, List
+from . import database
+from .models import User, Department
+from passlib.context import CryptContext
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
 
 app = FastAPI()
 
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000"],  # Add your Vue.js frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Pydantic models for response schemas
-class DepartmentBase(BaseModel):
-    department_name: str
+# Security configurations
+SECRET_KEY = "your-secret-key-here"  # Change this to a secure secret key
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-class DepartmentSchema(DepartmentBase):
-    department_id: int
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-    class Config:
-        orm_mode = True
-
-class SkillBase(BaseModel):
-    skill_name: str
-    skill_category: str
-
-class SkillSchema(SkillBase):
-    skill_id: int
-
-    class Config:
-        orm_mode = True
-
-class TalentBase(BaseModel):
-    first_name: str
-    last_name: str
-    email: str
-    phone: str
-    job_title: str
-    employment_type: str
-    department_id: int
-    hire_date: datetime
-    basic_salary: float
-    gender: str
-    date_of_birth: datetime
-    marital_status: bool
-    total_experience_years: float
-    career_preferences: str
-    availability_status: str
-
-class TalentSchema(TalentBase):
-    talent_id: int
-
-    class Config:
-        orm_mode = True
-
-class ProjectBase(BaseModel):
-    name: str
-    starred: bool
-    cv_count: int
-    progress: int
-    status: str
-    budget: float
-    user_id: int
-    start_date: datetime
-    required_skills: List[int]
-    min_experience_years: int
-    team_size: int
-    project_description: str
-
-class ProjectSchema(ProjectBase):
-    project_id: int
-
-    class Config:
-        orm_mode = True
-
-class UserBase(BaseModel):
-    name: str
-    department_id: int
-    email: str
-    role: str
-
-class UserSchema(UserBase):
-    user_id: int
-
-    class Config:
-        orm_mode = True
-
-# Pydantic models for request and response
+# Pydantic model for user signup
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
-    password: str  # Add password field for signup
-    department_id: int
-    role: str
+    password: str
+    department_id: Optional[int] = None
+    role: Optional[str] = "user"
 
-class UserLogin(BaseModel):
+# Pydantic models
+class LoginRequest(BaseModel):
     email: EmailStr
-    password: str  # Add password field for login
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user_name: str
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    department_id: Optional[int] = None
+    role: Optional[str] = None
+
+class DepartmentResponse(BaseModel):
+    department_id: int
+    department_name: str
+
+    class Config:
+        orm_mode = True
 
 class UserResponse(BaseModel):
     user_id: int
     name: str
-    email: EmailStr
-    department_id: int
-    role: str
+    email: str
+    department_id: Optional[int]
+    role: Optional[str]
+    department: Optional[DepartmentResponse]
     created_at: datetime
 
     class Config:
-        from_attributes = True  # Equivalent to orm_mode in Pydantic V2
+        orm_mode = True
 
-# Helper function to hash passwords (for security)
-def hash_password(password: str) -> str:
-    # In a real application, use a library like `bcrypt` or `passlib`
-    return f"hashed_{password}"  # Placeholder for demonstration
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
-# Helper function to verify passwords
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    # In a real application, use a library like `bcrypt` or `passlib`
-    return f"hashed_{plain_password}" == hashed_password  # Placeholder for demonstration
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
 
-# Signup endpoint
-@app.post("/signup/", response_model=UserResponse)
-def signup(user: UserCreate, db: Session = Depends(database.get_db)):
-    print("checkpoint1")
-    # Check if the email is already registered
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
-    print("checkpoint2")
-    if db_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+@app.post("/signup/")
+async def signup(user: UserCreate, db: Session = Depends(database.get_db)):
+    # Check if email already exists
+    existing_user = db.query(User).filter(User.email == user.email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
 
-    # Hash the password
-    hashed_password = hash_password(user.password)
-
-    # Create a new user
-    new_user = models.User(
-        name=user.name,
-        email=user.email,
-        password=hashed_password,  # Store the hashed password
-        department_id=user.department_id,
-        role=user.role,
-        created_at=datetime.utcnow(),
+    # Create new user
+    try:
+        # Hash the password
+        hashed_password = pwd_context.hash(user.password)
+        
+        # Create new user object
+        db_user = User(
+            name=user.name,
+            email=user.email,
+            password=hashed_password,
+            department_id=user.department_id,
+            role=user.role
+        )
+        
+        # Add to database
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        
+        return {"message": "User created successfully"}
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while creating user: {str(e)}"
+        )
+    
+@app.post("/login/", response_model=Token)
+async def login(login_request: LoginRequest, db: Session = Depends(database.get_db)):
+    # Find user by email
+    user = db.query(User).filter(User.email == login_request.email).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+    
+    # Verify password
+    if not verify_password(login_request.password, user.password):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+    
+    # Create access token
+    access_token = create_access_token(
+        data={"sub": user.email, "user_id": user.user_id}
     )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_name": user.name
+    }
 
-    # Add the user to the database
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    # Return the user without the password
-    return new_user
-
-# Login endpoint
-@app.post("/login/")
-def login(user: UserLogin, db: Session = Depends(database.get_db)):
-    # Find the user by email
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+@app.put("/users/{user_id}")
+async def update_user(
+    user_id: int,
+    user_update: UserUpdate,
+    db: Session = Depends(database.get_db)
+):
+    # Find the user in the database
+    db_user = db.query(User).filter(User.user_id == user_id).first()
+    
     if not db_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    # Verify the password
-    if not verify_password(user.password, db_user.password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
-
-    # Return a success message (or a token in a real application)
-    return {"message": "Login successful", "user_id": db_user.user_id}
-
-# API Endpoints
-@app.get("/departments/", response_model=List[DepartmentSchema])
-def get_departments(
-    skip: int = 0,
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+    
+    # Check if email is being updated and if it's already taken
+    if user_update.email and user_update.email != db_user.email:
+        existing_user = db.query(User).filter(User.email == user_update.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=400,
+                detail="Email already registered"
+            )
+    
+    try:
+        # Update user fields if they are provided
+        if user_update.name is not None:
+            db_user.name = user_update.name
+        
+        if user_update.email is not None:
+            db_user.email = user_update.email
+            
+        if user_update.password is not None:
+            db_user.password = pwd_context.hash(user_update.password)
+            
+        if user_update.department_id is not None:
+            # Optionally verify that the department exists
+            # department = db.query(Department).filter(
+            #     Department.department_id == user_update.department_id
+            # ).first()
+            # if not department:
+            #     raise HTTPException(
+            #         status_code=404,
+            #         detail="Department not found"
+            #     )
+            db_user.department_id = user_update.department_id
+            
+        if user_update.role is not None:
+            db_user.role = user_update.role
+        
+        # Commit the changes to the database
+        db.commit()
+        db.refresh(db_user)
+        
+        # Return the updated user information
+        return {
+            "message": "User updated successfully",
+            "user": {
+                "user_id": db_user.user_id,
+                "name": db_user.name,
+                "email": db_user.email,
+                "department_id": db_user.department_id,
+                "role": db_user.role
+            }
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while updating user: {str(e)}"
+        )
+    
+@app.get("/users/", response_model=List[UserResponse])
+async def get_users(
+    skip: int = 0, 
     limit: int = 100,
     db: Session = Depends(database.get_db)
 ):
-    departments = db.query(models.Department).offset(skip).limit(limit).all()
-    return departments
+    try:
+        users = db.query(User).offset(skip).limit(limit).all()
+        return users
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving users: {str(e)}"
+        )
 
-@app.get("/departments/{department_id}", response_model=DepartmentSchema)
-def get_department(department_id: int, db: Session = Depends(database.get_db)):
-    department = db.query(models.Department).filter(models.Department.department_id == department_id).first()
-    if department is None:
-        raise HTTPException(status_code=404, detail="Department not found")
-    return department
-
-@app.get("/skills/", response_model=List[SkillSchema])
-def get_skills(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(database.get_db)
-):
-    skills = db.query(models.Skill).offset(skip).limit(limit).all()
-    return skills
-
-@app.get("/skills/{skill_id}", response_model=SkillSchema)
-def get_skill(skill_id: int, db: Session = Depends(database.get_db)):
-    skill = db.query(models.Skill).filter(models.Skill.skill_id == skill_id).first()
-    if skill is None:
-        raise HTTPException(status_code=404, detail="Skill not found")
-    return skill
-
-@app.get("/talents/", response_model=List[TalentSchema])
-def get_talents(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(database.get_db)
-):
-    talents = db.query(models.Talent).offset(skip).limit(limit).all()
-    return talents
-
-@app.get("/talents/{talent_id}", response_model=TalentSchema)
-def get_talent(talent_id: int, db: Session = Depends(database.get_db)):
-    talent = db.query(models.Talent).filter(models.Talent.talent_id == talent_id).first()
-    if talent is None:
-        raise HTTPException(status_code=404, detail="Talent not found")
-    return talent
-
-@app.get("/projects/", response_model=List[ProjectSchema])
-def get_projects(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(database.get_db)
-):
-    projects = db.query(models.Project).offset(skip).limit(limit).all()
-    return projects
-
-@app.get("/projects/{project_id}", response_model=ProjectSchema)
-def get_project(project_id: int, db: Session = Depends(database.get_db)):
-    project = db.query(models.Project).filter(models.Project.project_id == project_id).first()
-    if project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    return project
-
-@app.get("/users/", response_model=List[UserSchema])
-def get_users(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(database.get_db)
-):
-    users = db.query(models.User).offset(skip).limit(limit).all()
-    return users
-
-@app.get("/users/{user_id}", response_model=UserSchema)
-def get_user(user_id: int, db: Session = Depends(database.get_db)):
-    user = db.query(models.User).filter(models.User.user_id == user_id).first()
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
+# Get specific user by ID endpoint
+@app.get("/users/{user_id}", response_model=UserResponse)
+async def get_user(user_id: int, db: Session = Depends(database.get_db)):
+    try:
+        user = db.query(User).filter(User.user_id == user_id).first()
+        if user is None:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+        return user
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving user: {str(e)}"
+        )
