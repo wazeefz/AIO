@@ -5,15 +5,11 @@ const API_URL = 'http://localhost:8000'
 export const useProjectStore = defineStore('project', {
   state: () => ({
     projects: [],
-    monthlyRevenue: [],
     isLoading: false,
     error: null,
   }),
 
   getters: {
-    totalRevenue: (state) => {
-      return state.monthlyRevenue.reduce((sum, month) => sum + month.revenue, 0)
-    },
     projectCount: (state) => state.projects.length,
 
     completedProjects: (state) =>
