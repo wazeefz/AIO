@@ -4,7 +4,7 @@
       <v-card-title class="text-h5 text-center">Sign Up</v-card-title>
 
       <v-card-text>
-        <v-form @submit.prevent="">
+        <v-form @submit.prevent="submitSignUp">
           <v-text-field
             v-model="name"
             label="Full Name"
@@ -61,7 +61,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-// import axios from 'axios'
+import axios from 'axios'
 
 const name = ref('')
 const email = ref('')
@@ -82,32 +82,32 @@ const togglePasswordVisibility = () => {
 }
 
 const submitSignUp = async () => {
-  //   try {
-  //     loading.value = true
-  //     const response = await axios.post('http://localhost:8000/users/signup', {
-  //       name: name.value,
-  //       email: email.value,
-  //       password: password.value,
-  //     })
+  try {
+    loading.value = true
+    const response = await axios.post('http://127.0.0.1:8000/signup/', {
+      name: name.value,
+      email: email.value,
+      password: password.value,
+    })
 
-  //     // If signup is successful, redirect to the login page
-  //     const { message } = response.data
-  //     console.log(message)
+    // If signup is successful, redirect to the login page
+    const { message } = response.data
+    console.log(message)
 
-  //     // Redirect user to login page after successful signup
-  //     router.push('/login')
-  //   } catch (error) {
-  //     loading.value = false
-  //     if (error.response) {
-  //       // If the backend returns an error (e.g., user already exists)
-  //       errorMessage.value = error.response.data.detail || 'Sign up failed'
-  //       console.error('Error:', errorMessage.value)
-  //     } else {
-  //       // Handle other errors (e.g., network issues)
-  //       errorMessage.value = 'An error occurred while trying to sign up.'
-  //       console.error('Error:', error.message)
-  //     }
-  //   }
+    // Redirect user to login page after successful signup
+    router.push('/login')
+  } catch (error) {
+    loading.value = false
+    if (error.response) {
+      // If the backend returns an error (e.g., user already exists)
+      errorMessage.value = error.response.data.detail || 'Sign up failed'
+      console.error('Error:', errorMessage.value)
+    } else {
+      // Handle other errors (e.g., network issues)
+      errorMessage.value = 'An error occurred while trying to sign up.'
+      console.error('Error:', error.message)
+    }
+  }
   console.log('signing up...')
 }
 
