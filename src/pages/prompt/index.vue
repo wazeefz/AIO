@@ -21,8 +21,8 @@
           </div>
           <div v-else key="message">
             <ChatMessage
-              v-for="(message, index) in currentChat.messages"
-              :key="index"
+              v-for="message in currentChat.messages"
+              :key="message.message_id"
               :message="message"
             />
           </div>
@@ -51,43 +51,22 @@ const {
   loadChat,
   deleteChat,
   sendMessage,
-  // loadSavedHistory,
 } = useChat(userId.value)
-
-// const {
-//   chatHistory,
-//   currentChat,
-//   isLoading,
-//   startNewChat,
-//   loadChat,
-//   deleteChat,
-//   sendMessage,
-//   loadSavedHistory,
-// } = useChat()
 
 const messagesContainer = ref(null)
 
-const scrollToBottom = () => {
-  setTimeout(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-    }
-  }, 100)
-}
-
-watch(() => currentChat.value.messages, scrollToBottom, { deep: true })
-
-// onMounted(() => {
-//   loadSavedHistory()
-// })
-
-const handleSearch = (query) => {
-  // Filter your chat history based on the query
-  // This is just an example implementation
-  filteredChatHistory.value = chatHistory.value.filter((chat) =>
-    chat.title.toLowerCase().includes(query.toLowerCase())
-  )
-}
+// Scroll to bottom when messages change
+watch(
+  () => currentChat.value.messages,
+  () => {
+    setTimeout(() => {
+      if (messagesContainer.value) {
+        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+      }
+    }, 100)
+  },
+  { deep: true }
+)
 </script>
 
 <style>

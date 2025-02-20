@@ -9,6 +9,7 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from jose import JWTError, jwt
+from sqlalchemy.orm import Session
 from pymongo import MongoClient
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -24,7 +25,7 @@ from .models import User, Department, Chat, Message
 load_dotenv()
 
 # Initialize FastAPI app
-app = FastAPI(title="Medical PDF QA System with Chat")
+app = FastAPI()
 
 # Configure CORS
 app.add_middleware(
@@ -134,6 +135,15 @@ class ChatResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     messages: List[MessageResponse]
+
+    class Config:
+        orm_mode = True
+
+class ChatListResponse(BaseModel):
+    conversation_id: int
+    title: str
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         orm_mode = True
@@ -463,6 +473,8 @@ async def create_chat(
     db.refresh(new_chat)
     return new_chat
 
+
+
 @app.get("/chat/{user_id}/{chat_id}", response_model=ChatResponse)
 async def get_chat(
     user_id: int,
@@ -477,15 +489,88 @@ async def get_chat(
         raise HTTPException(status_code=404, detail="Chat not found")
     return chat
 
-@app.get("/chat/history/{user_id}", response_model=List[ChatResponse])
-async def get_chat_history(
+@app.get("/chat/{user_id}", response_model=List[ChatListResponse])
+def get_user_chats(user_id: int, db: Session = Depends(database.get_db)):
+    """Get all chats for a specific user without messages"""
+    try:
+        # Query all chats for the user, ordered by most recent first
+        chats = (
+            db.query(Chat)
+            .filter(Chat.user_id == user_id)
+            .order_by(Chat.updated_at.desc())
+            .all()
+        )
+        
+        if not chats:
+            return []
+        
+        return chats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/chat/{user_id}/{chat_id}/messages", response_model=List[MessageResponse])
+async def get_chat_messages(
     user_id: int,
+    chat_id: int,
     db: Session = Depends(database.get_db)
 ):
-    chats = db.query(Chat).filter(
-        Chat.user_id == user_id
-    ).order_by(Chat.updated_at.desc()).all()
-    return chats
+    """Get messages for a specific chat"""
+    try:
+        # Verify chat belongs to user
+        chat = db.query(Chat).filter(
+            Chat.conversation_id == chat_id,
+            Chat.user_id == user_id
+        ).first()
+        
+        if not chat:
+            raise HTTPException(status_code=404, detail="Chat not found")
+            
+        # Get messages
+        messages = (
+            db.query(Message)
+            .filter(Message.conversation_id == chat_id)
+            .order_by(Message.created_at)
+            .all()
+        )
+        
+        return messages
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/chat/history/{user_id}", response_model=List[ChatResponse])
+def get_chat_history(user_id: int, db: Session = Depends(database.get_db)):
+    """
+    Retrieve chat history for a specific user.
+    """
+    try:
+        # Fetch the chat history from the database
+        chats = db.query(Chat).filter(Chat.user_id == user_id).order_by(Chat.updated_at.desc()).all()
+        
+        if not chats:
+            return []
+        
+        # Convert the SQLAlchemy objects to Pydantic models
+        chat_responses = []
+        for chat in chats:
+            messages = [MessageResponse(
+                message_id=message.message_id,
+                content=message.content,
+                role=message.role,
+                created_at=message.created_at
+            ) for message in chat.messages]
+            
+            chat_response = ChatResponse(
+                conversation_id=chat.conversation_id,
+                title=chat.title,
+                created_at=chat.created_at,
+                updated_at=chat.updated_at,
+                messages=messages
+            )
+            chat_responses.append(chat_response)
+        
+        return chat_responses
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat/{user_id}/{chat_id}/message", response_model=MessageResponse)
 async def create_message(

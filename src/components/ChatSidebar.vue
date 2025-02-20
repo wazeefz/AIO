@@ -36,15 +36,17 @@
     <div class="chat-history">
       <div
         v-for="chat in chatHistory"
-        :key="chat.id"
-        :class="['chat-item', { active: currentChatId === chat.id }]"
+        :key="chat.conversation_id"
+        :class="[
+          'chat-item',
+          { active: currentChatId === chat.conversation_id },
+        ]"
         @click="$emit('load-chat', chat)"
       >
         <span class="chat-title">{{ chat.title }}</span>
         <button
           class="delete-chat"
-          @click.stop="$emit('delete-chat', chat.id)"
-          @click="handleDeleteChatHistory"
+          @click.stop="$emit('delete-chat', chat.conversation_id)"
         >
           ×
         </button>
@@ -58,9 +60,16 @@ import { ref } from 'vue'
 
 const deleteChatHistory = ref()
 
-defineProps({
-  chatHistory: Array,
-  currentChatId: Number,
+const props = defineProps({
+  chatHistory: {
+    type: Array,
+    required: true,
+    default: () => [],
+  },
+  currentChatId: {
+    type: Number,
+    required: true,
+  },
 })
 
 const searchQuery = ref('')
