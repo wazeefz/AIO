@@ -1,20 +1,35 @@
-from fastapi import FastAPI, HTTPException, Depends
+import os
+import glob
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
+from datetime import datetime, timedelta
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from pymongo import MongoClient
+from langchain_mongodb import MongoDBAtlasVectorSearch
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai.embeddings import GoogleGenerativeAIEmbeddings
+from langchain.chains import RetrievalQA
+from langchain.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from dotenv import load_dotenv
 from . import database
 from .models import User, Department, Chat, Message
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-from jose import JWTError, jwt
 
-app = FastAPI()
+# Load environment variables
+load_dotenv()
+
+# Initialize FastAPI app
+app = FastAPI(title="Medical PDF QA System with Chat")
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Add your Vue.js frontend URL
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,6 +42,34 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Load environment variables
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+MONGODB_ATLAS_CLUSTER_URI = os.getenv("MONGODB_ATLAS_CLUSTER_URI")
+
+# Initialize MongoDB client
+client = MongoClient(MONGODB_ATLAS_CLUSTER_URI)
+
+# Define database and collection names
+DB_NAME = "test_db"
+COLLECTION_NAME = "test_collection_pdf"
+ATLAS_VECTOR_SEARCH_INDEX_NAME = "text-index-pdf"
+
+# Get MongoDB collection
+MONGODB_COLLECTION = client[DB_NAME][COLLECTION_NAME]
+MONGODB_COLLECTION.delete_many({})
+
+# Initialize Google Generative AI model and embeddings
+llm_model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", api_key=GEMINI_API_KEY)
+embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=GEMINI_API_KEY)
+
+# Initialize MongoDB Atlas Vector Search
+vector_store = MongoDBAtlasVectorSearch(
+    collection=MONGODB_COLLECTION,
+    embedding=embeddings,
+    index_name=ATLAS_VECTOR_SEARCH_INDEX_NAME,
+    relevance_score_fn="cosine",
+)
 
 # Pydantic model for user signup
 class UserCreate(BaseModel):
@@ -104,6 +147,47 @@ def create_access_token(data: dict):
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
+# Create Vector Search Index
+def create_vector_search_index():
+    try:
+        vector_store.create_vector_search_index(dimensions=768)
+        print("Vector Search Index Created!")
+    except Exception as e:
+        print(f"Vector Search Index already exists or error: {str(e)}")
+
+# Load and Store Documents
+def load_and_store_documents(pdf_dir="pdf_files/"):
+    try:
+        os.makedirs(pdf_dir, exist_ok=True)
+        pdf_files = glob.glob(f"{pdf_dir}/*.pdf")
+        
+        if not pdf_files:
+            print("No PDF files found in the directory.")
+            return
+        
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=500,
+            chunk_overlap=100
+        )
+        
+        for pdf_file in pdf_files:
+            print(f"Processing: {pdf_file}")
+            try:
+                loader = PyPDFLoader(pdf_file)
+                docs = loader.load_and_split(text_splitter)
+                
+                for doc in docs:
+                    doc.metadata["source_file"] = os.path.basename(pdf_file)
+                
+                vector_store.add_documents(docs)
+                print(f"Added {len(docs)} chunks from {pdf_file}")
+            except Exception as e:
+                print(f"Error processing {pdf_file}: {str(e)}")
+        
+        print("All documents processed and added to Vector Store!")
+    except Exception as e:
+        print(f"Error loading or storing documents: {str(e)}")
 
 @app.post("/signup/")
 async def signup(user: UserCreate, db: Session = Depends(database.get_db)):
@@ -282,98 +366,97 @@ async def get_user(user_id: int, db: Session = Depends(database.get_db)):
             status_code=500,
             detail=f"Error retrieving user: {str(e)}"
         )
-    
-# @app.post("/chat/{user_id}", response_model=ChatResponse)
-# async def create_chat(
-#     user_id: int,
-#     db: Session = Depends(database.get_db)
-# ):
-#     new_chat = Chat(
-#         user_id=user_id,
-#         title="New Chat"
-#     )
-#     db.add(new_chat)
-#     db.commit()
-#     db.refresh(new_chat)
-#     return new_chat
 
-# @app.get("/chat/{user_id}/{chat_id}", response_model=ChatResponse)
-# async def get_chat(
-#     user_id: int,
-#     chat_id: int,
-#     db: Session = Depends(database.get_db)
-# ):
-#     chat = db.query(Chat).filter(
-#         Chat.conversation_id == chat_id,
-#         Chat.user_id == user_id
-#     ).first()
-#     if not chat:
-#         raise HTTPException(status_code=404, detail="Chat not found")
-#     return chat
+# PDF Upload Endpoint
+@app.post("/upload-pdf/")
+async def upload_pdf(file: UploadFile = File(...)):
+    try:
+        pdf_dir = "pdf_files"
+        os.makedirs(pdf_dir, exist_ok=True)
+        
+        file_path = os.path.join(pdf_dir, file.filename)
+        with open(file_path, "wb") as f:
+            f.write(await file.read())
+        
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=500,
+            chunk_overlap=100
+        )
+        
+        loader = PyPDFLoader(file_path)
+        docs = loader.load_and_split(text_splitter)
+        
+        for doc in docs:
+            doc.metadata["source_file"] = file.filename
+        
+        vector_store.add_documents(docs)
+        
+        return JSONResponse(content={
+            "message": f"Successfully uploaded and processed {file.filename}",
+            "chunks_processed": len(docs)
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e)}")
 
-@app.get("/chat/history/{user_id}", response_model=List[ChatResponse])
-async def get_chat_history(
+# List PDFs Endpoint
+@app.get("/list-pdfs/")
+async def list_pdfs():
+    try:
+        pipeline = [
+            {"$group": {"_id": "$metadata.source_file"}},
+            {"$match": {"_id": {"$ne": None}}},
+            {"$project": {"filename": "$_id", "_id": 0}}
+        ]
+        
+        result = list(MONGODB_COLLECTION.aggregate(pipeline))
+        return {"pdfs": [doc["filename"] for doc in result]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error listing PDFs: {str(e)}")
+
+# Ask Question Endpoint
+@app.get("/ask-question/")
+async def ask_question(
+    question: str = Query(..., description="Your question"),
+    pdf_file: str = Query(None, description="Optional: Specific PDF to search in")
+):
+    try:
+        search_kwargs = {}
+        if pdf_file:
+            search_kwargs = {
+                "filter": {"metadata.source_file": pdf_file}
+            }
+        
+        retriever = vector_store.as_retriever(search_kwargs=search_kwargs)
+        
+        chain = RetrievalQA.from_chain_type(
+            llm=llm_model,
+            retriever=retriever,
+            chain_type="stuff",
+            return_source_documents=True
+        )
+        
+        result = chain.invoke(question)
+        
+        sources = []
+        if hasattr(result, 'get') and result.get('source_documents'):
+            for doc in result['source_documents']:
+                if 'source_file' in doc.metadata and doc.metadata['source_file'] not in sources:
+                    sources.append(doc.metadata['source_file'])
+        
+        return {
+            "question": question,
+            "answer": result["result"],
+            "sources": sources
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+# Chat Endpoints
+@app.post("/chat/{user_id}", response_model=ChatResponse)
+async def create_chat(
     user_id: int,
     db: Session = Depends(database.get_db)
 ):
-    try:
-        chats = db.query(Chat).filter(
-            Chat.user_id == user_id
-        ).order_by(Chat.updated_at.desc()).all()
-        return chats
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error retrieving chat history: {str(e)}")
-
-# @app.post("/chat/{user_id}/{chat_id}/message/", response_model=MessageResponse)
-# async def create_message(
-#     user_id: int,
-#     chat_id: int,
-#     message: MessageCreate,
-#     db: Session = Depends(database.get_db)
-# ):
-#     chat = db.query(Chat).filter(
-#         Chat.conversation_id == chat_id,
-#         Chat.user_id == user_id
-#     ).first()
-#     if not chat:
-#         raise HTTPException(status_code=404, detail="Chat not found")
-
-#     new_message = Message(
-#         conversation_id=chat_id,
-#         content=message.content,
-#         role=message.role
-#     )
-#     db.add(new_message)
-    
-#     # Update chat title if it's the first message
-#     if message.role == "user" and len(chat.messages) == 0:
-#         chat.title = message.content[:30] + "..." if len(message.content) > 30 else message.content
-    
-#     chat.updated_at = datetime.utcnow()
-#     db.commit()
-#     db.refresh(new_message)
-#     return new_message
-
-# @app.delete("/chat/{user_id}/{chat_id}")
-# async def delete_chat(
-#     user_id: int,
-#     chat_id: int,
-#     db: Session = Depends(database.get_db)
-# ):
-#     chat = db.query(Chat).filter(
-#         Chat.conversation_id == chat_id,
-#         Chat.user_id == user_id
-#     ).first()
-#     if not chat:
-#         raise HTTPException(status_code=404, detail="Chat not found")
-    
-#     db.delete(chat)
-#     db.commit()
-#     return {"message": "Chat deleted successfully"}
-
-
-@app.post("/chat/{user_id}", response_model=ChatResponse)
-async def create_chat(user_id: int, db: Session = Depends(database.get_db)):
     new_chat = Chat(user_id=user_id, title="New Chat")
     db.add(new_chat)
     db.commit()
@@ -381,7 +464,11 @@ async def create_chat(user_id: int, db: Session = Depends(database.get_db)):
     return new_chat
 
 @app.get("/chat/{user_id}/{chat_id}", response_model=ChatResponse)
-async def get_chat(user_id: int, chat_id: int, db: Session = Depends(database.get_db)):
+async def get_chat(
+    user_id: int,
+    chat_id: int,
+    db: Session = Depends(database.get_db)
+):
     chat = db.query(Chat).filter(
         Chat.conversation_id == chat_id,
         Chat.user_id == user_id
@@ -390,12 +477,15 @@ async def get_chat(user_id: int, chat_id: int, db: Session = Depends(database.ge
         raise HTTPException(status_code=404, detail="Chat not found")
     return chat
 
-# @app.get("/chat/history/{user_id}", response_model=List[ChatResponse])
-# async def get_chat_history(user_id: int, db: Session = Depends(database.get_db)):
-#     chats = db.query(Chat).filter(
-#         Chat.user_id == user_id
-#     ).order_by(Chat.updated_at.desc()).all()
-#     return chats
+@app.get("/chat/history/{user_id}", response_model=List[ChatResponse])
+async def get_chat_history(
+    user_id: int,
+    db: Session = Depends(database.get_db)
+):
+    chats = db.query(Chat).filter(
+        Chat.user_id == user_id
+    ).order_by(Chat.updated_at.desc()).all()
+    return chats
 
 @app.post("/chat/{user_id}/{chat_id}/message", response_model=MessageResponse)
 async def create_message(
@@ -408,6 +498,7 @@ async def create_message(
         Chat.conversation_id == chat_id,
         Chat.user_id == user_id
     ).first()
+    
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
 
@@ -418,7 +509,6 @@ async def create_message(
     )
     db.add(new_message)
 
-    # Update chat title if it's the first message
     if message.role == "user" and len(chat.messages) == 0:
         chat.title = message.content[:30] + "..." if len(message.content) > 30 else message.content
 
@@ -427,30 +517,26 @@ async def create_message(
     db.refresh(new_message)
     return new_message
 
-@app.delete("/chat/{user_id}/{chat_id}")
-async def delete_chat(user_id: int, chat_id: int, db: Session = Depends(database.get_db)):
+@app.delete("/chat/{user_id}/{chat_id}", )
+async def delete_chat(
+    user_id: int,
+    chat_id: int,
+    db: Session = Depends(database.get_db)
+):
     chat = db.query(Chat).filter(
         Chat.conversation_id == chat_id,
         Chat.user_id == user_id
     ).first()
+    
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
-
+    
     db.delete(chat)
     db.commit()
     return {"message": "Chat deleted successfully"}
 
-@app.delete("/chat/history/{user_id}")
-async def delete_chat_history(user_id: int, db: Session = Depends(get_db)):
-    try:
-        # Delete all chats and associated messages for the user
-        db.query(Message).filter(Message.conversation_id.in_(
-            db.query(Chat.conversation_id).filter(Chat.user_id == user_id)
-        )).delete(synchronize_session=False)
-
-        db.query(Chat).filter(Chat.user_id == user_id).delete(synchronize_session=False)
-        db.commit()
-        return {"message": "Chat history deleted successfully"}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error deleting chat history: {str(e)}")
+if __name__ == "__main__":
+    create_vector_search_index()
+    load_and_store_documents()
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

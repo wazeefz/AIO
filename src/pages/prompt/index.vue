@@ -42,6 +42,7 @@ import ChatMessage from '@/components/ChatMessage.vue'
 import ChatInput from '@/components/ChatInput.vue'
 import PromptPageDefault from '@/components/PromptPageDefault.vue'
 
+const userId = ref(1) // Get this from your user state/store
 const {
   chatHistory,
   currentChat,
@@ -50,8 +51,19 @@ const {
   loadChat,
   deleteChat,
   sendMessage,
-  loadSavedHistory,
-} = useChat()
+  // loadSavedHistory,
+} = useChat(userId.value)
+
+// const {
+//   chatHistory,
+//   currentChat,
+//   isLoading,
+//   startNewChat,
+//   loadChat,
+//   deleteChat,
+//   sendMessage,
+//   loadSavedHistory,
+// } = useChat()
 
 const messagesContainer = ref(null)
 
@@ -65,9 +77,9 @@ const scrollToBottom = () => {
 
 watch(() => currentChat.value.messages, scrollToBottom, { deep: true })
 
-onMounted(() => {
-  loadSavedHistory()
-})
+// onMounted(() => {
+//   loadSavedHistory()
+// })
 
 const handleSearch = (query) => {
   // Filter your chat history based on the query

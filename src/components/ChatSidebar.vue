@@ -41,7 +41,11 @@
         @click="$emit('load-chat', chat)"
       >
         <span class="chat-title">{{ chat.title }}</span>
-        <button class="delete-chat" @click.stop="$emit('delete-chat', chat.id)">
+        <button
+          class="delete-chat"
+          @click.stop="$emit('delete-chat', chat.id)"
+          @click="handleDeleteChatHistory"
+        >
           ×
         </button>
       </div>
@@ -52,6 +56,8 @@
 <script setup>
 import { ref } from 'vue'
 
+const deleteChatHistory = ref()
+
 defineProps({
   chatHistory: Array,
   currentChatId: Number,
@@ -60,6 +66,13 @@ defineProps({
 const searchQuery = ref('')
 
 defineEmits(['new-chat', 'load-chat', 'delete-chat', 'search'])
+
+const handleDeleteChatHistory = async () => {
+  if (confirm('Are you sure you want to delete all chat history?')) {
+    await deleteChatHistory()
+    alert('Chat history deleted successfully!')
+  }
+}
 </script>
 
 <style scoped>
