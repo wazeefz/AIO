@@ -1,5 +1,25 @@
 <template>
   <v-app>
+    <!-- Add loading overlay -->
+    <v-overlay v-model="isLoading" class="align-center justify-center">
+      <v-progress-circular
+        indeterminate
+        color="#d9c6a5"
+        size="64"
+      ></v-progress-circular>
+      <div class="mt-4 text-center">Loading resume data...</div>
+    </v-overlay>
+
+    <!-- Add error snackbar -->
+    <v-snackbar v-model="showError" color="error" timeout="5000">
+      {{ errorMessage }}
+      <template v-slot:actions>
+        <v-btn color="white" variant="text" @click="showError = false">
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
+
     <v-row justify="center">
       <v-col cols="12" lg="10">
         <v-card class="employee-form elevation-3">
@@ -325,12 +345,31 @@
           ></v-btn>
         </v-toolbar>
         <v-card-text class="pa-0">
-          <iframe
-            v-if="cvPreviewUrl"
-            :src="cvPreviewUrl"
-            class="cv-preview-frame"
-            frameborder="0"
-          ></iframe>
+          <div
+            v-if="cvData?.fileType === 'application/pdf'"
+            class="cv-container"
+          >
+            <iframe
+              :src="cvBlobUrl"
+              class="cv-preview-frame"
+              type="application/pdf"
+            ></iframe>
+          </div>
+          <div v-else class="cv-container">
+            <div class="unsupported-format">
+              <v-icon size="48" color="warning">mdi-file-alert</v-icon>
+              <p class="mt-4">Preview not available for this file format</p>
+              <v-btn
+                color="primary"
+                class="mt-4"
+                :href="cvBlobUrl"
+                target="_blank"
+                download
+              >
+                Download File
+              </v-btn>
+            </div>
+          </div>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -471,22 +510,98 @@ const getDurationLabel = computed(() => {
     : 'Part Time Duration (months)'
 })
 
-// Lifecycle Hooks
-onMounted(() => {
-  // Load CV data from localStorage
-  const storedCVData = localStorage.getItem('cvData')
-  const storedPreviewUrl = localStorage.getItem('cvPreviewUrl')
+// Add these refs
+const isLoading = ref(false)
+const showError = ref(false)
+const errorMessage = ref('')
+const cvBlobUrl = ref(null)
 
-  if (storedCVData && storedPreviewUrl) {
-    cvData.value = JSON.parse(storedCVData)
-    cvPreviewUrl.value = storedPreviewUrl
+// Lifecycle Hooks
+onMounted(async () => {
+  isLoading.value = true
+  try {
+    // Load CV data from localStorage
+    const storedCVData = localStorage.getItem('cvData')
+    const storedBlobUrl = localStorage.getItem('cvBlob')
+    const extractedData = localStorage.getItem('extractedResumeData')
+
+    if (storedCVData && storedBlobUrl) {
+      cvData.value = JSON.parse(storedCVData)
+      cvBlobUrl.value = storedBlobUrl
+    }
+
+    // Populate form with extracted data if available
+    if (extractedData) {
+      const parsedData = JSON.parse(extractedData)
+
+      // Split the full name into first and last name
+      const nameParts = parsedData.name.split(' ')
+      employeeData.firstName = nameParts[0] || '' // Sara
+      employeeData.lastName = nameParts.slice(1).join(' ') || '' // Soraya M. Shamaun
+
+      // Extract contact details
+      if (parsedData.contact_details) {
+        employeeData.email = parsedData.contact_details.email || ''
+        employeeData.phone = parsedData.contact_details.phone || ''
+      }
+
+      // Map skills - directly assign the skills array
+      if (Array.isArray(parsedData.skills)) {
+        employeeData.skills = parsedData.skills
+      }
+
+      // Map education - handle the new education structure
+      if (Array.isArray(parsedData.education)) {
+        employeeData.education = parsedData.education.map((edu) => ({
+          institution: edu.institution || '',
+          degree: edu.degree || '',
+          graduationYear: edu.graduation_year?.toString() || '',
+        }))
+      }
+
+      // Set bio using professional summary and skills
+      let bio = `Experienced professional with expertise in multiple technologies including ${employeeData.skills
+        .slice(0, 5)
+        .join(', ')} and more. `
+
+      if (employeeData.education.length > 0) {
+        const mainEducation = employeeData.education[0]
+        bio += `Holds a ${mainEducation.degree} from ${mainEducation.institution}.`
+      }
+
+      employeeData.bio = bio.trim()
+
+      // Set a default position based on skills
+      if (!employeeData.position) {
+        if (employeeData.skills.includes('Machine Learning')) {
+          employeeData.position = 'Machine Learning Engineer'
+        } else {
+          employeeData.position = 'Software Developer'
+        }
+      }
+
+      // Set a default department based on skills
+      if (!employeeData.department) {
+        employeeData.department = 'Engineering'
+      }
+    }
+  } catch (error) {
+    console.error('Error loading data:', error)
+    errorMessage.value = 'Failed to load resume data. Please try again.'
+    showError.value = true
+  } finally {
+    isLoading.value = false
   }
 })
 
+// Add cleanup on component unmount
 onBeforeUnmount(() => {
-  if (cvPreviewUrl.value) {
-    URL.revokeObjectURL(cvPreviewUrl.value)
+  if (cvBlobUrl.value) {
+    URL.revokeObjectURL(cvBlobUrl.value)
   }
+  localStorage.removeItem('cvBlob')
+  localStorage.removeItem('extractedResumeData')
+  localStorage.removeItem('cvData')
 })
 
 // Methods
@@ -495,7 +610,7 @@ const handleProfilePicChange = (file) => {
 }
 
 const previewCV = () => {
-  if (cvPreviewUrl.value) {
+  if (cvBlobUrl.value) {
     showCVPreview.value = true
   }
 }
@@ -654,5 +769,31 @@ const formatFileSize = (bytes) => {
 
 :deep(.v-expansion-panel-title) {
   padding: 16px !important;
+}
+
+.cv-container {
+  width: 100%;
+  height: 700px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f5f5f5;
+}
+
+.unsupported-format {
+  text-align: center;
+  padding: 2rem;
+}
+
+.cv-preview-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+@media (max-width: 600px) {
+  .cv-container {
+    height: 500px;
+  }
 }
 </style>

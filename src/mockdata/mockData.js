@@ -8,15 +8,33 @@ export const employeesData = [
     salary: 'RM10,000',
     department: 'Developer',
     employment: 'Full Time',
+    profilePicture: 'profile1.jpg',
   },
   {
     id: 102,
     name: 'Jane Smith',
     title: 'UI/UX Designer',
-    skills: ['Adobe Photoshop', 'Figma', 'HTML', 'CSS'],
+    skills: [
+      'Adobe Photoshop',
+      'Figma',
+      'HTML',
+      'CSS',
+      'Bootstrap',
+      'Python',
+      'MongoDB',
+      'Amazon Web Services (AWS)',
+      'Vue.js',
+      'Google Cloud Platform (GCP)',
+      'JavaScript',
+      'React.js',
+      'Angular',
+      'Node.js',
+      'RAG',
+    ],
     salary: 'RM10,000',
     department: 'Designer',
     employment: 'External',
+    profilePicture: 'WAZEEF!!.jpg',
   },
   {
     id: 103,
@@ -26,6 +44,7 @@ export const employeesData = [
     salary: 'RM15,000',
     department: 'Developer',
     employment: 'Part Time',
+    profilePicture: 'WAZEEF!!.jpg',
   },
   {
     id: 201,
@@ -35,6 +54,7 @@ export const employeesData = [
     salary: 'RM6,000',
     department: 'Developer',
     employment: 'Intern',
+    profilePicture: 'WAZEEF!!.jpg',
   },
   {
     id: 202,
@@ -44,6 +64,7 @@ export const employeesData = [
     salary: 'RM6,000',
     department: 'Designer',
     employment: 'Contractual',
+    profilePicture: 'WAZEEF!!.jpg',
   },
 ]
 
@@ -57,6 +78,7 @@ export const projectsData = [
     startDate: '2023-01-01',
     endDate: '2023-12-31',
     team: [101, 102, 103], // Reference to employee IDs
+    isTeamLead: 103,
   },
   {
     id: 2,
@@ -66,6 +88,7 @@ export const projectsData = [
     startDate: '2023-06-01',
     endDate: '2024-06-01',
     team: [201, 202],
+    isTeamLead: 201,
   },
 ]
 

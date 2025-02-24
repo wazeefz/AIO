@@ -35,6 +35,23 @@
         No projects available.
       </v-alert>
 
+      <div>
+        <v-row v-if="selectedProjectId">
+          <!-- Results -->
+          <v-col cols="12" md="12">
+            <div
+              class="d-flex flex-row justify-space-between align-center mb-12"
+            >
+              <div>
+                <h2>Active Filters</h2>
+                <!-- Chips component -->
+                <base-chips
+                  :chips="filterChips"
+                  :closable="true"
+                  :use-color-mapping="true"
+                  @remove-chip="handleFilterRemoval"
+                />
+              </div>
       <v-row v-if="selectedProjectId">
         <!-- Results -->
         <v-col cols="12" md="11">
@@ -82,10 +99,8 @@
             @remove-chip="handleFilterRemoval"
           />
 
-          <!-- Results Display -->
-          <div class="mt-6">
-            <!-- Action Buttons Card -->
-            <div class="d-flex justify-end mb-4">
+              <!-- Results Display -->
+              <!-- Action Buttons Card -->
               <v-card
                 class="action-buttons-card d-inline-flex align-center"
                 rounded="pill"
@@ -128,8 +143,9 @@
             </div>
 
             <!-- Team Members Section -->
-            <h2>Team Members ({{ filterStore.filteredTeamMembers.length }})</h2>
-
+            <h2 class="mb-4">
+              Team Members ({{ filterStore.filteredTeamMembers.length }})
+            </h2>
             <!-- ProfileCard Component -->
             <v-row class="gap-4">
               <v-col
@@ -139,7 +155,10 @@
                 sm="6"
               >
                 <ProfileCard
-                  :result="result"
+                  :result="{
+                    ...result,
+                    isTeamLead: currentProject.isTeamLead === result.id,
+                  }"
                   :is-editing="isEditing"
                   @click="handleModalOpen"
                   @modal-closed="handleModalClose"
@@ -147,32 +166,32 @@
                 />
               </v-col>
             </v-row>
-          </div>
 
-          <!-- Filter Dialog -->
-          <v-dialog v-model="showFilterDialog" max-width="800px" persistent>
-            <v-card>
-              <v-card-text>
-                <v-container>
-                  <FilterInterface
-                    :is-modal="false"
-                    @close-filter-dialog="closeFilterDialog"
-                  />
-                </v-container>
-              </v-card-text>
-            </v-card>
-          </v-dialog>
+            <!-- Filter Dialog -->
+            <v-dialog v-model="showFilterDialog" max-width="800px" persistent>
+              <v-card>
+                <v-card-text>
+                  <v-container>
+                    <FilterInterface
+                      :is-modal="false"
+                      @close-filter-dialog="closeFilterDialog"
+                    />
+                  </v-container>
+                </v-card-text>
+              </v-card>
+            </v-dialog>
 
-          <!-- Add Profile Modal -->
-          <AddProfileModal
-            v-if="currentProject"
-            v-model:showModal="showAddProfileModal"
-            :current-project="currentProject"
-            @profiles-added="handleProfilesAdded"
-            @filter-chips-updated="updateFilterChipsAddProfile"
-          />
-        </v-col>
-      </v-row>
+            <!-- Add Profile Modal -->
+            <AddProfileModal
+              v-if="currentProject"
+              v-model:showModal="showAddProfileModal"
+              :current-project="currentProject"
+              @profiles-added="handleProfilesAdded"
+              @filter-chips-updated="updateFilterChipsAddProfile"
+            />
+          </v-col>
+        </v-row>
+      </div>
     </div>
   </div>
 </template>
@@ -273,7 +292,15 @@ const handleProfilesAdded = (selectedEmployees) => {
   try {
     if (currentProject.value) {
       const memberIds = selectedEmployees.map((emp) => emp.id)
-      projectStore.addTeamMembers(currentProject.value.id, memberIds)
+      // Only add the new members that aren't already in the team
+      const currentTeamIds = currentProject.value.team
+      const newMemberIds = memberIds.filter(
+        (id) => !currentTeamIds.includes(id)
+      )
+
+      if (newMemberIds.length > 0) {
+        projectStore.addTeamMembers(currentProject.value.id, newMemberIds)
+      }
     }
     showAddProfileModal.value = false
   } catch (e) {
@@ -353,6 +380,8 @@ const closeFilterDialog = () => {
   z-index: 1;
 }
 
+.v-card-text {
+  padding: 0rem !important;
 /* Add pastel color classes and hover effects */
 /* .pastel-card {
   transition: transform 0.3s ease, box-shadow 0.3s ease;

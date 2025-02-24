@@ -6,6 +6,16 @@
     </h1>
   </div>
 
+  <!-- To extract and send data to backend -->
+  <v-overlay v-model="isExtracting" class="align-center justify-center">
+    <v-progress-circular
+      indeterminate
+      color="#d9c6a5"
+      size="64"
+    ></v-progress-circular>
+    <div class="mt-4 text-center">Extracting resume information...</div>
+  </v-overlay>
+
   <v-row justify="center pa-6">
     <v-col cols="12" sm="8" md="6" lg="4">
       <v-card class="pa-4">
@@ -73,6 +83,7 @@ const hasUploadedFile = ref(false)
 const uploadedFile = ref(null)
 const showCVPreview = ref(false)
 const cvPreviewUrl = ref(null)
+const isExtracting = ref(false)
 
 // Methods
 const handleFileSelected = (file) => {
@@ -95,12 +106,44 @@ const handleError = (error) => {
 }
 
 const uploadToServer = async (file) => {
+  isExtracting.value = true
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    console.log('File uploaded to server')
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch('http://localhost:8000/summarize_resume', {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to extract resume data')
+    }
+
+    const extractedData = await response.json()
+
+    // Create a blob URL from the file
+    const fileBlob = new Blob([file], { type: file.type })
+    const blobUrl = URL.createObjectURL(fileBlob)
+
+    // Store the extracted data, CV info, and blob URL in localStorage
+    localStorage.setItem('extractedResumeData', JSON.stringify(extractedData))
+    localStorage.setItem('cvBlob', blobUrl)
+    localStorage.setItem(
+      'cvData',
+      JSON.stringify({
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+      })
+    )
+
+    return extractedData
   } catch (error) {
     console.error('Upload failed:', error)
     throw error
+  } finally {
+    isExtracting.value = false
   }
 }
 
