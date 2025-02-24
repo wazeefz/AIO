@@ -1,11 +1,18 @@
 <template>
   <v-container fluid class="pa-2">
+    <v-overlay :model-value="isLoading">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
+    </v-overlay>
+
+    <v-alert v-if="error" type="error" closable class="mb-4">
+      {{ error }}
+    </v-alert>
+
     <!-- Fixed Content (Above Fold) -->
-    <div class="fixed-content">
+    <div v-if="isDataReady" class="fixed-content">
       <!-- Stats Row -->
       <v-row dense>
         <v-col cols="4">
-          <!-- Without crossfilter -->
           <StatCard
             dense
             title="Project"
@@ -17,17 +24,17 @@
         <v-col cols="4">
           <StatCard
             dense
-            title="Cost"
+            title="Total Salary"
             icon="mdi-currency-usd"
             iconColor="warning"
             :ndx="ndx"
-            valueType="totalWage"
+            valueType="totalSalary"
           />
         </v-col>
         <v-col cols="4">
           <StatCard
             dense
-            title="People"
+            title="Employees"
             icon="mdi-account-group"
             iconColor="success"
             :ndx="ndx"
@@ -38,25 +45,43 @@
 
       <!-- Charts Row -->
       <v-row dense>
-        <v-col cols="6">
+        <v-col cols="4">
           <v-card>
-            <v-card-title class="text-subtitle-1">Department</v-card-title>
+            <v-card-title class="text-subtitle-1"
+              >Department Distribution</v-card-title
+            >
             <PieChart
-              :dimension="departmentDimension"
-              :group="departmentGroup"
+              v-if="dimensions.department && groups.department"
+              :dimension="dimensions.department"
+              :group="groups.department"
               chartId="department-pie-chart"
               :colors="departmentColors"
             />
           </v-card>
         </v-col>
-        <v-col cols="6">
+        <v-col cols="4">
           <v-card>
-            <v-card-title class="text-subtitle-1">Skill</v-card-title>
+            <v-card-title class="text-subtitle-1">Employment Type</v-card-title>
             <PieChart
-              :dimension="skillDimension"
-              :group="skillGroup"
-              chartId="skill-pie-chart"
-              :colors="skillColors"
+              v-if="dimensions.employmentType && groups.employmentType"
+              :dimension="dimensions.employmentType"
+              :group="groups.employmentType"
+              chartId="employment-type-pie-chart"
+              :colors="employmentTypeColors"
+            />
+          </v-card>
+        </v-col>
+        <v-col cols="4">
+          <v-card>
+            <v-card-title class="text-subtitle-1"
+              >Gender Distribution</v-card-title
+            >
+            <PieChart
+              v-if="dimensions.gender && groups.gender"
+              :dimension="dimensions.gender"
+              :group="groups.gender"
+              chartId="gender-pie-chart"
+              :colors="genderColors"
             />
           </v-card>
         </v-col>
@@ -64,76 +89,159 @@
     </div>
 
     <!-- Scrollable Content (Below Fold) -->
-    <div class="scrollable-content">
+    <div v-if="isDataReady" class="scrollable-content">
       <v-card>
-        <DataTable
-          table-type="people"
+        <TalentTable
+          v-if="ndx && dimensions.people"
           :ndx="ndx"
-          :dimension="peopleDimension"
+          :dimension="dimensions.people"
         />
       </v-card>
     </div>
 
     <!-- Reset Filters Button -->
-    <v-btn color="primary" class="reset-button" @click="resetAllFilters">
+    <v-btn
+      v-if="isDataReady"
+      color="primary"
+      class="reset-button"
+      @click="resetAllFilters"
+    >
       Reset Filters
     </v-btn>
   </v-container>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useTalentStore } from '@/stores/talent'
 import StatCard from '@/components/StatCard.vue'
 import PieChart from '@/components/PieChart.vue'
-import DataTable from '@/components/DataTable.vue'
+import TalentTable from '@/components/kTalentTable.vue'
 import * as dc from 'dc'
 import crossfilter from 'crossfilter2'
 
 const talentStore = useTalentStore()
 const allDimensions = ref([])
+const ndx = ref(null)
+const isDataReady = ref(false)
 
-// Initialize crossfilter
-const ndx = crossfilter(talentStore.talents)
+// Reactive references for dimensions and groups
+const dimensions = ref({
+  people: null,
+  department: null,
+  employmentType: null,
+  gender: null,
+})
 
-// Create dimensions
-const peopleDimension = ndx.dimension((d) => d.first)
-const departmentDimension = ndx.dimension((d) => d.department)
-const skillDimension = ndx.dimension((d) => d.skill, true)
+const groups = ref({
+  department: null,
+  employmentType: null,
+  gender: null,
+})
 
-// Track all dimensions
-allDimensions.value = [peopleDimension, departmentDimension, skillDimension]
-
-// Create groups
-const departmentGroup = departmentDimension.group()
-const skillGroup = skillDimension.group()
+// Computed properties
+const isLoading = computed(() => talentStore.isLoading)
+const error = computed(() => talentStore.error)
 
 // Color schemes
 const departmentColors = {
-  IT: '#1976D2',
-  Design: '#E91E63',
-  Management: '#FFA000',
-  Marketing: '#388E3C',
-  Data: '#5E35B1',
-  HR: '#00ACC1',
-  Development: '#43A047',
-  Sales: '#FB8C00',
+  1: '#1976D2', // IT
+  2: '#E91E63', // Design
+  3: '#FFA000', // Management
+  4: '#388E3C', // Marketing
+  5: '#5E35B1', // Data
+  6: '#00ACC1', // HR
 }
 
-const skillColors = {
-  Vue: '#42b883',
-  Python: '#306998',
-  Node: '#68a063',
-  Javascript: '#f7df1e',
-  CRM: '#ff6b6b',
-  SEO: '#00bcd4',
-  Excel: '#217346',
-  Word: '#2b579a',
+const employmentTypeColors = {
+  FULL_TIME: '#42b883',
+  PART_TIME: '#ff6b6b',
+  CONTRACT: '#306998',
+  TEMPORARY: '#68a063',
 }
 
-onMounted(() => {
-  // Render all charts
-  dc.renderAll()
+const genderColors = {
+  MALE: '#2196F3',
+  FEMALE: '#E91E63',
+  OTHER: '#9C27B0',
+}
+
+// Initialize crossfilter and dimensions
+const initializeCrossfilter = () => {
+  if (!talentStore.talents.length) return
+
+  try {
+    // Initialize crossfilter
+    ndx.value = crossfilter(talentStore.talents)
+
+    // Create dimensions
+    dimensions.value = {
+      people: ndx.value.dimension((d) => d.first_name),
+      department: ndx.value.dimension((d) => d.department_id),
+      employmentType: ndx.value.dimension((d) => d.employment_type),
+      gender: ndx.value.dimension((d) => d.gender),
+    }
+
+    // Create groups
+    groups.value = {
+      department: dimensions.value.department.group(),
+      employmentType: dimensions.value.employmentType.group(),
+      gender: dimensions.value.gender.group(),
+    }
+
+    // Track all dimensions for reset functionality
+    allDimensions.value = Object.values(dimensions.value)
+
+    isDataReady.value = true
+  } catch (error) {
+    console.error('Error initializing crossfilter:', error)
+    isDataReady.value = false
+  }
+}
+
+// Watch for changes in talent store data
+watch(
+  () => talentStore.talents,
+  (newTalents) => {
+    if (newTalents.length > 0) {
+      // Reset existing crossfilter if it exists
+      if (ndx.value) {
+        ndx.value.remove()
+      }
+
+      // Reinitialize crossfilter with new data
+      initializeCrossfilter()
+
+      // Redraw all charts
+      dc.redrawAll()
+    }
+  },
+  { deep: true }
+)
+
+onMounted(async () => {
+  try {
+    // Fetch talents data
+    await talentStore.fetchTalents()
+
+    // Initialize crossfilter after data is loaded
+    initializeCrossfilter()
+
+    if (ndx.value) {
+      // Create a dummy chart to handle resets properly
+      const dummyChart = {
+        render: () => {},
+        redraw: () => {},
+        filterAll: () => {},
+      }
+      dc.registerChart(dummyChart)
+
+      // Render all charts
+      dc.renderAll()
+    }
+  } catch (error) {
+    console.error('Error in mounting:', error)
+  }
 
   // Add resize listener
   window.addEventListener('resize', handleResize)
@@ -150,7 +258,9 @@ onUnmounted(() => {
   })
 
   // Clear data
-  ndx.remove()
+  if (ndx.value) {
+    ndx.value.remove()
+  }
 })
 
 const handleResize = () => {
@@ -166,10 +276,10 @@ const resetAllFilters = () => {
   })
 
   // Reset crossfilter
-  ndx.remove()
-
-  // Re-add the data
-  ndx.add(talentStore.talents)
+  if (ndx.value) {
+    ndx.value.remove()
+    ndx.value.add(talentStore.talents)
+  }
 
   // Redraw all charts
   dc.redrawAll()
@@ -218,6 +328,13 @@ const resetAllFilters = () => {
   padding: 12px 16px;
   font-size: 0.875rem !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Dark theme support */
+:deep(.v-theme--dark) {
+  .v-card-title {
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+  }
 }
 
 @media (max-width: 960px) {

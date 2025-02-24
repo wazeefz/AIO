@@ -5,14 +5,13 @@
       <!-- Stats Row -->
       <v-row dense>
         <v-col cols="4">
-          <!-- With crossfilter -->
           <StatCard
             dense
             title="Budget"
             icon="mdi-currency-usd"
             iconColor="primary"
             :ndx="ndx"
-            valueType="totalRevenue"
+            valueType="totalBudget"
           />
         </v-col>
         <v-col cols="4">
@@ -39,29 +38,31 @@
 
       <!-- Charts Row -->
       <v-row dense>
-        <!-- Project Status Pie Chart -->
-        <v-col cols="6">
-          <v-card>
+        <v-col cols="4">
+          <v-card class="chart-card">
             <v-card-title class="text-subtitle-1">Status</v-card-title>
             <PieChart
-              :dimension="statusDimension"
-              :group="statusGroup"
+              v-if="dimensions.status && groups.status"
+              :dimension="dimensions.status"
+              :group="groups.status"
               chartId="status-pie-chart"
               :colors="statusColors"
             />
           </v-card>
         </v-col>
 
-        <!-- Department Budget Chart -->
-        <v-col cols="6">
-          <v-card>
+        <v-col cols="8">
+          <v-card class="chart-card">
             <v-card-title class="text-subtitle-1"
-              >Budget by Department</v-card-title
+              >Budget by Status</v-card-title
             >
             <BarChart
-              :dimension="departmentDimension"
-              :group="departmentBudgetGroup"
-              chartId="department-budget-chart"
+              v-if="dimensions.status && groups.budgetByStatus"
+              :dimension="dimensions.status"
+              :group="groups.budgetByStatus"
+              chartId="status-budget-chart"
+              chartType="budget"
+              barColor="#1976D2"
             />
           </v-card>
         </v-col>
@@ -71,10 +72,10 @@
     <!-- Scrollable Content (Below Fold) -->
     <div class="scrollable-content">
       <v-card>
-        <DataTable
-          table-type="projects"
+        <ProjectTable
+          v-if="ndx && dimensions.project"
           :ndx="ndx"
-          :dimension="projectDimension"
+          :dimension="dimensions.project"
         />
       </v-card>
     </div>
@@ -87,12 +88,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import StatCard from '@/components/StatCard.vue'
 import BarChart from '@/components/BarChart.vue'
 import PieChart from '@/components/PieChart.vue'
-import DataTable from '@/components/DataTable.vue'
+import ProjectTable from '@/components/kProjectTable.vue'
 import * as dc from 'dc'
 import * as d3 from 'd3'
 import crossfilter from 'crossfilter2'
@@ -100,56 +101,124 @@ import crossfilter from 'crossfilter2'
 const projectStore = useProjectStore()
 const allDimensions = ref([])
 const dataCount = ref(null)
+const ndx = ref(null)
+const revenueNdx = ref(null)
 
-// Initialize crossfilter
-const ndx = crossfilter(projectStore.projects)
-const revenueNdx = crossfilter(projectStore.monthlyRevenue)
+const isLoading = ref(true)
 
-// Create dimensions
-const projectDimension = ndx.dimension((d) => d.name)
-const statusDimension = ndx.dimension((d) => d.status)
-const departmentDimension = ndx.dimension((d) => d.department)
-const monthDimension = revenueNdx.dimension((d) => d.month)
+// Reactive references for dimensions and groups
+const dimensions = ref({
+  project: null,
+  status: null,
+  department: null,
+  month: null,
+  budget: null,
+  teamSize: null,
+})
 
-// Track all dimensions
-allDimensions.value = [
-  projectDimension,
-  statusDimension,
-  departmentDimension,
-  monthDimension,
-]
+const groups = ref({
+  status: null,
+  budgetByStatus: null,
+  departmentBudget: null,
+  monthlyRevenue: null,
+  teamSize: null,
+})
 
-// Create groups
-const statusGroup = statusDimension.group()
-const departmentBudgetGroup = departmentDimension
-  .group()
-  .reduceSum((d) => d.budget)
-const monthlyRevenueGroup = monthDimension.group().reduceSum((d) => d.revenue)
-
-// Status colors
+// Status colors (keep the same)
 const statusColors = {
-  Finished: '#4CAF50',
-  'In Progress': '#FFA726',
-  Unfinished: '#EF5350',
+  IN_PROGRESS: '#FFA726',
+  COMPLETED: '#4CAF50',
+  ON_HOLD: '#EF5350',
+  CANCELLED: '#9E9E9E',
 }
 
-onMounted(() => {
-  // Initialize data count
-  dataCount.value = dc
-    .dataCount('#dc-data-count')
-    .dimension(ndx)
-    .group(ndx.groupAll())
+// Initialize crossfilter and dimensions
+const initializeCrossfilter = () => {
+  if (!projectStore.projects.length) return
 
-  // Create a dummy chart to handle resets properly
-  const dummyChart = {
-    render: () => {},
-    redraw: () => {},
-    filterAll: () => {},
+  try {
+    // Initialize main crossfilter
+    ndx.value = crossfilter(projectStore.projects)
+
+    // Create dimensions
+    dimensions.value = {
+      project: ndx.value.dimension((d) => d.name),
+      status: ndx.value.dimension((d) => d.status),
+      department: ndx.value.dimension((d) => d.department),
+      budget: ndx.value.dimension((d) => d.budget),
+      teamSize: ndx.value.dimension((d) => d.team_size),
+    }
+
+    // Create groups
+    groups.value = {
+      status: dimensions.value.status.group(),
+      budgetByStatus: dimensions.value.status.group().reduce(
+        (p, v) => p + (v.budget || 0),
+        (p, v) => p - (v.budget || 0),
+        () => 0
+      ),
+      teamSize: dimensions.value.teamSize.group(),
+    }
+
+    // Track all dimensions for reset functionality
+    allDimensions.value = Object.values(dimensions.value)
+
+    isLoading.value = false
+  } catch (error) {
+    console.error('Error initializing crossfilter:', error)
+    isLoading.value = false
   }
-  dc.registerChart(dummyChart)
+}
 
-  // Render all charts
-  dc.renderAll()
+// Watch for changes in project store data
+watch(
+  () => projectStore.projects,
+  (newProjects) => {
+    if (newProjects.length > 0) {
+      // Reset existing crossfilter if it exists
+      if (ndx.value) {
+        ndx.value.remove()
+      }
+
+      // Reinitialize crossfilter with new data
+      initializeCrossfilter()
+
+      // Redraw all charts
+      dc.redrawAll()
+    }
+  },
+  { deep: true }
+)
+
+onMounted(async () => {
+  try {
+    // Fetch projects data
+    await projectStore.fetchProjects()
+
+    // Initialize crossfilter after data is loaded
+    initializeCrossfilter()
+
+    if (ndx.value) {
+      // Initialize data count
+      dataCount.value = dc
+        .dataCount('#dc-data-count')
+        .dimension(ndx.value)
+        .group(ndx.value.groupAll())
+
+      // Create a dummy chart to handle resets properly
+      const dummyChart = {
+        render: () => {},
+        redraw: () => {},
+        filterAll: () => {},
+      }
+      dc.registerChart(dummyChart)
+
+      // Render all charts
+      dc.renderAll()
+    }
+  } catch (error) {
+    console.error('Error in mounting:', error)
+  }
 
   // Add resize listener
   window.addEventListener('resize', handleResize)
@@ -166,8 +235,9 @@ onUnmounted(() => {
   })
 
   // Clear data
-  ndx.remove()
-  revenueNdx.remove()
+  if (ndx.value) {
+    ndx.value.remove()
+  }
 })
 
 const handleResize = () => {
@@ -182,17 +252,28 @@ const resetAllFilters = () => {
     }
   })
 
-  // Reset both crossfilters
-  ndx.remove()
-  revenueNdx.remove()
-
-  // Re-add the data
-  ndx.add(projectStore.projects)
-  revenueNdx.add(projectStore.monthlyRevenue)
+  // Reset crossfilter
+  if (ndx.value) {
+    ndx.value.remove()
+    ndx.value.add(projectStore.projects)
+  }
 
   // Redraw all charts
   dc.redrawAll()
 }
+
+// Expose necessary refs and functions
+defineExpose({
+  ndx,
+  dimensions,
+  groups,
+  statusColors,
+  resetAllFilters,
+})
+
+const showLoadingIndicator = computed(() => {
+  return isLoading.value || !ndx.value
+})
 </script>
 
 <style scoped>
@@ -210,7 +291,7 @@ const resetAllFilters = () => {
 .scrollable-content {
   flex: 1;
   overflow-y: auto;
-  margin-top: 16px;
+  margin-top: 8px;
 }
 
 .reset-button {
@@ -230,7 +311,7 @@ const resetAllFilters = () => {
 }
 
 .v-col {
-  padding: 4px !important;
+  padding: 2px !important;
 }
 
 .v-card-title {
@@ -251,5 +332,30 @@ const resetAllFilters = () => {
     flex: 0 0 100%;
     max-width: 100%;
   }
+}
+
+.chart-card {
+  height: 300px;
+  max-height: 350px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-card .v-card-title {
+  flex: 0 0 auto;
+  padding: 8px 16px; /* Reduced padding */
+}
+
+.chart-card :deep(.pie-chart-container),
+.chart-card :deep(.bar-chart-container) {
+  flex: 1;
+  min-height: 0;
+}
+
+/* This will make the chart components take up the remaining space */
+.chart-card :deep(.pie-chart-container),
+.chart-card :deep(.bar-chart-container) {
+  flex: 1;
+  min-height: 0; /* Important for Firefox */
 }
 </style>

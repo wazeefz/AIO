@@ -63,14 +63,23 @@ const props = defineProps({
     validator: (value) =>
       !value ||
       [
+        // Talent metrics
+        'totalSalary',
+        'peopleCount',
+        'avgSalary',
+        'departmentCount',
+        'fullTimeCount',
+        'partTimeCount',
+        'availableCount',
+        'avgExperience',
+        // Project metrics
         'totalRevenue',
         'projectCount',
-        'completedProjects',
         'resourceCount',
-        'totalWage',
-        'peopleCount',
-        'avgWage',
-        'skillCount',
+        'completedProjects',
+        'activeProjects',
+        'totalBudget',
+        'avgBudget',
       ].includes(value),
   },
 })
@@ -78,6 +87,7 @@ const props = defineProps({
 const hover = ref(false)
 const currentValue = ref(null)
 const dummyChart = ref(null)
+const isInitialized = ref(false)
 
 const hasValue = computed(() => {
   return props.ndx && props.valueType
@@ -87,16 +97,27 @@ const computedValue = computed(() => {
   if (!currentValue.value) return '0'
 
   switch (props.valueType) {
+    case 'totalSalary':
+    case 'avgSalary':
     case 'totalRevenue':
-    case 'totalWage':
-    case 'avgWage':
+    case 'totalBudget':
+    case 'avgBudget':
       return formatCurrency(currentValue.value)
-    case 'projectCount':
-    case 'completedProjects':
-    case 'resourceCount':
+
     case 'peopleCount':
-    case 'skillCount':
+    case 'departmentCount':
+    case 'fullTimeCount':
+    case 'partTimeCount':
+    case 'availableCount':
+    case 'projectCount':
+    case 'resourceCount':
+    case 'completedProjects':
+    case 'activeProjects':
       return formatNumber(currentValue.value)
+
+    case 'avgExperience':
+      return formatDecimal(currentValue.value) + ' years'
+
     default:
       return currentValue.value
   }
@@ -105,42 +126,102 @@ const computedValue = computed(() => {
 function calculateValue() {
   if (!props.ndx || !props.valueType) return null
 
-  const group = props.ndx.groupAll()
+  try {
+    const group = props.ndx.groupAll()
 
-  switch (props.valueType) {
-    case 'totalRevenue':
-      return group.reduceSum((d) => d.budget || 0).value()
-    case 'projectCount':
-      return group.reduceCount().value()
-    case 'completedProjects':
-      return (
-        props.ndx
-          .dimension((d) => d.status)
-          .group()
-          .all()
-          .find((g) => g.key === 'Finished')?.value || 0
-      )
-    case 'resourceCount':
-      return group.reduceSum((d) => d.cvCount || 1).value()
-    case 'totalWage':
-      return group.reduceSum((d) => d.wage || 0).value()
-    case 'peopleCount':
-      return group.reduceCount().value()
-    case 'avgWage':
-      const total = group.reduceSum((d) => d.wage || 0).value()
-      const count = group.reduceCount().value()
-      return count ? total / count : 0
-    case 'skillCount':
-      if (props.ndx.dimension((d) => d.skill)) {
+    switch (props.valueType) {
+      // Talent metrics
+      case 'totalSalary':
+        return group.reduceSum((d) => d.basic_salary || 0).value()
+
+      case 'peopleCount':
+        return group.reduceCount().value()
+
+      case 'avgSalary':
+        const totalSalary = group.reduceSum((d) => d.basic_salary || 0).value()
+        const count = group.reduceCount().value()
+        return count ? totalSalary / count : 0
+
+      case 'departmentCount':
         return props.ndx
-          .dimension((d) => d.skill)
+          .dimension((d) => d.department_id)
           .group()
-          .all()
-          .reduce((sum, g) => sum + g.value, 0)
-      }
-      return 0
-    default:
-      return 0
+          .all().length
+
+      case 'fullTimeCount':
+        return (
+          props.ndx
+            .dimension((d) => d.employment_type)
+            .group()
+            .all()
+            .find((g) => g.key === 'FULL_TIME')?.value || 0
+        )
+
+      case 'partTimeCount':
+        return (
+          props.ndx
+            .dimension((d) => d.employment_type)
+            .group()
+            .all()
+            .find((g) => g.key === 'PART_TIME')?.value || 0
+        )
+
+      case 'availableCount':
+        return (
+          props.ndx
+            .dimension((d) => d.availability_status)
+            .group()
+            .all()
+            .find((g) => g.key === 'Available')?.value || 0
+        )
+
+      case 'avgExperience':
+        const totalExp = group
+          .reduceSum((d) => d.total_experience_years || 0)
+          .value()
+        const empCount = group.reduceCount().value()
+        return empCount ? totalExp / empCount : 0
+
+      // Project metrics
+      case 'totalRevenue':
+      case 'totalBudget':
+        return group.reduceSum((d) => d.budget || 0).value()
+
+      case 'projectCount':
+        return group.reduceCount().value()
+
+      case 'resourceCount':
+        return group.reduceSum((d) => d.team_size || 0).value()
+
+      case 'completedProjects':
+        return (
+          props.ndx
+            .dimension((d) => d.status)
+            .group()
+            .all()
+            .find((g) => g.key === 'COMPLETED')?.value || 0
+        )
+
+      case 'activeProjects':
+        return (
+          props.ndx
+            .dimension((d) => d.status)
+            .group()
+            .all()
+            .find((g) => g.key === 'IN_PROGRESS')?.value || 0
+        )
+
+      case 'avgBudget':
+        const totalBudget = group.reduceSum((d) => d.budget || 0).value()
+        const projectCount = group.reduceCount().value()
+        return projectCount ? totalBudget / projectCount : 0
+
+      default:
+        return 0
+    }
+  } catch (error) {
+    console.error('Error calculating value:', error)
+    return 0
   }
 }
 
@@ -157,14 +238,21 @@ function formatNumber(value) {
   return new Intl.NumberFormat('en-US').format(value)
 }
 
+function formatDecimal(value) {
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value)
+}
+
 function updateValues() {
   if (props.ndx && props.valueType) {
     currentValue.value = calculateValue()
   }
 }
 
-onMounted(() => {
-  if (props.ndx && props.valueType) {
+function initializeChart() {
+  if (!isInitialized.value && props.ndx && props.valueType) {
     dummyChart.value = {
       render: updateValues,
       redraw: updateValues,
@@ -172,15 +260,22 @@ onMounted(() => {
     }
     dc.registerChart(dummyChart.value)
     updateValues()
+    isInitialized.value = true
   }
-})
+}
 
-// onUnmounted(() => {
-//   if (dummyChart.value) {
-//     dc.deregisterChart(dummyChart.value)
-//   }
-// })
+// Watch for ndx changes
+watch(
+  () => props.ndx,
+  (newNdx) => {
+    if (newNdx) {
+      initializeChart()
+    }
+  },
+  { immediate: true }
+)
 
+// Watch for filtered data changes
 watch(
   () => props.ndx?.allFiltered(),
   () => {
@@ -189,6 +284,10 @@ watch(
     }
   }
 )
+
+onMounted(() => {
+  initializeChart()
+})
 </script>
 
 <style scoped>
