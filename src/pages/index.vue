@@ -23,6 +23,6 @@ onMounted(() => {
   // Delay the push by 3 seconds
   setTimeout(() => {
     router.push('/login')
-  }, 0) // Delay time in milliseconds (3000ms = 3 seconds)
+  }, 1000) // Delay time in milliseconds (3000ms = 3 seconds)
 })
 </script>

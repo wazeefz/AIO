@@ -1,7 +1,7 @@
 <template>
   <v-layout>
     <!-- Conditionally render Sidebar only if not on login/signup pages -->
-    <SideNav2 v-if="!isLoginPage && !isSignUpPage" />
+    <SideNav2 v-if="!isLoginPage && !isSignUpPage && !isRootPage" />
 
     <!-- Main Content Section -->
     <v-main class="d-flex">
@@ -20,6 +20,7 @@ import SideNav2 from '@/components/layout/SideNav2.vue'
 // Define reactive variables for checking the route
 const isLoginPage = ref(false)
 const isSignUpPage = ref(false)
+const isRootPage = ref(false)
 
 // Get the current route
 const route = useRoute()
@@ -30,6 +31,7 @@ watch(
   (newRouteName) => {
     isLoginPage.value = newRouteName === '/login/' // Adjust with your actual login route name
     isSignUpPage.value = newRouteName === '/signup/' // Adjust with your actual signup route name
+    isRootPage.value = newRouteName === '/' // Adjust with your actual signup route name
   }
 )
 
@@ -37,6 +39,7 @@ watch(
 onMounted(() => {
   isLoginPage.value = route.name === '/login/' // Adjust with your actual login route name
   isSignUpPage.value = route.name === '/signup/' // Adjust with your actual signup route name
+  isRootPage.value = route.name === '/'
 })
 
 console.log('isLoginPage', isLoginPage.value)
