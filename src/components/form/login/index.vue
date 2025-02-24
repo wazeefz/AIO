@@ -26,7 +26,7 @@
           <v-btn
             :loading="loading"
             type="submit"
-            color="primary"
+            color="primaryBrown"
             block
             class="mt-3"
           >
@@ -42,7 +42,7 @@
         <!-- Sign-up Link -->
         <div class="text-center mt-4">
           <span>Don't have an account?</span>
-          <v-btn variant="text" color="primary" @click="goToSignUp">
+          <v-btn variant="text" color="secondaryBrown" @click="goToSignUp">
             Sign Up
           </v-btn>
         </div>

@@ -43,7 +43,7 @@
           <v-btn
             :loading="loading"
             type="submit"
-            color="primary"
+            color="primaryBrown"
             block
             class="mt-3"
             :disabled="isSubmitDisabled"
@@ -60,7 +60,9 @@
         <!-- Login Link -->
         <div class="text-center mt-4">
           <span>Already have an account?</span>
-          <v-btn variant="text" color="primary" @click="goToLogin">Login</v-btn>
+          <v-btn variant="text" color="secondaryBrown" @click="goToLogin"
+            >Login</v-btn
+          >
         </div>
       </v-card-text>
     </v-card>

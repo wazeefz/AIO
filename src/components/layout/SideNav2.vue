@@ -10,10 +10,16 @@
   >
     <v-list>
       <v-list-item
-        prepend-avatar="/mock/marcus.png"
-        subtitle="marcus@gmail.com"
-        title="Marcus Rashford"
-      ></v-list-item>
+        :prepend-avatar="userAvatar"
+        :title="userName"
+        :subtitle="userEmail"
+      >
+        <template v-slot:prepend>
+          <v-avatar v-if="!userAvatar" color="secondaryBrown" size="32">
+            <span class="text-h6 white--text">{{ userInitial }}</span>
+          </v-avatar>
+        </template>
+      </v-list-item>
     </v-list>
 
     <v-divider class="bg-primaryBrown mx-2"></v-divider>
@@ -31,9 +37,6 @@
 
     <!-- Pushes logout button to the bottom -->
     <template v-slot:append>
-      <div class="">
-        <img src="/public/vector.png" alt="Company Logo" class="" width="270" />
-      </div>
       <div class="ma-4">
         <div class="d-flex justify-center" v-if="!isRail">
           <img
@@ -59,9 +62,24 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const isRail = ref(true)
+
+// Retrieve user data from localStorage
+const user = ref(JSON.parse(localStorage.getItem('user')) || {})
+
+// Extract user details
+const userName = computed(() => user.value?.name || 'Guest User')
+const userEmail = computed(() => user.value?.email || 'guest@example.com')
+const userAvatar = computed(() => user.value?.avatar || null)
+
+// Get first letter of the first name
+const userInitial = computed(() => {
+  return user.value?.name ? user.value.name.charAt(0).toUpperCase() : '?'
+})
 
 // Define the menu items with their routes
 const menuItems = ref([
@@ -71,12 +89,7 @@ const menuItems = ref([
     to: '/dashboard',
     value: 'dashboard',
   },
-  {
-    title: 'AIO Prompt',
-    icon: 'mdi-pencil',
-    to: '/prompt',
-    value: 'prompt',
-  },
+  { title: 'AIO Prompt', icon: 'mdi-pencil', to: '/prompt', value: 'prompt' },
   {
     title: 'Projects',
     icon: 'mdi-briefcase-outline',
@@ -93,7 +106,12 @@ const menuItems = ref([
 
 const logout = () => {
   console.log('Logging out...')
-  // Add your logout logic here (e.g., clear tokens, redirect, etc.)
+
+  localStorage.removeItem('user')
+  localStorage.removeItem('isAuthenticated')
+
+  // Redirect using Vue Router
+  router.push('/login')
 }
 </script>
 
