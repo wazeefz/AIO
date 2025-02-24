@@ -35,36 +35,18 @@
         No projects available.
       </v-alert>
 
-      <div>
-        <v-row v-if="selectedProjectId">
-          <!-- Results -->
-          <v-col cols="12" md="12">
-            <div
-              class="d-flex flex-row justify-space-between align-center mb-12"
-            >
-              <div>
-                <h2>Active Filters</h2>
-                <!-- Chips component -->
-                <base-chips
-                  :chips="filterChips"
-                  :closable="true"
-                  :use-color-mapping="true"
-                  @remove-chip="handleFilterRemoval"
-                />
-              </div>
-      <v-row v-if="selectedProjectId">
+      <div v-if="selectedProjectId">
         <!-- Results -->
         <v-col cols="12" md="11">
           <v-row class="d-flex justify-end ma-8">
             <Star />
           </v-row>
-          <!-- Add the three pastel cards here -->
+          <!-- Pastel Cards -->
           <div class="container">
             <v-row class="mb-4">
               <v-col cols="12" md="4">
                 <v-card class="pastel-card pastel-blue">
                   <v-card-text>
-                    <!-- Add card content here -->
                     This is Marcus and john's first collaboration!
                   </v-card-text>
                 </v-card>
@@ -72,7 +54,6 @@
               <v-col cols="12" md="4">
                 <v-card class="pastel-card pastel-pink">
                   <v-card-text>
-                    <!-- Add card content here -->
                     John has worked on 10 projects in the past month. Maybe it's
                     time for a well derseved rest?
                   </v-card-text>
@@ -81,7 +62,6 @@
               <v-col cols="12" md="4">
                 <v-card class="pastel-card pastel-green">
                   <v-card-text>
-                    <!-- Add card content here -->
                     Jane and Ali have nevwe worked on a project like this before
                   </v-card-text>
                 </v-card>
@@ -89,108 +69,108 @@
             </v-row>
           </div>
 
-          <h2>Active Filters</h2>
-
-          <!-- Chips component -->
-          <base-chips
-            :chips="filterChips"
-            :closable="true"
-            :use-color-mapping="true"
-            @remove-chip="handleFilterRemoval"
-          />
-
-              <!-- Results Display -->
-              <!-- Action Buttons Card -->
-              <v-card
-                class="action-buttons-card d-inline-flex align-center"
-                rounded="pill"
-                color="#EAE3D6"
-                elevation="0"
-              >
-                <v-btn
-                  v-if="isEditing"
-                  icon
-                  color="green"
-                  @click="openAddProfileModal"
-                >
-                  <v-icon>mdi-plus</v-icon>
-                </v-btn>
-
-                <v-divider
-                  v-if="isEditing"
-                  vertical
-                  class="mx-2"
-                  color="#292D32"
-                ></v-divider>
-
-                <v-btn
-                  :color="isEditing ? 'error' : '#B1A184'"
-                  class="custom-edit-btn"
-                  icon
-                  @click="toggleEdit"
-                >
-                  <v-icon color="#292D32">
-                    {{ isEditing ? 'mdi-close' : 'mdi-pencil' }}
-                  </v-icon>
-                </v-btn>
-
-                <v-divider vertical class="mx-2" color="#292D32"></v-divider>
-
-                <v-btn icon @click="toggleFilter">
-                  <v-icon color="#292D32">mdi-tune-vertical</v-icon>
-                </v-btn>
-              </v-card>
+          <div class="d-flex flex-row justify-space-between align-center mb-12">
+            <div>
+              <h2>Active Filters</h2>
+              <!-- Chips component -->
+              <base-chips
+                :chips="filterChips"
+                :closable="true"
+                :use-color-mapping="true"
+                @remove-chip="handleFilterRemoval"
+              />
             </div>
 
-            <!-- Team Members Section -->
-            <h2 class="mb-4">
-              Team Members ({{ filterStore.filteredTeamMembers.length }})
-            </h2>
-            <!-- ProfileCard Component -->
-            <v-row class="gap-4">
-              <v-col
-                v-for="result in filterStore.filteredTeamMembers"
-                :key="result.id"
-                cols="12"
-                sm="6"
+            <!-- Action Buttons Card -->
+            <v-card
+              class="action-buttons-card d-inline-flex align-center"
+              rounded="pill"
+              color="#EAE3D6"
+              elevation="0"
+            >
+              <v-btn
+                v-if="isEditing"
+                icon
+                color="green"
+                @click="openAddProfileModal"
               >
-                <ProfileCard
-                  :result="{
-                    ...result,
-                    isTeamLead: currentProject.isTeamLead === result.id,
-                  }"
-                  :is-editing="isEditing"
-                  @click="handleModalOpen"
-                  @modal-closed="handleModalClose"
-                  @remove-profile="handleRemoveItem"
-                />
-              </v-col>
-            </v-row>
+                <v-icon>mdi-plus</v-icon>
+              </v-btn>
 
-            <!-- Filter Dialog -->
-            <v-dialog v-model="showFilterDialog" max-width="800px" persistent>
-              <v-card>
-                <v-card-text>
-                  <v-container>
-                    <FilterInterface
-                      :is-modal="false"
-                      @close-filter-dialog="closeFilterDialog"
-                    />
-                  </v-container>
-                </v-card-text>
-              </v-card>
-            </v-dialog>
+              <v-divider
+                v-if="isEditing"
+                vertical
+                class="mx-2"
+                color="#292D32"
+              ></v-divider>
 
-            <!-- Add Profile Modal -->
-            <AddProfileModal
-              v-if="currentProject"
-              v-model:showModal="showAddProfileModal"
-              :current-project="currentProject"
-              @profiles-added="handleProfilesAdded"
-              @filter-chips-updated="updateFilterChipsAddProfile"
-            />
-          </v-col>
-        </v-row>
+              <v-btn
+                :color="isEditing ? 'error' : '#B1A184'"
+                class="custom-edit-btn"
+                icon
+                @click="toggleEdit"
+              >
+                <v-icon color="#292D32">
+                  {{ isEditing ? 'mdi-close' : 'mdi-pencil' }}
+                </v-icon>
+              </v-btn>
+
+              <v-divider vertical class="mx-2" color="#292D32"></v-divider>
+
+              <v-btn icon @click="toggleFilter">
+                <v-icon color="#292D32">mdi-tune-vertical</v-icon>
+              </v-btn>
+            </v-card>
+          </div>
+
+          <!-- Team Members Section -->
+          <h2 class="mb-4">
+            Team Members ({{ filterStore.filteredTeamMembers.length }})
+          </h2>
+          <!-- ProfileCard Component -->
+          <v-row class="gap-4">
+            <v-col
+              v-for="result in filterStore.filteredTeamMembers"
+              :key="result.id"
+              cols="12"
+              sm="6"
+            >
+              <ProfileCard
+                :result="{
+                  ...result,
+                  isTeamLead: currentProject.isTeamLead === result.id,
+                }"
+                :is-editing="isEditing"
+                @click="handleModalOpen"
+                @modal-closed="handleModalClose"
+                @remove-profile="handleRemoveItem"
+              />
+            </v-col>
+          </v-row>
+
+          <!-- Filter Dialog -->
+          <v-dialog v-model="showFilterDialog" max-width="800px" persistent>
+            <v-card>
+              <v-card-text>
+                <v-container>
+                  <FilterInterface
+                    :is-modal="false"
+                    @close-filter-dialog="closeFilterDialog"
+                  />
+                </v-container>
+              </v-card-text>
+            </v-card>
+          </v-dialog>
+
+          <!-- Add Profile Modal -->
+          <AddProfileModal
+            v-if="currentProject"
+            v-model:showModal="showAddProfileModal"
+            :current-project="currentProject"
+            @profiles-added="handleProfilesAdded"
+            @filter-chips-updated="updateFilterChipsAddProfile"
+          />
+        </v-col>
       </div>
     </div>
   </div>
@@ -382,12 +362,7 @@ const closeFilterDialog = () => {
 
 .v-card-text {
   padding: 0rem !important;
-/* Add pastel color classes and hover effects */
-/* .pastel-card {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  cursor: pointer;
-  box-shadow: 0 16px 16px rgba(0, 0, 0, 2);
-} */
+}
 
 .pastel-card {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -404,15 +379,15 @@ const closeFilterDialog = () => {
 }
 
 .pastel-blue {
-  background-color: #a8d1e6; /* Light pastel blue */
+  background-color: #a8d1e6;
 }
 
 .pastel-pink {
-  background-color: #f5c3cb; /* Light pastel pink */
+  background-color: #f5c3cb;
 }
 
 .pastel-green {
-  background-color: #b4e0b4; /* Light pastel green */
+  background-color: #b4e0b4;
 }
 
 .container {
