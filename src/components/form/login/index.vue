@@ -13,12 +13,14 @@
             required
           ></v-text-field>
 
+          <!-- Password field (for display only) -->
           <v-text-field
             v-model="password"
             label="Password"
             type="password"
             variant="outlined"
             required
+            disabled
           ></v-text-field>
 
           <v-btn
@@ -52,23 +54,39 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth' // Import composable
 
+const { login } = useAuth() // Remove unused `error`
 const email = ref('')
-const password = ref('')
+const password = ref('') // This is just for display
 const errorMessage = ref('')
 const loading = ref(false)
 const router = useRouter()
 
-const submitLogin = () => {
-  // Store name and set isAuthenticated to true in localStorage
-  localStorage.setItem('name', email.value) // You can store email as 'name' if that's intended
-  localStorage.setItem('isAuthenticated', true)
+const submitLogin = async () => {
+  loading.value = true
+  errorMessage.value = ''
 
-  // Redirect user after login
-  router.push('/dashboard')
+  try {
+    console.log('email', email.value)
+    const response = await login(email.value) // Pass email as string, not object
+
+    if (!response || !response.name) {
+      throw new Error('Invalid response from server')
+    }
+
+    localStorage.setItem('user', JSON.stringify(response)) // Store user properly
+    localStorage.setItem('isAuthenticated', 'true')
+
+    router.push('/dashboard') // Redirect after login
+  } catch (err) {
+    errorMessage.value = err.message || 'Login failed'
+  } finally {
+    loading.value = false
+  }
 }
 
 const goToSignUp = () => {
-  router.push('/signup') // Navigate to the signup page
+  router.push('/signup') // Navigate to signup page
 }
 </script>
