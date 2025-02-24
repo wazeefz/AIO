@@ -9,15 +9,20 @@ export function useAuth() {
   const API_URL = 'http://localhost:8000/users'
 
   // Signup function
-  const signup = async (formData) => {
+  const signup = async ({ name, email, department_id, role }) => {
     error.value = null
     try {
-      const response = await axios.post(`${API_URL}/signup`, formData)
-      user.value = response.data
+      const response = await axios.post(`${API_URL}/signup`, {
+        name,
+        email,
+        department_id,
+        role,
+      })
+      user.value = response.data // Store user in Vue state
       return response.data
     } catch (err) {
       error.value = err.response?.data?.detail || 'Signup failed'
-      throw error.value
+      throw new Error(error.value)
     }
   }
 
