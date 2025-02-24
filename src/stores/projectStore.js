@@ -1,78 +1,31 @@
-// stores/projectStore.js
 import { defineStore } from 'pinia'
-import { projectsData, employeesData } from '@/mockdata/mockData'
+import axios from 'axios'
+
+const API_URL = 'http://localhost:8000'
 
 export const useProjectStore = defineStore('project', {
   state: () => ({
-    projects: projectsData,
+    projects: [],
     currentProject: null,
     loading: false,
     error: null,
+    projectTeam: [],
+    availableEmployees: [],
   }),
 
   getters: {
-    getProjectTeamMembers: (state) => (projectId) => {
-      const project = state.projects.find((p) => p.id === projectId)
-      if (!project) return []
-
-      return project.team
-        .map((memberId) => employeesData.find((emp) => emp.id === memberId))
-        .filter(Boolean)
-    },
-
-    getAvailableEmployees: (state) => (projectId) => {
-      const project = state.projects.find((p) => p.id === projectId)
-      if (!project) return employeesData
-
-      // Return all employees that are not in the current project
-      return employeesData.filter((emp) => !project.team.includes(emp.id))
-    },
-
-    getCurrentProjectTeam: (state) => {
-      if (!state.currentProject) return []
-      return state.currentProject.team
-        .map((memberId) => employeesData.find((emp) => emp.id === memberId))
-        .filter(Boolean)
-    },
+    getCurrentProjectTeam: (state) => state.projectTeam,
   },
 
   actions: {
-    setCurrentProject(projectId) {
-      this.currentProject = this.projects.find((p) => p.id === projectId)
-    },
-
-    addTeamMembers(projectId, memberIds) {
-      const project = this.projects.find((p) => p.id === projectId)
-      if (project) {
-        project.team = [...new Set([...project.team, ...memberIds])]
-        if (this.currentProject?.id === projectId) {
-          this.currentProject = project
-        }
-      }
-    },
-
-    removeTeamMember(projectId, memberId) {
-      const project = this.projects.find((p) => p.id === projectId)
-      if (project) {
-        project.team = project.team.filter((id) => id !== memberId)
-        if (this.currentProject?.id === projectId) {
-          this.currentProject = project
-        }
-      }
-    },
-
-    // Additional project management actions
-    async createProject(projectData) {
+    async fetchProjectTeam(projectId) {
       try {
         this.loading = true
-        // Add API call here when backend is ready
-        const newProject = {
-          id: this.projects.length + 1,
-          ...projectData,
-          team: [],
-        }
-        this.projects.push(newProject)
-        return newProject
+        const response = await axios.get(
+          `${API_URL}/project-assignments/project/${projectId}/team`
+        )
+        this.projectTeam = response.data
+        return response.data
       } catch (error) {
         this.error = error.message
         throw error
@@ -81,22 +34,99 @@ export const useProjectStore = defineStore('project', {
       }
     },
 
-    async updateProject(projectId, updateData) {
+    async fetchAvailableEmployees(projectId) {
       try {
         this.loading = true
-        const project = this.projects.find((p) => p.id === projectId)
-        if (project) {
-          Object.assign(project, updateData)
-          if (this.currentProject?.id === projectId) {
-            this.currentProject = project
-          }
-        }
+        const response = await axios.get(
+          `${API_URL}/project-assignments/available-talents/${projectId}`
+        )
+        this.availableEmployees = response.data
+        return response.data
       } catch (error) {
         this.error = error.message
         throw error
       } finally {
         this.loading = false
       }
+    },
+
+    async addTeamMembers(projectId, memberIds) {
+      try {
+        this.loading = true
+        const response = await axios.post(
+          `${API_URL}/project-assignments/batch-assign/${projectId}`,
+          memberIds
+        )
+        // Refresh the project team after adding members
+        await this.fetchProjectTeam(projectId)
+        return response.data
+      } catch (error) {
+        this.error = error.message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async removeTeamMember(projectId, memberId) {
+      try {
+        this.loading = true
+        await axios.delete(
+          `${API_URL}/project-assignments/${projectId}/${memberId}`
+        )
+        // Refresh the project team after removing a member
+        await this.fetchProjectTeam(projectId)
+      } catch (error) {
+        this.error = error.message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async updateTeamMemberRole(projectId, memberId, updateData) {
+      try {
+        this.loading = true
+        const response = await axios.put(
+          `${API_BASE_URL}/project-assignments/${projectId}/${memberId}`,
+          updateData
+        )
+        // Refresh the project team after updating
+        await this.fetchProjectTeam(projectId)
+        return response.data
+      } catch (error) {
+        this.error = error.message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async setCurrentProject(projectId) {
+      try {
+        this.loading = true
+        await this.fetchProjectTeam(projectId)
+        await this.fetchAvailableEmployees(projectId)
+        this.currentProject = { id: projectId }
+      } catch (error) {
+        this.error = error.message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    clearError() {
+      this.error = null
+    },
+
+    resetState() {
+      this.projects = []
+      this.currentProject = null
+      this.loading = false
+      this.error = null
+      this.projectTeam = []
+      this.availableEmployees = []
     },
   },
 })
