@@ -4,8 +4,8 @@
     <SideNav2 v-if="!isLoginPage && !isSignUpPage" />
 
     <!-- Main Content Section -->
-    <v-main class="d-flex flex-column fill-height">
-      <v-container fluid class="flex-grow-1 overflow-auto pb-4">
+    <v-main class="d-flex">
+      <v-container fluid class="px-2 py-2">
         <router-view />
       </v-container>
     </v-main>
