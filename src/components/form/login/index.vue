@@ -70,6 +70,7 @@ const submitLogin = async () => {
 
     // Store token and user information
     const { access_token, user_name } = response.data
+    console.log(response.data)
     localStorage.setItem('token', access_token)
     localStorage.setItem('name', user_name)
     localStorage.setItem('isAuthenticated', 'true')
