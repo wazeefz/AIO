@@ -1,5 +1,7 @@
 <template>
-  <login />
+  <v-container class="d-flex justify-center align-center fill-height">
+    <login />
+  </v-container>
 </template>
 
 <script setup>

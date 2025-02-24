@@ -1,5 +1,5 @@
 <template>
-  <v-breadcrumbs class="bg-thirdBrown mb-3 rounded-lg">
+  <v-breadcrumbs class="bg-secondaryBrown mb-3 rounded-m">
     <v-breadcrumbs-item
       v-for="(crumb, index) in breadcrumbs"
       :key="index"

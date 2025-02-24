@@ -1,5 +1,7 @@
 <template>
-  <signup />
+  <v-container class="d-flex justify-center align-center fill-height">
+    <signup />
+  </v-container>
 </template>
 
 <script setup>
