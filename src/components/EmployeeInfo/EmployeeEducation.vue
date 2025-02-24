@@ -1,13 +1,12 @@
-<!-- components/EducationSection.vue -->
 <template>
   <div class="education-section">
     <div class="d-flex justify-space-between align-center mb-4">
       <h3 class="text-h6">
-        <v-icon color="#d9c6a5" class="mr-2">mdi-school</v-icon>
+        <v-icon color="#B1A184" class="mr-2">mdi-school</v-icon>
         Education
       </h3>
       <v-btn
-        color="#d9c6a5"
+        color="#B1A184"
         variant="text"
         prepend-icon="mdi-plus"
         @click="addEducation"
@@ -18,7 +17,7 @@
 
     <v-expand-transition group>
       <v-card
-        v-for="(edu, index) in modelValue"
+        v-for="(edu, index) in localEducation"
         :key="index"
         class="mb-3"
         variant="outlined"
@@ -27,7 +26,7 @@
           <div class="d-flex justify-space-between">
             <div>
               <div class="text-subtitle-1 font-weight-medium">
-                {{ edu.degree }}
+                {{ edu.education }}
               </div>
               <div class="text-subtitle-2 text-grey">
                 {{ edu.institution }}
@@ -39,7 +38,7 @@
                 icon="mdi-pencil"
                 variant="text"
                 density="comfortable"
-                color="#d9c6a5"
+                color="#B1A184"
                 @click="editEducation(index)"
               />
               <v-btn
@@ -56,17 +55,17 @@
     </v-expand-transition>
 
     <!-- Education Dialog -->
-    <v-dialog v-model="showDialog" max-width="500">
+    <v-dialog v-model="showDialog" max-width="500" persistent>
       <v-card>
-        <v-card-title style="background-color: #d9c6a5" class="text-white">
+        <v-card-title style="background-color: #b1a184" class="text-white">
           {{ editingIndex === -1 ? 'Add Education' : 'Edit Education' }}
         </v-card-title>
         <v-card-text class="pa-4">
           <v-form ref="form" v-model="isFormValid">
             <v-text-field
-              v-model="editingEducation.degree"
-              label="Degree/Certification"
-              :rules="[(v) => !!v || 'Degree is required']"
+              v-model="editingEducation.education"
+              label="Education/Certification"
+              :rules="[(v) => !!v || 'Education Type is required']"
               variant="outlined"
               density="comfortable"
               class="mb-4"
@@ -88,6 +87,7 @@
               :rules="[
                 (v) => !!v || 'Year is required',
                 (v) => (v && v <= new Date().getFullYear()) || 'Invalid year',
+                (v) => (v && v >= 1950) || 'Year must be after 1950',
               ]"
               variant="outlined"
               density="comfortable"
@@ -98,13 +98,13 @@
           <v-spacer />
           <v-btn
             variant="outlined"
-            @click="showDialog = false"
-            style="border-color: #d9c6a5; color: #d9c6a5"
+            @click="closeDialog"
+            style="border-color: #b1a184; color: #b1a184"
           >
             Cancel
           </v-btn>
           <v-btn
-            color="#d9c6a5"
+            color="#B1A184"
             :disabled="!isFormValid"
             @click="saveEducation"
           >
@@ -117,54 +117,76 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch } from 'vue'
 
 const props = defineProps({
   modelValue: {
     type: Array,
     required: true,
+    default: () => [],
   },
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:model-value'])
 
 const form = ref(null)
 const showDialog = ref(false)
 const isFormValid = ref(false)
 const editingIndex = ref(-1)
+
+// Local state management
+const localEducation = ref([...props.modelValue])
+
+// Watch for external changes
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    localEducation.value = [...newValue]
+  },
+  { deep: true }
+)
+
 const editingEducation = reactive({
-  degree: '',
+  education: '',
   institution: '',
   year: '',
 })
 
+const resetForm = () => {
+  Object.assign(editingEducation, {
+    education: '',
+    institution: '',
+    year: '',
+  })
+  if (form.value) {
+    form.value.reset()
+  }
+  isFormValid.value = false
+}
+
 const addEducation = () => {
   editingIndex.value = -1
-  editingEducation.degree = ''
-  editingEducation.institution = ''
-  editingEducation.year = ''
+  resetForm()
   showDialog.value = true
 }
 
 const editEducation = (index) => {
   editingIndex.value = index
-  const edu = props.modelValue[index]
-  editingEducation.degree = edu.degree
-  editingEducation.institution = edu.institution
-  editingEducation.year = edu.year
+  const edu = localEducation.value[index]
+  Object.assign(editingEducation, { ...edu })
   showDialog.value = true
+}
+
+const closeDialog = () => {
+  showDialog.value = false
+  resetForm()
 }
 
 const saveEducation = () => {
   if (!isFormValid.value) return
 
-  const newEducation = {
-    degree: editingEducation.degree,
-    institution: editingEducation.institution,
-    year: editingEducation.year,
-  }
-
-  const updatedEducation = [...props.modelValue]
+  const newEducation = { ...editingEducation }
+  const updatedEducation = [...localEducation.value]
 
   if (editingIndex.value === -1) {
     updatedEducation.push(newEducation)
@@ -172,77 +194,71 @@ const saveEducation = () => {
     updatedEducation[editingIndex.value] = newEducation
   }
 
-  emit('update:modelValue', updatedEducation)
-  showDialog.value = false
+  // Sort education entries by year in descending order
+  updatedEducation.sort((a, b) => b.year - a.year)
+
+  localEducation.value = updatedEducation
+  emit('update:model-value', updatedEducation)
+  closeDialog()
 }
 
 const removeEducation = (index) => {
   if (confirm('Are you sure you want to remove this education entry?')) {
-    const updatedEducation = props.modelValue.filter((_, i) => i !== index)
-    emit('update:modelValue', updatedEducation)
+    const updatedEducation = localEducation.value.filter((_, i) => i !== index)
+    localEducation.value = updatedEducation
+    emit('update:model-value', updatedEducation)
   }
 }
 </script>
 
-<style>
-:root {
-  --primary-color: #d9c6a5;
-}
-
-/* Education section styles */
-.education-section {
+<style scoped>
+:deep(.education-section) {
   transition: all 0.3s ease;
 }
 
-.education-section .v-card {
+:deep(.v-card) {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.education-section .v-card:hover {
+:deep(.v-card:hover) {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Dialog styles */
-.education-section .v-dialog .v-card-title {
+:deep(.v-dialog .v-card-title) {
   padding: 16px;
 }
 
-.education-section .v-dialog .v-card-actions {
+:deep(.v-dialog .v-card-actions) {
   padding: 16px;
 }
 
-/* Form field styles */
-.education-section .v-text-field {
+:deep(.v-text-field) {
   margin-bottom: 16px;
 }
 
-/* Custom styles for focused state */
 :deep(.v-field--focused) {
-  --v-field-border-color: var(--primary-color) !important;
+  --v-field-border-color: #b1a184 !important;
 }
 
-/* Custom styles for buttons */
-.education-section .v-btn {
+:deep(.v-btn) {
   text-transform: none;
 }
 
 :deep(.v-btn--variant-outlined) {
-  border-color: var(--primary-color) !important;
-  color: var(--primary-color) !important;
+  border-color: #b1a184 !important;
+  color: #b1a184 !important;
 }
 
 :deep(.v-btn--variant-text) {
-  color: var(--primary-color) !important;
+  color: #b1a184 !important;
 }
 
-/* Custom styles for text fields */
 :deep(.v-input--is-focused) {
-  --v-field-border-color: var(--primary-color) !important;
+  --v-field-border-color: #b1a184 !important;
 }
 
-/* Custom styles for dialog */
 :deep(.v-dialog .v-card-title) {
-  background-color: var(--primary-color) !important;
+  background-color: #b1a184 !important;
 }
 </style>

@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import EmployeeInfoForm from '@/components/EmployeeInfoForm.vue'
+import EmployeeInfoForm from '@/components/EmployeeInfo/EmployeeInfoForm.vue'
 </script>
 
 <!-- <script setup>
