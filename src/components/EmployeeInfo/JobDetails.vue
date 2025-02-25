@@ -113,7 +113,7 @@
       <v-textarea
         v-model="localFormData.employmentRemarks"
         @update:model-value="updateFormData('employmentRemarks', $event)"
-        label="Remarks (Optional)"
+        label="Remarks/Career Preference (Optional)"
         variant="outlined"
         density="comfortable"
         rows="2"

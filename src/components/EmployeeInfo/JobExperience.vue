@@ -29,10 +29,23 @@
                 {{ exp.position }}
               </div>
               <div class="text-subtitle-2 text-grey">
-                {{ exp.company }}
+                {{ exp.company }} • {{ exp.employmentType }}
               </div>
-              <div class="text-caption">{{ exp.duration }}</div>
-              <div class="text-body-2 mt-2">{{ exp.responsibilities }}</div>
+              <div class="text-caption">
+                {{ exp.location }} • {{ formatDate(exp.startDate) }} -
+                {{
+                  exp.endDate === 'Present'
+                    ? 'Present'
+                    : formatDate(exp.endDate)
+                }}
+              </div>
+              <div v-if="exp.description" class="text-body-2 mt-2">
+                {{ exp.description }}
+              </div>
+              <div v-if="exp.achievements" class="text-body-2 mt-2">
+                <strong>Key Achievements:</strong>
+                <div>{{ exp.achievements }}</div>
+              </div>
             </div>
             <div>
               <v-btn
@@ -56,7 +69,7 @@
     </v-expand-transition>
 
     <!-- Experience Dialog -->
-    <v-dialog v-model="showDialog" max-width="500" persistent>
+    <v-dialog v-model="showDialog" max-width="600" persistent>
       <v-card>
         <v-card-title style="background-color: #b1a184" class="text-white">
           {{ editingIndex === -1 ? 'Add Experience' : 'Edit Experience' }}
@@ -81,19 +94,59 @@
               class="mb-4"
             />
 
-            <v-text-field
-              v-model="editingExperience.duration"
-              label="Duration (e.g., Jan 2020 - Present)"
-              :rules="[(v) => !!v || 'Duration is required']"
+            <v-select
+              v-model="editingExperience.employmentType"
+              :items="employmentTypes"
+              label="Employment Type"
+              :rules="[(v) => !!v || 'Employment type is required']"
               variant="outlined"
               density="comfortable"
               class="mb-4"
             />
 
+            <v-text-field
+              v-model="editingExperience.location"
+              label="Location"
+              :rules="[(v) => !!v || 'Location is required']"
+              variant="outlined"
+              density="comfortable"
+              class="mb-4"
+            />
+
+            <div class="d-flex gap-4">
+              <v-text-field
+                v-model="editingExperience.startDate"
+                label="Start Date"
+                type="date"
+                :rules="[(v) => !!v || 'Start date is required']"
+                variant="outlined"
+                density="comfortable"
+                class="mb-4"
+              />
+
+              <v-text-field
+                v-model="editingExperience.endDate"
+                label="End Date"
+                type="date"
+                variant="outlined"
+                density="comfortable"
+                :rules="[(v) => !!v || 'End date is required', validateEndDate]"
+                class="mb-4"
+              />
+            </div>
+
             <v-textarea
-              v-model="editingExperience.responsibilities"
-              label="Responsibilities"
-              :rules="[(v) => !!v || 'Responsibilities are required']"
+              v-model="editingExperience.description"
+              label="Description (Optional)"
+              variant="outlined"
+              density="comfortable"
+              rows="3"
+              class="mb-4"
+            />
+
+            <v-textarea
+              v-model="editingExperience.achievements"
+              label="Key Achievements (Optional)"
               variant="outlined"
               density="comfortable"
               rows="3"
@@ -106,12 +159,14 @@
             variant="outlined"
             @click="closeDialog"
             style="border-color: #b1a184; color: #b1a184"
+            :disabled="loading"
           >
             Cancel
           </v-btn>
           <v-btn
             color="#B1A184"
-            :disabled="!isFormValid"
+            :disabled="!isFormValid || loading"
+            :loading="loading"
             @click="saveExperience"
           >
             Save
@@ -123,7 +178,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, watch, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -139,9 +194,30 @@ const form = ref(null)
 const showDialog = ref(false)
 const isFormValid = ref(false)
 const editingIndex = ref(-1)
+const loading = ref(false)
 
 // Local state management
 const localExperiences = ref([...props.modelValue])
+
+const employmentTypes = [
+  'Full-time',
+  'Part-time',
+  'Contract',
+  'Temporary',
+  'Internship',
+  'Freelance',
+]
+
+const editingExperience = reactive({
+  position: '',
+  company: '',
+  employmentType: '',
+  location: '',
+  startDate: '',
+  endDate: '',
+  description: '',
+  achievements: '',
+})
 
 // Watch for external changes
 watch(
@@ -152,19 +228,16 @@ watch(
   { deep: true }
 )
 
-const editingExperience = reactive({
-  position: '',
-  company: '',
-  duration: '',
-  responsibilities: '',
-})
-
 const resetForm = () => {
   Object.assign(editingExperience, {
     position: '',
     company: '',
-    duration: '',
-    responsibilities: '',
+    employmentType: '',
+    location: '',
+    startDate: '',
+    endDate: '',
+    description: '',
+    achievements: '',
   })
   if (form.value) {
     form.value.reset()
@@ -185,26 +258,38 @@ const editExperience = (index) => {
   showDialog.value = true
 }
 
-const closeDialog = () => {
-  showDialog.value = false
-  resetForm()
+const closeDialog = async () => {
+  try {
+    showDialog.value = false
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    resetForm()
+  } catch (error) {
+    console.error('Error closing dialog:', error)
+  }
 }
 
-const saveExperience = () => {
-  if (!isFormValid.value) return
+const saveExperience = async () => {
+  if (!isFormValid.value || loading.value) return
 
-  const newExperience = { ...editingExperience }
-  const updatedExperiences = [...localExperiences.value]
+  try {
+    loading.value = true
+    const newExperience = { ...editingExperience }
+    const updatedExperiences = [...localExperiences.value]
 
-  if (editingIndex.value === -1) {
-    updatedExperiences.push(newExperience)
-  } else {
-    updatedExperiences[editingIndex.value] = newExperience
+    if (editingIndex.value === -1) {
+      updatedExperiences.push(newExperience)
+    } else {
+      updatedExperiences[editingIndex.value] = newExperience
+    }
+
+    localExperiences.value = updatedExperiences
+    emit('update:model-value', updatedExperiences)
+    await closeDialog()
+  } catch (error) {
+    console.error('Error saving experience:', error)
+  } finally {
+    loading.value = false
   }
-
-  localExperiences.value = updatedExperiences
-  emit('update:model-value', updatedExperiences)
-  closeDialog()
 }
 
 const removeExperience = (index) => {
@@ -216,6 +301,30 @@ const removeExperience = (index) => {
     emit('update:model-value', updatedExperiences)
   }
 }
+
+const formatDate = (dateString) => {
+  if (!dateString || dateString === 'Present') return dateString
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  } catch {
+    return dateString
+  }
+}
+
+const validateEndDate = (v) => {
+  if (!v) return 'End date is required'
+  return v > editingExperience.startDate || 'End date must be after start date'
+}
+
+// Cleanup
+onBeforeUnmount(() => {
+  showDialog.value = false
+})
 </script>
 
 <style scoped>
@@ -267,5 +376,25 @@ const removeExperience = (index) => {
 
 :deep(.v-dialog .v-card-title) {
   background-color: #b1a184 !important;
+}
+
+:deep(.v-select) {
+  margin-bottom: 16px;
+}
+
+.gap-4 {
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .d-flex.gap-4 {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  :deep(.v-dialog) {
+    margin: 16px;
+    width: calc(100% - 32px);
+  }
 }
 </style>

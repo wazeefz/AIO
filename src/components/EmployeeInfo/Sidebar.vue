@@ -1,31 +1,31 @@
 <template>
-  <v-card class="mb-4 sticky-sidebar" style="overflow: visible">
-    <v-card-text class="text-center pa-6">
-      <!-- Profile Picture Section -->
-      <div class="profile-section mb-8">
-        <h3 class="section-title mb-4">Profile Picture</h3>
-        <div class="profile-container">
-          <ProfilePictureEditor
-            ref="profileEditor"
-            @image-changed="handleProfileImageChange"
-            :initial-image="modelValue.profilePic"
-            :first-name="modelValue.firstName"
-            :last-name="modelValue.lastName"
-          />
-        </div>
+  <v-card-text class="text-center pa-6">
+    <!-- Profile Picture Section -->
+    <section class="mb-8">
+      <h3 class="section-title mb-4">Profile Picture</h3>
+      <div class="profile-container">
+        <ProfilePictureEditor
+          ref="profileEditor"
+          @image-changed="handleProfileImageChange"
+          :initial-image="modelValue.profilePic"
+          :first-name="modelValue.firstName"
+          :last-name="modelValue.lastName"
+        />
       </div>
+    </section>
 
-      <!-- CV Preview Section -->
-      <div class="cv-section mb-8">
-        <h3 class="section-title mb-4">Uploaded CV</h3>
-        <div v-if="uploadedCV?.file" class="cv-preview-section">
+    <!-- CV Preview Section -->
+    <section class="mb-8">
+      <h3 class="section-title mb-4">Uploaded CV</h3>
+      <div :class="['cv-preview', { 'cv-preview-section': uploadedCV?.file }]">
+        <template v-if="uploadedCV?.file">
           <div class="d-flex align-center mb-4">
             <v-icon
               :icon="getFileIcon(uploadedCV?.name)"
               color="#B1A184"
               class="mr-2"
               size="32"
-            ></v-icon>
+            />
             <div class="text-left">
               <div
                 class="text-subtitle-2 text-truncate"
@@ -56,39 +56,89 @@
           >
             Upload Different CV
           </v-btn>
-        </div>
-        <div v-else>
+        </template>
+        <v-btn
+          v-else
+          block
+          variant="outlined"
+          color="#B1A184"
+          prepend-icon="mdi-upload"
+          @click="$emit('back')"
+        >
+          Upload CV First
+        </v-btn>
+      </div>
+    </section>
+
+    <!-- Progress Section -->
+    <section class="progress-section mb-8">
+      <h3 class="section-title mb-4">Completion Status</h3>
+      <v-progress-linear
+        :model-value="completionProgress"
+        color="#B1A184"
+        height="20"
+        rounded
+        striped
+      >
+        <template v-slot:default="{ value }">
+          <span class="progress-text">{{ Math.ceil(value) }}% Complete</span>
+        </template>
+      </v-progress-linear>
+      <div class="text-caption text-grey mt-2">
+        Complete all required fields to proceed
+      </div>
+    </section>
+
+    <!-- Navigation Section -->
+    <section class="navigation-section">
+      <v-list density="compact" class="py-4">
+        <v-list-item class="side-nav-header mb-4 px-4">
+          Form Sections
+        </v-list-item>
+
+        <v-divider class="mb-2" />
+
+        <div class="d-flex justify-space-around px-4 mb-4">
           <v-btn
-            block
-            variant="outlined"
             color="#B1A184"
-            prepend-icon="mdi-upload"
-            @click="$emit('back')"
+            size="small"
+            variant="outlined"
+            @click="$emit('expand-all')"
+            class="flex-grow-1 mr-2"
           >
-            Upload CV First
+            <v-icon left size="small">mdi-unfold-more-horizontal</v-icon>
+            Expand All
+          </v-btn>
+          <v-btn
+            color="#B1A184"
+            size="small"
+            variant="outlined"
+            @click="$emit('collapse-all')"
+            class="flex-grow-1"
+          >
+            <v-icon left size="small">mdi-unfold-less-horizontal</v-icon>
+            Collapse All
           </v-btn>
         </div>
-      </div>
 
-      <!-- Progress Section -->
-      <div class="progress-section">
-        <h3 class="section-title mb-4">Completion Status</h3>
-        <v-progress-linear
-          :model-value="completionProgress"
-          color="#B1A184"
-          height="20"
-          rounded
+        <v-list-item
+          v-for="(section, index) in sections"
+          :key="index"
+          :class="getSectionClass(section)"
+          @click="$emit('section-click', section.value)"
+          link
+          class="mx-2 rounded"
         >
-          <span class="progress-text"
-            >{{ Math.ceil(completionProgress) }}%</span
-          >
-        </v-progress-linear>
-        <div class="text-caption text-grey mt-2">
-          Complete all required fields to proceed
-        </div>
-      </div>
-    </v-card-text>
-  </v-card>
+          <template v-slot:prepend>
+            <v-icon :icon="section.icon" color="#B1A184" class="mr-2" />
+          </template>
+          <v-list-item-title class="text-subtitle-2">
+            {{ section.title }}
+          </v-list-item-title>
+        </v-list-item>
+      </v-list>
+    </section>
+  </v-card-text>
 </template>
 
 <script setup>
@@ -112,9 +162,24 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
+  sections: {
+    type: Array,
+    required: true,
+  },
+  expandedPanels: {
+    type: Object,
+    required: true,
+  },
 })
 
-const emit = defineEmits(['update:modelValue', 'preview', 'back'])
+const emit = defineEmits([
+  'update:modelValue',
+  'preview',
+  'back',
+  'expand-all',
+  'collapse-all',
+  'section-click',
+])
 
 const handleProfileImageChange = (imageData) => {
   emit('update:modelValue', {
@@ -136,16 +201,14 @@ const formatFileSize = (bytes) => {
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
+
+const getSectionClass = (section) => ({
+  'active-section': props.expandedPanels[section.value] === 0,
+  'mb-1': true,
+})
 </script>
 
 <style scoped>
-.sticky-sidebar {
-  position: sticky;
-  top: 88px;
-  height: fit-content;
-  background-color: white;
-}
-
 .section-title {
   color: var(--text-primary);
   font-size: 1.1rem;
@@ -165,13 +228,43 @@ const formatFileSize = (bytes) => {
   color: white;
   font-weight: 500;
   font-size: 0.875rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.side-nav-header {
+  color: #b1a184;
+  border-bottom: 2px solid #f5f0e8;
+}
+
+.active-section {
+  background-color: #f5f0e8 !important;
+  color: #b1a184 !important;
+}
+
+:deep(.v-list-item) {
+  min-height: 44px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+:deep(.v-list-item:hover) {
+  background-color: #f5f0e8;
+}
+
+:deep(.v-btn) {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+:deep(.v-progress-linear) {
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 @media (max-width: 960px) {
-  .sticky-sidebar {
-    position: relative;
-    top: 0;
-    margin-bottom: 24px;
+  .section-title {
+    font-size: 1rem;
   }
 }
 </style>

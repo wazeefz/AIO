@@ -26,12 +26,19 @@
           <div class="d-flex justify-space-between">
             <div>
               <div class="text-subtitle-1 font-weight-medium">
-                {{ edu.education }}
+                {{ edu.qualificationType }}
+                <span v-if="edu.fieldOfStudy"> in {{ edu.fieldOfStudy }}</span>
               </div>
               <div class="text-subtitle-2 text-grey">
                 {{ edu.institution }}
               </div>
-              <div class="text-caption">{{ edu.year }}</div>
+              <div class="text-caption">
+                {{
+                  formatDate(edu.startDate)
+                    ? formatDate(edu.startDate) + ' - '
+                    : ''
+                }}{{ formatDate(edu.endDate) }}
+              </div>
             </div>
             <div>
               <v-btn
@@ -62,10 +69,20 @@
         </v-card-title>
         <v-card-text class="pa-4">
           <v-form ref="form" v-model="isFormValid">
-            <v-text-field
-              v-model="editingEducation.education"
-              label="Education/Certification"
-              :rules="[(v) => !!v || 'Education Type is required']"
+            <v-combobox
+              v-model="editingEducation.qualificationType"
+              :items="qualificationTypes"
+              label="Qualification Type"
+              :rules="[(v) => !!v || 'Qualification type is required']"
+              variant="outlined"
+              density="comfortable"
+              class="mb-4"
+            />
+
+            <v-combobox
+              v-model="editingEducation.fieldOfStudy"
+              :items="fieldOfStudyOptions"
+              label="Field of Study (Optional)"
               variant="outlined"
               density="comfortable"
               class="mb-4"
@@ -80,18 +97,26 @@
               class="mb-4"
             />
 
-            <v-text-field
-              v-model="editingEducation.year"
-              label="Year"
-              type="number"
-              :rules="[
-                (v) => !!v || 'Year is required',
-                (v) => (v && v <= new Date().getFullYear()) || 'Invalid year',
-                (v) => (v && v >= 1950) || 'Year must be after 1950',
-              ]"
-              variant="outlined"
-              density="comfortable"
-            />
+            <div class="d-flex gap-4">
+              <v-text-field
+                v-model="editingEducation.startDate"
+                label="Start Date (Optional)"
+                type="date"
+                variant="outlined"
+                density="comfortable"
+                class="mb-4"
+              />
+
+              <v-text-field
+                v-model="editingEducation.endDate"
+                label="End Date"
+                type="date"
+                :rules="[(v) => !!v || 'End date is required', validateEndDate]"
+                variant="outlined"
+                density="comfortable"
+                class="mb-4"
+              />
+            </div>
           </v-form>
         </v-card-text>
         <v-card-actions class="pa-4">
@@ -100,12 +125,14 @@
             variant="outlined"
             @click="closeDialog"
             style="border-color: #b1a184; color: #b1a184"
+            :disabled="loading"
           >
             Cancel
           </v-btn>
           <v-btn
             color="#B1A184"
-            :disabled="!isFormValid"
+            :disabled="!isFormValid || loading"
+            :loading="loading"
             @click="saveEducation"
           >
             Save
@@ -117,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -133,9 +160,44 @@ const form = ref(null)
 const showDialog = ref(false)
 const isFormValid = ref(false)
 const editingIndex = ref(-1)
+const loading = ref(false)
 
 // Local state management
 const localEducation = ref([...props.modelValue])
+
+const qualificationTypes = [
+  "Bachelor's Degree",
+  "Master's Degree",
+  'Ph.D.',
+  'Diploma',
+  'Certificate',
+  'High School Diploma',
+  "Associate's Degree",
+  'Professional Certification',
+]
+
+const fieldOfStudyOptions = [
+  'Computer Science',
+  'Information Technology',
+  'Business Administration',
+  'Engineering',
+  'Mathematics',
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'Economics',
+  'Psychology',
+  'Education',
+  'Arts',
+]
+
+const editingEducation = reactive({
+  qualificationType: '',
+  fieldOfStudy: '',
+  institution: '',
+  startDate: '',
+  endDate: '',
+})
 
 // Watch for external changes
 watch(
@@ -146,17 +208,35 @@ watch(
   { deep: true }
 )
 
-const editingEducation = reactive({
-  education: '',
-  institution: '',
-  year: '',
-})
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  } catch {
+    return dateString
+  }
+}
+
+const validateEndDate = (v) => {
+  if (!v) return 'End date is required'
+  if (editingEducation.startDate && v < editingEducation.startDate) {
+    return 'End date must be after start date'
+  }
+  return true
+}
 
 const resetForm = () => {
   Object.assign(editingEducation, {
-    education: '',
+    qualificationType: '',
+    fieldOfStudy: '',
     institution: '',
-    year: '',
+    startDate: '',
+    endDate: '',
   })
   if (form.value) {
     form.value.reset()
@@ -177,29 +257,41 @@ const editEducation = (index) => {
   showDialog.value = true
 }
 
-const closeDialog = () => {
-  showDialog.value = false
-  resetForm()
+const closeDialog = async () => {
+  try {
+    showDialog.value = false
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    resetForm()
+  } catch (error) {
+    console.error('Error closing dialog:', error)
+  }
 }
 
-const saveEducation = () => {
-  if (!isFormValid.value) return
+const saveEducation = async () => {
+  if (!isFormValid.value || loading.value) return
 
-  const newEducation = { ...editingEducation }
-  const updatedEducation = [...localEducation.value]
+  try {
+    loading.value = true
+    const newEducation = { ...editingEducation }
+    const updatedEducation = [...localEducation.value]
 
-  if (editingIndex.value === -1) {
-    updatedEducation.push(newEducation)
-  } else {
-    updatedEducation[editingIndex.value] = newEducation
+    if (editingIndex.value === -1) {
+      updatedEducation.push(newEducation)
+    } else {
+      updatedEducation[editingIndex.value] = newEducation
+    }
+
+    // Sort education entries by end date in descending order
+    updatedEducation.sort((a, b) => new Date(b.endDate) - new Date(a.endDate))
+
+    localEducation.value = updatedEducation
+    emit('update:model-value', updatedEducation)
+    await closeDialog()
+  } catch (error) {
+    console.error('Error saving education:', error)
+  } finally {
+    loading.value = false
   }
-
-  // Sort education entries by year in descending order
-  updatedEducation.sort((a, b) => b.year - a.year)
-
-  localEducation.value = updatedEducation
-  emit('update:model-value', updatedEducation)
-  closeDialog()
 }
 
 const removeEducation = (index) => {
@@ -209,6 +301,11 @@ const removeEducation = (index) => {
     emit('update:model-value', updatedEducation)
   }
 }
+
+// Cleanup
+onBeforeUnmount(() => {
+  showDialog.value = false
+})
 </script>
 
 <style scoped>
@@ -260,5 +357,25 @@ const removeEducation = (index) => {
 
 :deep(.v-dialog .v-card-title) {
   background-color: #b1a184 !important;
+}
+
+:deep(.v-combobox) {
+  margin-bottom: 16px;
+}
+
+.gap-4 {
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .d-flex.gap-4 {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  :deep(.v-dialog) {
+    margin: 16px;
+    width: calc(100% - 32px);
+  }
 }
 </style>
