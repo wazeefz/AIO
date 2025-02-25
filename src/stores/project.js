@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 
 const API_URL = 'http://localhost:8000'
 
-export const useProjectStore = defineStore('project', {
+export const useProjectMetricsStore = defineStore('projectMetrics', {
   state: () => ({
     projects: [],
     isLoading: false,

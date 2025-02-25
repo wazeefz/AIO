@@ -23,8 +23,8 @@
             v-model="selectedProjectId"
             :items="projectItems"
             label="Select Project"
-            item-title="title"
-            item-value="id"
+            item-title="name"
+            item-value="project_id"
             @update:model-value="handleProjectChange"
           />
         </v-card-text>
@@ -35,118 +35,52 @@
         No projects available.
       </v-alert>
 
-      <div v-if="selectedProjectId">
+      <v-row v-if="selectedProjectId">
         <!-- Results -->
         <v-col cols="12" md="11">
-          <v-row class="d-flex justify-end ma-8">
-            <Star />
-          </v-row>
-          <!-- Pastel Cards -->
-          <div class="container">
-            <v-row class="mb-4">
-              <v-col cols="12" md="4">
-                <v-card class="pastel-card pastel-blue">
-                  <v-card-text>
-                    This is Marcus and john's first collaboration!
-                  </v-card-text>
-                </v-card>
-              </v-col>
-              <v-col cols="12" md="4">
-                <v-card class="pastel-card pastel-pink">
-                  <v-card-text>
-                    John has worked on 10 projects in the past month. Maybe it's
-                    time for a well derseved rest?
-                  </v-card-text>
-                </v-card>
-              </v-col>
-              <v-col cols="12" md="4">
-                <v-card class="pastel-card pastel-green">
-                  <v-card-text>
-                    Jane and Ali have nevwe worked on a project like this before
-                  </v-card-text>
-                </v-card>
+          <FunCards />
+
+          <h2>Active Filters</h2>
+
+          <!-- Chips component -->
+          <base-chips
+            :chips="filterChips"
+            :closable="true"
+            :use-color-mapping="true"
+            @remove-chip="handleFilterRemoval"
+          />
+
+          <!-- Results Display -->
+          <div class="mt-6">
+            <!-- Replace the existing action buttons with ActionBtn -->
+            <ActionBtn
+              :isEditing="isEditing"
+              @add-profile="openAddProfileModal"
+              @edit-toggled="toggleEdit"
+              @filter-toggled="toggleFilter"
+            />
+
+            <!-- Team Members Section -->
+            <h2>Team Members ({{ filterStore.filteredTeamMembers.length }})</h2>
+
+            <!-- ProfileCard Component -->
+            <v-row class="gap-4">
+              <v-col
+                v-for="result in filterStore.filteredTeamMembers"
+                :key="result.id"
+                cols="12"
+                sm="6"
+              >
+                <ProfileCard
+                  :result="result"
+                  :is-editing="isEditing"
+                  @click="handleModalOpen"
+                  @modal-closed="handleModalClose"
+                  @remove-profile="handleRemoveItem"
+                />
               </v-col>
             </v-row>
           </div>
-
-          <div class="d-flex flex-row justify-space-between align-center mb-12">
-            <div>
-              <h2>Active Filters</h2>
-              <!-- Chips component -->
-              <base-chips
-                :chips="filterChips"
-                :closable="true"
-                :use-color-mapping="true"
-                @remove-chip="handleFilterRemoval"
-              />
-            </div>
-
-            <!-- Action Buttons Card -->
-            <v-card
-              class="action-buttons-card d-inline-flex align-center"
-              rounded="pill"
-              color="#EAE3D6"
-              elevation="0"
-            >
-              <v-btn
-                v-if="isEditing"
-                icon
-                color="green"
-                @click="openAddProfileModal"
-              >
-                <v-icon>mdi-plus</v-icon>
-              </v-btn>
-
-              <v-divider
-                v-if="isEditing"
-                vertical
-                class="mx-2"
-                color="#292D32"
-              ></v-divider>
-
-              <v-btn
-                :color="isEditing ? 'error' : '#B1A184'"
-                class="custom-edit-btn"
-                icon
-                @click="toggleEdit"
-              >
-                <v-icon color="#292D32">
-                  {{ isEditing ? 'mdi-close' : 'mdi-pencil' }}
-                </v-icon>
-              </v-btn>
-
-              <v-divider vertical class="mx-2" color="#292D32"></v-divider>
-
-              <v-btn icon @click="toggleFilter">
-                <v-icon color="#292D32">mdi-tune-vertical</v-icon>
-              </v-btn>
-            </v-card>
-          </div>
-
-          <!-- Team Members Section -->
-          <h2 class="mb-4">
-            Team Members ({{ filterStore.filteredTeamMembers.length }})
-          </h2>
-          <!-- ProfileCard Component -->
-          <v-row class="gap-4">
-            <v-col
-              v-for="result in filterStore.filteredTeamMembers"
-              :key="result.id"
-              cols="12"
-              sm="6"
-            >
-              <ProfileCard
-                :result="{
-                  ...result,
-                  isTeamLead: currentProject.isTeamLead === result.id,
-                }"
-                :is-editing="isEditing"
-                @click="handleModalOpen"
-                @modal-closed="handleModalClose"
-                @remove-profile="handleRemoveItem"
-              />
-            </v-col>
-          </v-row>
 
           <!-- Filter Dialog -->
           <v-dialog v-model="showFilterDialog" max-width="800px" persistent>
@@ -171,7 +105,7 @@
             @filter-chips-updated="updateFilterChipsAddProfile"
           />
         </v-col>
-      </div>
+      </v-row>
     </div>
   </div>
 </template>
@@ -181,13 +115,12 @@ import { computed, ref, onMounted } from 'vue'
 import BaseChips from '@/components/Chips.vue'
 import FilterInterface from '@/components/FilterInterface.vue'
 import { useFilterStore } from '@/stores/filterStore'
-import { useProjectStore } from '@/stores/projectStore'
+import { useProjectManagementStore } from '@/stores/projectStore'
 import ProfileCard from '@/components/profileCard.vue'
 import AddProfileModal from '@/components/addProfileModal.vue'
-import Star from '@/components/Star.vue'
 
 const filterStore = useFilterStore()
-const projectStore = useProjectStore()
+const projectStore = useProjectManagementStore()
 
 // Local state
 const isEditing = ref(false)
@@ -202,8 +135,8 @@ const projectItems = computed(() => {
   try {
     if (!projectStore.projects) return []
     return projectStore.projects.map((project) => ({
-      title: project.projectName,
-      id: project.id,
+      name: project.name,
+      project_id: project.project_id,
     }))
   } catch (e) {
     error.value = 'Error loading projects'
@@ -229,13 +162,16 @@ const filterChips = computed(() => {
 
 // Event handlers
 const handleProjectChange = async (projectId) => {
+  if (!projectId) return
+
   try {
     loading.value = true
+    error.value = null
     await projectStore.setCurrentProject(projectId)
     filterStore.clearTeamFilters() // Reset filters when changing projects
   } catch (e) {
-    error.value = 'Error changing project'
-    console.error(e)
+    error.value = e.message || 'Error changing project'
+    console.error('Project change error:', e)
   } finally {
     loading.value = false
   }
@@ -257,35 +193,49 @@ const openAddProfileModal = () => {
   showAddProfileModal.value = true
 }
 
-const handleRemoveItem = (memberId) => {
+const handleRemoveItem = async (memberId) => {
   try {
-    if (currentProject.value) {
-      projectStore.removeTeamMember(currentProject.value.id, memberId)
+    if (!currentProject.value) {
+      error.value = 'No project selected'
+      return
     }
+    loading.value = true
+    error.value = null
+    await projectStore.removeTeamMember(
+      currentProject.value.project_id,
+      memberId
+    )
   } catch (e) {
-    error.value = 'Error removing team member'
-    console.error(e)
+    error.value = e.message || 'Error removing team member'
+    console.error('Remove member error:', e)
+  } finally {
+    loading.value = false
   }
 }
 
-const handleProfilesAdded = (selectedEmployees) => {
+const handleProfilesAdded = async (selectedEmployees) => {
   try {
-    if (currentProject.value) {
-      const memberIds = selectedEmployees.map((emp) => emp.id)
-      // Only add the new members that aren't already in the team
-      const currentTeamIds = currentProject.value.team
-      const newMemberIds = memberIds.filter(
-        (id) => !currentTeamIds.includes(id)
-      )
-
-      if (newMemberIds.length > 0) {
-        projectStore.addTeamMembers(currentProject.value.id, newMemberIds)
-      }
+    if (!currentProject.value) {
+      error.value = 'No project selected'
+      return
     }
+    if (!selectedEmployees?.length) {
+      error.value = 'No employees selected'
+      return
+    }
+    loading.value = true
+    error.value = null
+    const memberIds = selectedEmployees.map((emp) => emp.talent_id)
+    await projectStore.addTeamMembers(
+      currentProject.value.project_id,
+      memberIds
+    )
     showAddProfileModal.value = false
   } catch (e) {
-    error.value = 'Error adding team members'
-    console.error(e)
+    error.value = e.message || 'Error adding team members'
+    console.error('Add members error:', e)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -298,16 +248,18 @@ const updateFilterChipsAddProfile = (chips) => {
 onMounted(async () => {
   try {
     loading.value = true
-    // Wait for projects to load
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    error.value = null
+    await projectStore.initializeProjects()
 
     if (projectItems.value.length > 0) {
-      selectedProjectId.value = projectItems.value[0].id
+      selectedProjectId.value = projectItems.value[0].project_id
       await handleProjectChange(selectedProjectId.value)
+    } else {
+      error.value = 'No projects available'
     }
   } catch (e) {
-    error.value = 'Error initializing page'
-    console.error(e)
+    error.value = e.message || 'Error initializing page'
+    console.error('Initialization error:', e)
   } finally {
     loading.value = false
   }
@@ -320,79 +272,5 @@ const closeFilterDialog = () => {
 </script>
 
 <style scoped>
-.action-buttons-card {
-  padding: 4px 8px;
-}
-
-.custom-edit-btn {
-  height: 40px;
-  width: 40px;
-}
-
-:deep(.v-btn) {
-  box-shadow: none !important;
-}
-
-:deep(.v-btn:hover) {
-  opacity: 0.8;
-}
-
-:deep(.v-divider) {
-  border-color: #292d32 !important;
-  opacity: 0.5;
-}
-
-:deep(.v-btn--icon) {
-  background: transparent;
-}
-
-:deep(.v-btn--icon.custom-edit-btn .v-btn__content) {
-  border-radius: 50%;
-  background-color: currentColor;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-:deep(.v-btn--icon .v-icon) {
-  z-index: 1;
-}
-
-.v-card-text {
-  padding: 0rem !important;
-}
-
-.pastel-card {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  cursor: pointer;
-  background-color: #f0f0f0;
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 9px 8px 0px 3px rgba(0, 0, 0, 1);
-}
-
-.pastel-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 16px 16px rgba(0, 0, 0, 0.1);
-}
-
-.pastel-blue {
-  background-color: #a8d1e6;
-}
-
-.pastel-pink {
-  background-color: #f5c3cb;
-}
-
-.pastel-green {
-  background-color: #b4e0b4;
-}
-
-.container {
-  display: flex;
-  gap: 20px;
-  padding: 20px;
-}
+/* Add your styles here */
 </style>

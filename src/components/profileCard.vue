@@ -53,7 +53,7 @@
             <v-avatar size="80" :rounded="true" class="rounded-lg">
               <v-img
                 :src="profileImageUrl"
-                :alt="result.name"
+                :alt="getDisplayName"
                 cover
                 class="profile-image"
               ></v-img>
@@ -64,7 +64,7 @@
           <div class="profile-info">
             <slot name="card-header" :result="result">
               <div class="text-h5 font-weight-medium text-white mt-1">
-                {{ result.name }}
+                {{ getDisplayName }}
               </div>
               <v-divider
                 class="my-4"
@@ -72,16 +72,18 @@
                 thickness="2"
               ></v-divider>
               <div class="text-subtitle-1 text-white mb-2">
-                {{ result.title }}
+                {{ result.title || result.job_title || 'No title' }}
               </div>
               <div class="d-flex align-center mb-2">
                 <v-icon size="small" color="white" class="mr-1"
                   >mdi-currency-usd</v-icon
                 >
-                <span class="text-white">{{ result.salary }} </span>
+                <span class="text-white"
+                  >{{ result.salary || result.daily_rate || 'N/A' }}
+                </span>
               </div>
               <div class="text-subtitle-2 text-white mb-4">
-                Department: {{ result.department }}
+                Department: {{ result.department || 'N/A' }}
               </div>
               <!-- Skills Slot -->
               <slot name="skills" :skills="skillChips">
@@ -132,7 +134,7 @@
               <v-avatar size="80" :rounded="true" class="rounded-lg">
                 <v-img
                   :src="profileImageUrl"
-                  :alt="result.name"
+                  :alt="getDisplayName"
                   cover
                   class="profile-image"
                 ></v-img>
@@ -149,7 +151,7 @@
           </div>
           <div class="d-flex align-center justify-space-between pl-4">
             <v-card-title class="text-h5 pa-0">
-              {{ result.name }}
+              {{ getDisplayName }}
             </v-card-title>
           </div>
         </slot>
@@ -158,16 +160,16 @@
           <slot name="modal-content" :result="result" :skills="skillChips">
             <div class="mt-4">
               <h3 class="text-h6 mt-4">Title</h3>
-              <p>{{ result.title }}</p>
+              <p>{{ result.title || result.job_title || 'No title' }}</p>
 
               <h3 class="text-h6 mt-4">Department</h3>
-              <p>{{ result.department }}</p>
+              <p>{{ result.department || 'N/A' }}</p>
 
               <h3 class="text-h6 mt-4">Employment Type</h3>
-              <p>{{ result.employment }}</p>
+              <p>{{ result.employment || result.employment_type || 'N/A' }}</p>
 
               <h3 class="text-h6 mt-4">Salary</h3>
-              <p>{{ result.salary }}</p>
+              <p>{{ result.salary || result.daily_rate || 'N/A' }}</p>
 
               <h3 class="text-h6 mt-4">Skills</h3>
               <base-chips :chips="skillChipsData" :use-color-mapping="true" />
@@ -206,6 +208,10 @@ const props = defineProps({
   result: {
     type: Object,
     required: true,
+    validator: (value) => {
+      // Add basic validation for required properties
+      return value && typeof value === 'object'
+    },
   },
   isEditing: {
     type: Boolean,
@@ -229,14 +235,15 @@ const emit = defineEmits([
 ])
 const showModal = ref(false)
 const showConfirmDialog = ref(false)
-const visibleCount = ref(props.result.skills.length)
+const visibleCount = ref(0) // Initialize to 0 instead of undefined skills length
 const skillsContainer = ref(null)
 const skillChips = ref([])
 const resizeObserver = ref(null)
 
-// Data for skills is here
+// Data for skills with null check
 const skillChipsData = computed(() => {
-  return props.result.skills.map((skill) => ({
+  const skills = props.result.skills || [] // Provide default empty array if skills is undefined
+  return skills.map((skill) => ({
     label: skill,
     category: 'skills',
   }))
@@ -253,13 +260,14 @@ const hiddenSkillsCount = computed(() => {
 const calculateVisibleChips = async () => {
   if (!skillsContainer.value) return
 
+  // Set initial visible count to the total number of skills
+  visibleCount.value = skillChipsData.value.length
+
+  await nextTick()
+
   const containerWidth = skillsContainer.value.offsetWidth
   const chipGap = 8
   const overflowChipWidth = 60
-
-  // Always start by showing all chips
-  visibleCount.value = skillChipsData.value.length
-  await nextTick()
 
   // Get all chip elements
   const chipElements = Array.from(
@@ -397,13 +405,24 @@ const confirmRemove = (event) => {
 
 const confirmAndRemove = () => {
   showConfirmDialog.value = false
-  emit('remove-profile', props.result.id)
+  emit('remove-profile', props.result.talent_id || props.result.id) // Fallback to id if talent_id is not available
 }
 
 const handleConfirmAdd = () => {
   emit('confirm-add-profile', props.result)
   closeModal()
 }
+
+// Add computed property for display name
+const getDisplayName = computed(() => {
+  if (props.result.name) return props.result.name
+  if (props.result.talent_first_name || props.result.talent_last_name) {
+    return `${props.result.talent_first_name || ''} ${
+      props.result.talent_last_name || ''
+    }`.trim()
+  }
+  return 'No Name'
+})
 </script>
 
 <style scoped>

@@ -1,9 +1,40 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
 
-const API_URL = 'http://localhost:8000'
+const API_BASE_URL = 'http://localhost:8000' // Adjust this based on your backend URL
 
-export const useProjectStore = defineStore('project', {
+// Configure axios defaults
+axios.defaults.headers.common['Content-Type'] = 'application/json'
+
+// Create axios instance with custom config
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000, // 10 seconds timeout
+})
+
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    let errorMessage = 'An error occurred'
+    if (error.response) {
+      // Server responded with error
+      errorMessage =
+        error.response.data?.detail ||
+        error.response.data?.message ||
+        `Server error: ${error.response.status}`
+    } else if (error.request) {
+      // Request made but no response
+      errorMessage = 'No response from server. Please check your connection.'
+    } else {
+      // Request setup error
+      errorMessage = error.message
+    }
+    return Promise.reject({ message: errorMessage, originalError: error })
+  }
+)
+
+export const useProjectManagementStore = defineStore('projectManagement', {
   state: () => ({
     projects: [],
     currentProject: null,
@@ -11,91 +42,33 @@ export const useProjectStore = defineStore('project', {
     error: null,
     projectTeam: [],
     availableEmployees: [],
+    filteredProjects: [],
   }),
 
   getters: {
     getCurrentProjectTeam: (state) => state.projectTeam,
+    getAvailableEmployees: (state) => state.availableEmployees,
   },
 
   actions: {
-    async fetchProjectTeam(projectId) {
+    async initializeProjects() {
       try {
         this.loading = true
-        const response = await axios.get(
-          `${API_URL}/project-assignments/project/${projectId}/team`
-        )
-        this.projectTeam = response.data
-        return response.data
-      } catch (error) {
-        this.error = error.message
-        throw error
-      } finally {
-        this.loading = false
-      }
-    },
+        this.error = null
 
-    async fetchAvailableEmployees(projectId) {
-      try {
-        this.loading = true
-        const response = await axios.get(
-          `${API_URL}/project-assignments/available-talents/${projectId}`
-        )
-        this.availableEmployees = response.data
-        return response.data
-      } catch (error) {
-        this.error = error.message
-        throw error
-      } finally {
-        this.loading = false
-      }
-    },
+        const response = await api.get('/projects')
+        this.projects = response.data
+        this.filteredProjects = response.data
 
-    async addTeamMembers(projectId, memberIds) {
-      try {
-        this.loading = true
-        const response = await axios.post(
-          `${API_URL}/project-assignments/batch-assign/${projectId}`,
-          memberIds
-        )
-        // Refresh the project team after adding members
-        await this.fetchProjectTeam(projectId)
-        return response.data
+        if (this.projects.length > 0) {
+          await this.setCurrentProject(this.projects[0].project_id)
+        }
       } catch (error) {
         this.error = error.message
-        throw error
-      } finally {
-        this.loading = false
-      }
-    },
-
-    async removeTeamMember(projectId, memberId) {
-      try {
-        this.loading = true
-        await axios.delete(
-          `${API_URL}/project-assignments/${projectId}/${memberId}`
+        console.error(
+          'Error initializing projects:',
+          error.originalError || error
         )
-        // Refresh the project team after removing a member
-        await this.fetchProjectTeam(projectId)
-      } catch (error) {
-        this.error = error.message
-        throw error
-      } finally {
-        this.loading = false
-      }
-    },
-
-    async updateTeamMemberRole(projectId, memberId, updateData) {
-      try {
-        this.loading = true
-        const response = await axios.put(
-          `${API_BASE_URL}/project-assignments/${projectId}/${memberId}`,
-          updateData
-        )
-        // Refresh the project team after updating
-        await this.fetchProjectTeam(projectId)
-        return response.data
-      } catch (error) {
-        this.error = error.message
         throw error
       } finally {
         this.loading = false
@@ -103,21 +76,103 @@ export const useProjectStore = defineStore('project', {
     },
 
     async setCurrentProject(projectId) {
+      if (!projectId) {
+        this.error = 'Invalid project ID'
+        return
+      }
+
       try {
         this.loading = true
-        await this.fetchProjectTeam(projectId)
-        await this.fetchAvailableEmployees(projectId)
-        this.currentProject = { id: projectId }
+        this.error = null
+
+        // Get project team members
+        const [teamResponse, availableResponse] = await Promise.all([
+          api.get(`/project-assignments/project/${projectId}/team`),
+          api.get(`/project-assignments/available-talents/${projectId}`),
+        ])
+
+        const project = this.projects.find((p) => p.project_id === projectId)
+        if (!project) {
+          throw { message: 'Project not found' }
+        }
+
+        this.currentProject = project
+        this.projectTeam = teamResponse.data
+        this.availableEmployees = availableResponse.data
       } catch (error) {
         this.error = error.message
+        console.error(
+          'Error setting current project:',
+          error.originalError || error
+        )
         throw error
       } finally {
         this.loading = false
       }
     },
 
-    clearError() {
-      this.error = null
+    async addTeamMembers(projectId, memberIds) {
+      if (!projectId || !memberIds?.length) {
+        this.error = 'Invalid project ID or member IDs'
+        return
+      }
+
+      try {
+        this.loading = true
+        this.error = null
+
+        await api.post(
+          `/project-assignments/batch-assign/${projectId}`,
+          memberIds
+        )
+        await this.setCurrentProject(projectId)
+      } catch (error) {
+        this.error = error.message
+        console.error(
+          'Error adding team members:',
+          error.originalError || error
+        )
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async removeTeamMember(projectId, memberId) {
+      if (!projectId || !memberId) {
+        this.error = 'Invalid project ID or member ID'
+        return
+      }
+
+      try {
+        this.loading = true
+        this.error = null
+
+        await api.delete(`/project-assignments/${projectId}/${memberId}`)
+        await this.setCurrentProject(projectId)
+      } catch (error) {
+        this.error = error.message
+        console.error(
+          'Error removing team member:',
+          error.originalError || error
+        )
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    filterProjects(searchTerm = '') {
+      if (!searchTerm.trim()) {
+        this.filteredProjects = this.projects
+      } else {
+        const term = searchTerm.toLowerCase()
+        this.filteredProjects = this.projects.filter(
+          (project) =>
+            project.name.toLowerCase().includes(term) ||
+            project.project_description.toLowerCase().includes(term)
+        )
+      }
     },
 
     resetState() {
@@ -127,6 +182,7 @@ export const useProjectStore = defineStore('project', {
       this.error = null
       this.projectTeam = []
       this.availableEmployees = []
+      this.filteredProjects = []
     },
   },
 })

@@ -1,6 +1,6 @@
 // stores/filterStore.js
 import { defineStore } from 'pinia'
-import { useProjectStore } from '@/stores/projectStore'
+import { useProjectManagementStore } from '@/stores/projectStore'
 
 export const useFilterStore = defineStore('filter', {
   state: () => ({
@@ -47,7 +47,7 @@ export const useFilterStore = defineStore('filter', {
     },
 
     filteredTeamMembers: (state) => {
-      const projectStore = useProjectStore()
+      const projectStore = useProjectManagementStore()
       const teamMembers = projectStore.currentProject
         ? projectStore.getCurrentProjectTeam
         : []
@@ -63,9 +63,9 @@ export const useFilterStore = defineStore('filter', {
     },
 
     filteredModalMembers: (state) => {
-      const projectStore = useProjectStore()
+      const projectStore = useProjectManagementStore()
       const availableMembers = projectStore.currentProject
-        ? projectStore.getAvailableEmployees(projectStore.currentProject.id)
+        ? projectStore.getAvailableEmployees
         : []
 
       return availableMembers.filter((item) => {
