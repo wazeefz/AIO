@@ -36,12 +36,18 @@
     <div class="chat-history">
       <div
         v-for="chat in chatHistory"
-        :key="chat.id"
-        :class="['chat-item', { active: currentChatId === chat.id }]"
+        :key="chat.conversation_id"
+        :class="[
+          'chat-item',
+          { active: currentChatId === chat.conversation_id },
+        ]"
         @click="$emit('load-chat', chat)"
       >
         <span class="chat-title">{{ chat.title }}</span>
-        <button class="delete-chat" @click.stop="$emit('delete-chat', chat.id)">
+        <button
+          class="delete-chat"
+          @click.stop="$emit('delete-chat', chat.conversation_id)"
+        >
           ×
         </button>
       </div>
@@ -49,7 +55,7 @@
   </div>
 </template>
 
-<script setup>
+<!-- <script setup>
 import { ref } from 'vue'
 
 defineProps({
@@ -60,6 +66,35 @@ defineProps({
 const searchQuery = ref('')
 
 defineEmits(['new-chat', 'load-chat', 'delete-chat', 'search'])
+</script> -->
+
+<script setup>
+import { ref } from 'vue'
+
+const deleteChatHistory = ref()
+
+const props = defineProps({
+  chatHistory: {
+    type: Array,
+    required: true,
+    default: () => [],
+  },
+  currentChatId: {
+    type: Number,
+    required: true,
+  },
+})
+
+const searchQuery = ref('')
+
+defineEmits(['new-chat', 'load-chat', 'delete-chat', 'search'])
+
+const handleDeleteChatHistory = async () => {
+  if (confirm('Are you sure you want to delete all chat history?')) {
+    await deleteChatHistory()
+    alert('Chat history deleted successfully!')
+  }
+}
 </script>
 
 <style scoped>

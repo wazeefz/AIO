@@ -1,4 +1,4 @@
-<template>
+<!-- <template>
   <div :class="['message', message.role]">
     <div class="message-content">
       <template v-if="message.role === 'assistant'">
@@ -12,6 +12,33 @@
       </template>
       <div class="actions">
         <button @click="copyMessage">Copy</button>
+      </div>
+    </div>
+  </div>
+</template> -->
+
+<template>
+  <div :class="['message', message.role]">
+    <div class="message-content">
+      <template v-if="message.role === 'assistant'">
+        <div class="avatar">🤖</div>
+      </template>
+      <div class="text">
+        <div v-html="formattedContent"></div>
+        <!-- Added sources display -->
+        <div v-if="message.sources && message.sources.length" class="sources">
+          <span class="sources-label">Sources:</span>
+          <span class="sources-list">{{ message.sources.join(', ') }}</span>
+        </div>
+      </div>
+      <template v-if="message.role === 'user'">
+        <div class="avatar">👤</div>
+      </template>
+      <div class="actions">
+        <button @click="copyMessage" class="copy-button">
+          <span class="copy-icon">📋</span>
+          <span class="copy-text">Copy</span>
+        </button>
       </div>
     </div>
   </div>

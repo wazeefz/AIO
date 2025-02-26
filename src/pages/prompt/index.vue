@@ -34,7 +34,7 @@
   </div>
 </template>
 
-<script setup>
+<!-- <script setup>
 import { onMounted, ref, watch } from 'vue'
 import { useChat } from '@/composables/useChat'
 import ChatSidebar from '@/components/ChatSidebar.vue'
@@ -76,6 +76,41 @@ const handleSearch = (query) => {
     chat.title.toLowerCase().includes(query.toLowerCase())
   )
 }
+</script> -->
+
+<script setup>
+import { onMounted, ref, watch } from 'vue'
+import { useChat } from '@/composables/useChat'
+import ChatSidebar from '@/components/ChatSidebar.vue'
+import ChatMessage from '@/components/ChatMessage.vue'
+import ChatInput from '@/components/ChatInput.vue'
+import PromptPageDefault from '@/components/PromptPageDefault.vue'
+
+const userId = ref(1) // Get this from your user state/store
+const {
+  chatHistory,
+  currentChat,
+  isLoading,
+  startNewChat,
+  loadChat,
+  deleteChat,
+  sendMessage,
+} = useChat(userId.value)
+
+const messagesContainer = ref(null)
+
+// Scroll to bottom when messages change
+watch(
+  () => currentChat.value.messages,
+  () => {
+    setTimeout(() => {
+      if (messagesContainer.value) {
+        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+      }
+    }, 100)
+  },
+  { deep: true }
+)
 </script>
 
 <style>
