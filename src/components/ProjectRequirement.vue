@@ -690,7 +690,12 @@
 </template>
 
 <script setup>
+const router = useRouter()
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { useProjectRequirementsStore } from '@/stores/projectRequirements'
+import { useRouter } from 'vue-router'
+
+const projectRequirementsStore = useProjectRequirementsStore()
 
 // Form reference and state management
 const mainContent = ref(null)
@@ -1048,9 +1053,9 @@ const getCommonSkills = (category) => {
 const handleSubmit = async () => {
   loading.value = true
   try {
-    console.log('Form Data:', formData)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    alert('Project requirements submitted successfully!')
+    const result = await projectRequirementsStore.submitRequirements(formData)
+    // Use regular Vue Router navigation
+    router.push('/projects/results')
   } catch (error) {
     console.error('Submission error:', error)
     alert('Error submitting project requirements. Please try again.')
