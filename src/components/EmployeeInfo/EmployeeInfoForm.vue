@@ -208,7 +208,7 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import HeaderSection from './HeaderSection.vue'
 import SidebarSection from './Sidebar.vue'
 import PersonalInfoSection from './PersonalInfo.vue'
@@ -223,6 +223,11 @@ import CertificationSection from './ProfessionalCert.vue'
 import Assessment from './Assessment.vue'
 
 const router = useRouter()
+const route = useRoute()
+
+const queryParams = route.query
+console.log('Query Params:', queryParams?.data)
+const props = queryParams?.data ? JSON.parse(queryParams.data) : {}
 
 // Form refs and state
 const form = ref(null)
@@ -237,44 +242,44 @@ const showPreview = ref(false)
 // Initialize form data
 const formData = reactive({
   // Personal Info
-  profilePic: '',
-  firstName: '',
-  lastName: '',
-  email: '',
-  phone: '',
-  dateOfBirth: '',
-  age: '',
-  gender: '',
-  maritalStatus: '',
+  profilePic: props?.profilePic,
+  firstName: props?.firstName,
+  lastName: props?.lastName,
+  email: props?.email,
+  phone: props?.phone,
+  dateOfBirth: props?.dateOfBirth,
+  age: props?.age,
+  gender: props?.gender,
+  maritalStatus: props?.maritalStatus,
 
   // Location
-  currentCountry: '',
-  currentCity: '',
-  willingToRelocate: false,
-  relocationPreferences: [],
+  currentCountry: props?.currentCountry,
+  currentCity: props?.currentCity,
+  willingToRelocate: props?.willingToRelocate,
+  relocationPreferences: props?.relocationPreferences,
 
   // Professional Summary
-  summary: '',
-  experience: '',
+  summary: props?.summary,
+  experience: props?.experience,
 
   // Skills
-  skills: [],
+  skills: props?.skills,
 
   // Arrays for sections
-  education: [],
-  experiences: [],
-  certifications: [],
+  education: props?.education,
+  experiences: props?.experiences,
+  certifications: props?.certifications,
 
   // Job Details
-  jobTitle: '',
-  jobPosition: '',
-  department: '',
-  employmentType: 'fullTime',
-  contractDuration: '',
-  employmentRemarks: '',
+  jobTitle: props?.jobTitle,
+  jobPosition: props?.jobPosition,
+  department: props?.department,
+  employmentType: props?.employmentType,
+  contractDuration: props?.contractDuration,
+  employmentRemarks: props?.employmentRemarks,
 
   // Salary
-  salary: '',
+  salary: props?.salary,
 
   // Assessment
   assessment: {
@@ -322,6 +327,9 @@ const expandedPanels = reactive({
   salary: 0,
   assessment: 0,
 })
+
+// console.log('props', props)
+// const formData = props
 
 // Methods for expanding/collapsing sections
 const expandAll = () => {
@@ -399,11 +407,11 @@ const completionProgress = computed(() => {
   }
 
   // Check assessment
-  if (formData.assessment) {
+  if (formData?.assessment) {
     // Check interview ratings
     total += 2 // Two interview ratings
-    if (formData.assessment.interview[0].rating > 0) completed++
-    if (formData.assessment.interview[1].rating > 0) completed++
+    if (formData?.assessment?.interview[0]?.rating > 0) completed++
+    if (formData?.assessment?.interview[1]?.rating > 0) completed++
 
     // Check projects
     total++
@@ -612,15 +620,19 @@ const handleSubmit = async () => {
 
 // Lifecycle hooks
 onMounted(() => {
-  const savedData = localStorage.getItem('employeeFormData')
-  if (savedData) {
-    try {
-      const parsedData = JSON.parse(savedData)
-      Object.assign(formData, parsedData)
-    } catch (error) {
-      console.error('Error loading saved form data:', error)
-    }
-  }
+  // const savedData = localStorage.getItem('employeeFormData')
+  // if (savedData) {
+  //   try {
+  //     const parsedData = JSON.parse(savedData)
+  //     Object.assign(formData, parsedData)
+  //   } catch (error) {
+  //     console.error('Error loading saved form data:', error)
+  //   }
+  // }
+
+  // if (props) {
+  //   Object.assign(formData, props)
+  // }
 
   const container = document.querySelector('.form-container')
   if (container) {
