@@ -21,8 +21,8 @@
           </div>
           <div v-else key="message">
             <ChatMessage
-              v-for="(message, index) in currentChat.messages"
-              :key="index"
+              v-for="message in currentChat.messages"
+              :key="message.message_id"
               :message="message"
             />
           </div>
@@ -42,6 +42,7 @@ import ChatMessage from '@/components/ChatMessage.vue'
 import ChatInput from '@/components/ChatInput.vue'
 import PromptPageDefault from '@/components/PromptPageDefault.vue'
 
+const userId = ref(1) // Get this from your user state/store
 const {
   chatHistory,
   currentChat,
@@ -50,32 +51,22 @@ const {
   loadChat,
   deleteChat,
   sendMessage,
-  loadSavedHistory,
-} = useChat()
+} = useChat(userId.value)
 
 const messagesContainer = ref(null)
 
-const scrollToBottom = () => {
-  setTimeout(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-    }
-  }, 100)
-}
-
-watch(() => currentChat.value.messages, scrollToBottom, { deep: true })
-
-onMounted(() => {
-  loadSavedHistory()
-})
-
-const handleSearch = (query) => {
-  // Filter your chat history based on the query
-  // This is just an example implementation
-  filteredChatHistory.value = chatHistory.value.filter((chat) =>
-    chat.title.toLowerCase().includes(query.toLowerCase())
-  )
-}
+// Scroll to bottom when messages change
+watch(
+  () => currentChat.value.messages,
+  () => {
+    setTimeout(() => {
+      if (messagesContainer.value) {
+        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+      }
+    }, 100)
+  },
+  { deep: true }
+)
 </script>
 
 <style>
