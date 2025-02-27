@@ -95,15 +95,21 @@
               <div class="text-subtitle-2 text-white mb-4">
                 Department: {{ getDepartmentDisplay }}
               </div>
-              <!-- Skills Slot -->
-              <slot name="skills" :skills="skillChips">
+              <!-- Skills Section -->
+              <div v-if="result.skills && result.skills.length > 0">
+                <div class="text-subtitle-2 text-white mb-2">
+                  <v-icon size="small" color="white" class="mr-1"
+                    >mdi-lightbulb</v-icon
+                  >
+                  Skills
+                </div>
                 <div
                   ref="skillsContainer"
                   class="d-flex flex-wrap gap-2 skills-container"
                 >
                   <template
                     v-for="(skill, index) in visibleSkills"
-                    :key="skill.label"
+                    :key="index"
                   >
                     <v-chip
                       ref="skillChips"
@@ -111,8 +117,9 @@
                       class="mr-2 mb-2 skill-chip"
                       color="#2d2d2d"
                       text-color="white"
+                      size="small"
                     >
-                      {{ skill.label }}
+                      {{ skill }}
                     </v-chip>
                   </template>
                   <v-chip
@@ -122,11 +129,12 @@
                     class="mr-2 mb-2 overflow-chip"
                     color="#2d2d2d"
                     text-color="white"
+                    size="small"
                   >
                     +{{ hiddenSkillsCount }}
                   </v-chip>
                 </div>
-              </slot>
+              </div>
             </slot>
           </div>
         </div>
@@ -135,10 +143,10 @@
 
     <!-- Modal -->
     <v-dialog v-model="showModal" max-width="600px">
-      <v-card>
+      <v-card class="modal-card">
         <!-- Modal Header Slot -->
         <slot name="modal-header" :result="result" :close="closeModal">
-          <div class="d-flex align-center justify-space-between pa-4">
+          <div class="modal-header">
             <!-- Profile Image -->
             <div class="profile-image-container">
               <v-avatar size="80" :rounded="true" class="rounded-lg">
@@ -166,8 +174,8 @@
           </div>
         </slot>
 
-        <v-card-text>
-          <slot name="modal-content" :result="result" :skills="skillChips">
+        <v-card-text class="modal-content">
+          <slot name="modal-content" :result="result">
             <div class="mt-4">
               <h3 class="text-h6 mt-4">Title</h3>
               <p>{{ getJobTitle }}</p>
@@ -187,13 +195,27 @@
               <h3 class="text-h6 mt-4">Salary</h3>
               <p>{{ getSalaryDisplay }}</p>
 
-              <h3 class="text-h6 mt-4">Skills</h3>
-              <base-chips :chips="skillChipsData" :use-color-mapping="true" />
+              <!-- Skills Section in Modal -->
+              <template v-if="result.skills && result.skills.length > 0">
+                <h3 class="text-h6 mt-4">Skills</h3>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                  <v-chip
+                    v-for="(skill, index) in result.skills"
+                    :key="index"
+                    variant="elevated"
+                    class="mr-2 mb-2"
+                    color="primary"
+                    size="small"
+                  >
+                    {{ skill }}
+                  </v-chip>
+                </div>
+              </template>
             </div>
           </slot>
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="modal-actions">
           <v-spacer></v-spacer>
           <slot name="modal-actions" :close="closeModal" :result="result">
             <!-- Check if it's being called by addProfileModal -->
@@ -271,18 +293,22 @@ const skillChipsData = computed(() => {
 })
 
 const visibleSkills = computed(() => {
-  return skillChipsData.value.slice(0, visibleCount.value)
+  return props.result.skills
+    ? props.result.skills.slice(0, visibleCount.value)
+    : []
 })
 
 const hiddenSkillsCount = computed(() => {
-  return Math.max(0, skillChipsData.value.length - visibleCount.value)
+  return props.result.skills
+    ? Math.max(0, props.result.skills.length - visibleCount.value)
+    : 0
 })
 
 const calculateVisibleChips = async () => {
-  if (!skillsContainer.value) return
+  if (!skillsContainer.value || !props.result.skills) return
 
   // Set initial visible count to the total number of skills
-  visibleCount.value = skillChipsData.value.length
+  visibleCount.value = props.result.skills.length
 
   await nextTick()
 
@@ -658,12 +684,14 @@ const handleAddTeamMember = async () => {
   min-height: 32px;
   position: relative;
   overflow: hidden;
+  margin-top: 8px;
 }
 
 .skill-chip {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.875rem;
 }
 
 .overflow-chip {
@@ -684,5 +712,56 @@ const handleAddTeamMember = async () => {
   background-color: rgba(0, 0, 0, 0.6);
   padding: 4px;
   border-radius: 4px;
+}
+
+/* Modal styles */
+.modal-card {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.modal-header {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.modal-actions {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  z-index: 1;
+  padding: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
 }
 </style>

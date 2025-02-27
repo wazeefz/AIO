@@ -58,6 +58,21 @@ api.interceptors.response.use(
  * @property {string} [assignment_start_date]
  * @property {string} [assignment_end_date]
  * @property {number} [total_experience_years]
+ * @property {string[]} [skills]
+ */
+
+/**
+ * @typedef {Object} AvailableTalent
+ * @property {number} talent_id
+ * @property {string} first_name
+ * @property {string} last_name
+ * @property {string} email
+ * @property {number} basic_salary
+ * @property {string} [phone]
+ * @property {string} [job_title]
+ * @property {string} [department_name]
+ * @property {number} [total_experience_years]
+ * @property {string[]} [skills]
  */
 
 export const useProjectManagementStore = defineStore('projectManagement', {
@@ -67,7 +82,7 @@ export const useProjectManagementStore = defineStore('projectManagement', {
     loading: false,
     error: null,
     projectTeam: [],
-    /** @type {ProjectTeamMember[]} */ availableEmployees: [],
+    /** @type {AvailableTalent[]} */ availableEmployees: [],
     filteredProjects: [],
   }),
 
@@ -204,10 +219,10 @@ export const useProjectManagementStore = defineStore('projectManagement', {
         this.loading = true
         this.error = null
 
-        // Get project team members
+        // Get project team members and available talents from profile-card endpoints
         const [teamResponse, availableResponse] = await Promise.all([
-          api.get(`/project-assignments/project/${projectId}/team`),
-          api.get(`/project-assignments/available-talents/${projectId}`),
+          api.get(`/profile-card/project/${projectId}/team`),
+          api.get(`/profile-card/available-talents/${projectId}`),
         ])
 
         const project = this.projects.find((p) => p.project_id === projectId)

@@ -61,25 +61,31 @@
             />
 
             <!-- Team Members Section -->
-            <h2>Team Members ({{ filterStore.filteredTeamMembers.length }})</h2>
+            <div class="team-members-section">
+              <h2>
+                Team Members ({{ filterStore.filteredTeamMembers.length }})
+              </h2>
 
-            <!-- ProfileCard Component -->
-            <v-row class="gap-4">
-              <v-col
-                v-for="result in filterStore.filteredTeamMembers"
-                :key="result.id"
-                cols="12"
-                sm="6"
-              >
-                <ProfileCard
-                  :result="result"
-                  :is-editing="isEditing"
-                  @click="handleModalOpen"
-                  @modal-closed="handleModalClose"
-                  @remove-profile="handleRemoveItem"
-                />
-              </v-col>
-            </v-row>
+              <!-- ProfileCard Component -->
+              <div class="scrollable-cards-container">
+                <v-row class="gap-4">
+                  <v-col
+                    v-for="result in filterStore.filteredTeamMembers"
+                    :key="result.id"
+                    cols="12"
+                    sm="6"
+                  >
+                    <ProfileCard
+                      :result="result"
+                      :is-editing="isEditing"
+                      @click="handleModalOpen"
+                      @modal-closed="handleModalClose"
+                      @remove-profile="handleRemoveItem"
+                    />
+                  </v-col>
+                </v-row>
+              </div>
+            </div>
           </div>
 
           <!-- Filter Dialog -->
@@ -272,5 +278,36 @@ const closeFilterDialog = () => {
 </script>
 
 <style scoped>
-/* Add your styles here */
+.team-members-section {
+  height: calc(
+    100vh - 300px
+  ); /* Adjust this value based on your header/navigation height */
+  display: flex;
+  flex-direction: column;
+}
+
+.scrollable-cards-container {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 16px; /* Add some padding for the scrollbar */
+}
+
+/* Custom scrollbar styling */
+.scrollable-cards-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollable-cards-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.scrollable-cards-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.scrollable-cards-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
 </style>
