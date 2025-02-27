@@ -36,7 +36,10 @@
       <v-card-text class="pa-6">
         <div class="d-flex">
           <!-- Team Lead Badge -->
-          <div v-if="result.isTeamLead" class="team-lead-badge">
+          <div
+            v-if="result.role && result.role.toLowerCase().includes('lead')"
+            class="team-lead-badge"
+          >
             <v-tooltip text="Team Lead">
               <template v-slot:activator="{ props }">
                 <v-icon
@@ -72,18 +75,25 @@
                 thickness="2"
               ></v-divider>
               <div class="text-subtitle-1 text-white mb-2">
-                {{ result.title || result.job_title || 'No title' }}
+                <v-icon size="small" color="white" class="mr-1"
+                  >mdi-briefcase</v-icon
+                >
+                <span class="text-white">{{ getJobTitle }}</span>
+              </div>
+              <div class="text-subtitle-1 text-white mb-2">
+                <v-icon size="small" color="white" class="mr-1"
+                  >mdi-sitemap</v-icon
+                >
+                <span class="text-white">{{ assignmentDetails.role }} </span>
               </div>
               <div class="d-flex align-center mb-2">
                 <v-icon size="small" color="white" class="mr-1"
-                  >mdi-currency-usd</v-icon
+                  >mdi-cash</v-icon
                 >
-                <span class="text-white"
-                  >{{ result.salary || result.daily_rate || 'N/A' }}
-                </span>
+                <span class="text-white">{{ getSalaryDisplay }} </span>
               </div>
               <div class="text-subtitle-2 text-white mb-4">
-                Department: {{ result.department || 'N/A' }}
+                Department: {{ getDepartmentDisplay }}
               </div>
               <!-- Skills Slot -->
               <slot name="skills" :skills="skillChips">
@@ -160,16 +170,22 @@
           <slot name="modal-content" :result="result" :skills="skillChips">
             <div class="mt-4">
               <h3 class="text-h6 mt-4">Title</h3>
-              <p>{{ result.title || result.job_title || 'No title' }}</p>
+              <p>{{ getJobTitle }}</p>
 
               <h3 class="text-h6 mt-4">Department</h3>
-              <p>{{ result.department || 'N/A' }}</p>
+              <p>{{ getDepartmentDisplay }}</p>
 
-              <h3 class="text-h6 mt-4">Employment Type</h3>
-              <p>{{ result.employment || result.employment_type || 'N/A' }}</p>
+              <template v-if="isTeamMember">
+                <h3 class="text-h6 mt-4">Role In Project</h3>
+                <p>{{ assignmentDetails.role }}</p>
+
+                <h3 class="text-h6 mt-4">Assignment Period</h3>
+                <p>From: {{ assignmentDetails.assignment_start_date }}</p>
+                <p>To: {{ assignmentDetails.assignment_end_date }}</p>
+              </template>
 
               <h3 class="text-h6 mt-4">Salary</h3>
-              <p>{{ result.salary || result.daily_rate || 'N/A' }}</p>
+              <p>{{ getSalaryDisplay }}</p>
 
               <h3 class="text-h6 mt-4">Skills</h3>
               <base-chips :chips="skillChipsData" :use-color-mapping="true" />
@@ -201,15 +217,16 @@
 <script setup>
 import BaseChips from '@/components/Chips.vue'
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
-// Import a default placeholder image stored locally
+import { useProjectManagementStore } from '@/stores/projectStore'
 import placeholderImage from '@/assets/profilePic/placeholder.png'
+
+const projectStore = useProjectManagementStore()
 
 const props = defineProps({
   result: {
     type: Object,
     required: true,
     validator: (value) => {
-      // Add basic validation for required properties
       return value && typeof value === 'object'
     },
   },
@@ -222,6 +239,10 @@ const props = defineProps({
     default: false,
   },
   isAddMode: {
+    type: Boolean,
+    default: false,
+  },
+  forceTeamMember: {
     type: Boolean,
     default: false,
   },
@@ -404,25 +425,127 @@ const confirmRemove = (event) => {
 }
 
 const confirmAndRemove = () => {
+  if (isTeamMember.value) {
+    handleRemoveTeamMember()
+  } else {
+    emit('remove-profile', props.result.talent_id || props.result.id)
+  }
   showConfirmDialog.value = false
-  emit('remove-profile', props.result.talent_id || props.result.id) // Fallback to id if talent_id is not available
 }
 
 const handleConfirmAdd = () => {
-  emit('confirm-add-profile', props.result)
+  if (props.isAddMode && !isTeamMember.value) {
+    handleAddTeamMember()
+  } else {
+    emit('confirm-add-profile', props.result)
+  }
   closeModal()
 }
 
-// Add computed property for display name
+// Add computed property to check if talent is in current project team
+const isTeamMember = computed(() => {
+  // If forceTeamMember is true, always return true (useful for explicit team member views)
+  if (props.forceTeamMember) return true
+
+  const currentProjectTeam = projectStore.getCurrentProjectTeam
+  const talentId = props.result.talent_id
+
+  // If we don't have a team or talent ID, they're not a member
+  if (!currentProjectTeam || !talentId) return false
+
+  // Check if the talent is in the current project team
+  return currentProjectTeam.some((member) => member.talent_id === talentId)
+})
+
+// Update assignmentDetails to use the team member data if available
+const assignmentDetails = computed(() => {
+  if (isTeamMember.value) {
+    // Find the team member data
+    const teamMemberData = projectStore.getCurrentProjectTeam.find(
+      (member) => member.talent_id === props.result.talent_id
+    )
+
+    if (teamMemberData) {
+      return {
+        role: teamMemberData.role || 'Not Assigned',
+        performance_rating: teamMemberData.performance_rating || 'N/A',
+        assignment_start_date: teamMemberData.assignment_start_date
+          ? new Date(teamMemberData.assignment_start_date).toLocaleDateString()
+          : 'Not Set',
+        assignment_end_date: teamMemberData.assignment_end_date
+          ? new Date(teamMemberData.assignment_end_date).toLocaleDateString()
+          : 'Not Set',
+      }
+    }
+  }
+
+  // Fallback to default data
+  return {
+    role: props.result.role || 'Not Assigned',
+    performance_rating: props.result.performance_rating || 'N/A',
+    assignment_start_date: props.result.assignment_start_date
+      ? new Date(props.result.assignment_start_date).toLocaleDateString()
+      : 'Not Set',
+    assignment_end_date: props.result.assignment_end_date
+      ? new Date(props.result.assignment_end_date).toLocaleDateString()
+      : 'Not Set',
+  }
+})
+
+// Update getDisplayName to handle both talent and team member formats
 const getDisplayName = computed(() => {
-  if (props.result.name) return props.result.name
-  if (props.result.talent_first_name || props.result.talent_last_name) {
-    return `${props.result.talent_first_name || ''} ${
-      props.result.talent_last_name || ''
-    }`.trim()
+  if (props.result.first_name && props.result.last_name) {
+    return `${props.result.first_name} ${props.result.last_name}`.trim()
+  }
+  if (props.result.name) {
+    return props.result.name
   }
   return 'No Name'
 })
+
+// Handle salary/rate display
+const getSalaryDisplay = computed(() => {
+  const salary =
+    props.result.basic_salary || props.result.salary || props.result.daily_rate
+  return salary ? `$${salary.toLocaleString()}` : 'N/A'
+})
+
+// Handle department display
+const getDepartmentDisplay = computed(() => {
+  return props.result.department_name || props.result.department || 'N/A'
+})
+
+// Handle job title display
+const getJobTitle = computed(() => {
+  return props.result.job_title || props.result.title || 'No title'
+})
+
+// Methods for project assignment actions
+const handleRemoveTeamMember = async () => {
+  try {
+    const projectId = projectStore.getCurrentProject?.project_id
+    if (!projectId) throw new Error('No current project selected')
+
+    await projectStore.removeTeamMember(projectId, props.result.talent_id)
+    showConfirmDialog.value = false
+    emit('remove-profile', props.result.talent_id)
+  } catch (error) {
+    console.error('Error removing team member:', error)
+  }
+}
+
+const handleAddTeamMember = async () => {
+  try {
+    const projectId = projectStore.getCurrentProject?.project_id
+    if (!projectId) throw new Error('No current project selected')
+
+    await projectStore.addTeamMembers(projectId, [props.result.talent_id])
+    emit('confirm-add-profile', props.result)
+    closeModal()
+  } catch (error) {
+    console.error('Error adding team member:', error)
+  }
+}
 </script>
 
 <style scoped>

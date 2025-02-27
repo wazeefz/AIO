@@ -34,6 +34,32 @@ api.interceptors.response.use(
   }
 )
 
+/**
+ * @typedef {Object} ProjectAssignment
+ * @property {number} project_id
+ * @property {number} talent_id
+ * @property {string} [role]
+ * @property {string} [assignment_start_date]
+ * @property {string} [assignment_end_date]
+ * @property {number} [performance_rating]
+ */
+
+/**
+ * @typedef {Object} ProjectTeamMember
+ * @property {number} talent_id
+ * @property {string} first_name
+ * @property {string} last_name
+ * @property {string} job_title
+ * @property {number} basic_salary
+ * @property {string} [role]
+ * @property {string} email
+ * @property {string} [department_name]
+ * @property {number} [performance_rating]
+ * @property {string} [assignment_start_date]
+ * @property {string} [assignment_end_date]
+ * @property {number} [total_experience_years]
+ */
+
 export const useProjectManagementStore = defineStore('projectManagement', {
   state: () => ({
     projects: [],
@@ -41,13 +67,18 @@ export const useProjectManagementStore = defineStore('projectManagement', {
     loading: false,
     error: null,
     projectTeam: [],
-    availableEmployees: [],
+    /** @type {ProjectTeamMember[]} */ availableEmployees: [],
     filteredProjects: [],
   }),
 
   getters: {
     getCurrentProjectTeam: (state) => state.projectTeam,
     getAvailableEmployees: (state) => state.availableEmployees,
+    getCurrentProject: (state) => state.currentProject,
+    getProjects: (state) => state.projects,
+    getFilteredProjects: (state) => state.filteredProjects,
+    isLoading: (state) => state.loading,
+    getError: (state) => state.error,
   },
 
   actions: {
@@ -75,6 +106,94 @@ export const useProjectManagementStore = defineStore('projectManagement', {
       }
     },
 
+    /**
+     * Get all project assignments with pagination
+     * @param {number} [skip=0] - Number of records to skip
+     * @param {number} [limit=100] - Maximum number of records to return
+     * @returns {Promise<ProjectAssignment[]>}
+     */
+    async getAllProjectAssignments(skip = 0, limit = 100) {
+      try {
+        this.loading = true
+        this.error = null
+
+        const response = await api.get('/project-assignments', {
+          params: { skip, limit },
+        })
+        return response.data
+      } catch (error) {
+        this.error = error.message
+        console.error(
+          'Error getting project assignments:',
+          error.originalError || error
+        )
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    /**
+     * Create a new project assignment
+     * @param {ProjectAssignment} assignment - The assignment data
+     */
+    async createProjectAssignment(assignment) {
+      try {
+        this.loading = true
+        this.error = null
+
+        const response = await api.post('/project-assignments', assignment)
+        await this.setCurrentProject(assignment.project_id)
+        return response.data
+      } catch (error) {
+        this.error = error.message
+        console.error(
+          'Error creating project assignment:',
+          error.originalError || error
+        )
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    /**
+     * Update a project assignment
+     * @param {number} projectId - The project ID
+     * @param {number} talentId - The talent ID
+     * @param {Object} updateData - The data to update
+     * @param {string} [updateData.role] - The new role
+     * @param {string} [updateData.assignment_start_date] - The new start date
+     * @param {string} [updateData.assignment_end_date] - The new end date
+     * @param {number} [updateData.performance_rating] - The new performance rating
+     */
+    async updateProjectAssignment(projectId, talentId, updateData) {
+      try {
+        this.loading = true
+        this.error = null
+
+        const response = await api.put(
+          `/project-assignments/${projectId}/${talentId}`,
+          updateData
+        )
+        await this.setCurrentProject(projectId)
+        return response.data
+      } catch (error) {
+        this.error = error.message
+        console.error(
+          'Error updating project assignment:',
+          error.originalError || error
+        )
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    /**
+     * Set the current project and load its team members and available talents
+     * @param {number} projectId - The project ID to set as current
+     */
     async setCurrentProject(projectId) {
       if (!projectId) {
         this.error = 'Invalid project ID'
@@ -111,6 +230,11 @@ export const useProjectManagementStore = defineStore('projectManagement', {
       }
     },
 
+    /**
+     * Add multiple team members to a project
+     * @param {number} projectId - The project ID
+     * @param {number[]} memberIds - Array of talent IDs to add
+     */
     async addTeamMembers(projectId, memberIds) {
       if (!projectId || !memberIds?.length) {
         this.error = 'Invalid project ID or member IDs'
@@ -138,6 +262,11 @@ export const useProjectManagementStore = defineStore('projectManagement', {
       }
     },
 
+    /**
+     * Remove a team member from a project
+     * @param {number} projectId - The project ID
+     * @param {number} memberId - The talent ID to remove
+     */
     async removeTeamMember(projectId, memberId) {
       if (!projectId || !memberId) {
         this.error = 'Invalid project ID or member ID'
