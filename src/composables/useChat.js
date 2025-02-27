@@ -200,7 +200,7 @@ export function useChat(userId) {
         {
           message_text:
             aiResponse.data.content ||
-            aiResponse.data.answer ||
+            aiResponse.data.team_recommendation ||
             'No response generated',
           sender: 'assistant',
         }
