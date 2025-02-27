@@ -55,19 +55,6 @@
   </div>
 </template>
 
-<!-- <script setup>
-import { ref } from 'vue'
-
-defineProps({
-  chatHistory: Array,
-  currentChatId: Number,
-})
-
-const searchQuery = ref('')
-
-defineEmits(['new-chat', 'load-chat', 'delete-chat', 'search'])
-</script> -->
-
 <script setup>
 import { ref } from 'vue'
 

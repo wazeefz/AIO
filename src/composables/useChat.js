@@ -169,7 +169,7 @@ export function useChat(userId) {
     }
   }
 
-  const sendMessage = async (content) => {
+  const sendMessage = async (message_text) => {
     if (!currentChat.value.id) {
       await startNewChat()
     }
@@ -180,46 +180,39 @@ export function useChat(userId) {
       const userMessage = await axios.post(
         `http://127.0.0.1:8000/chat/${userId}/${currentChat.value.id}/message`,
         {
-          content,
-          role: 'user',
+          message_text,
+          sender: 'user',
         }
       )
       currentChat.value.messages.push(userMessage.data)
 
-      // Get AI response using PDF QA system
-      const qaResponse = await axios.get(
-        `http://127.0.0.1:8000/ask-question/`,
+      // Get AI response
+      const aiResponse = await axios.get(
+        `http://127.0.0.1:8000/chat/ask-question/`,
         {
-          params: {
-            question: content,
-          },
+          params: { question: message_text },
         }
       )
 
-      // Send AI response to chat
+      // Send AI message
       const aiMessage = await axios.post(
         `http://127.0.0.1:8000/chat/${userId}/${currentChat.value.id}/message`,
         {
-          content: qaResponse.data.answer,
-          role: 'assistant',
-          sources: qaResponse.data.sources,
+          message_text:
+            aiResponse.data.content ||
+            aiResponse.data.answer ||
+            'No response generated',
+          sender: 'assistant',
         }
       )
+      currentChat.value.messages.push(aiMessage.data)
 
-      // Add the AI message to current chat
-      currentChat.value.messages.push({
-        ...aiMessage.data,
-        content: qaResponse.data.answer,
-        sources: qaResponse.data.sources,
-      })
-
-      // Reload chat list to update titles and order
       await loadUserChats()
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.error('Error:', error.response?.data || error)
       currentChat.value.messages.push({
-        role: 'system',
-        content: 'Error: Unable to process your message. Please try again.',
+        message_text: 'Error: Unable to process your message.',
+        sender: 'system',
       })
     } finally {
       isLoading.value = false
@@ -257,8 +250,8 @@ export function useChat(userId) {
     (newMessages) => {
       if (currentChat.value.id && newMessages.length > 0) {
         // Update chat title if it's the first message
-        if (newMessages.length === 1 && newMessages[0].role === 'user') {
-          const firstMessage = newMessages[0].content
+        if (newMessages.length === 1 && newMessages[0].sender === 'user') {
+          const firstMessage = newMessages[0].message_text
           currentChat.value.title =
             firstMessage.slice(0, 30) + (firstMessage.length > 30 ? '...' : '')
         }

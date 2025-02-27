@@ -21,8 +21,8 @@
           </div>
           <div v-else key="message">
             <ChatMessage
-              v-for="(message, index) in currentChat.messages"
-              :key="index"
+              v-for="message in currentChat.messages"
+              :key="message.message_id"
               :message="message"
             />
           </div>
@@ -33,50 +33,6 @@
     </div>
   </div>
 </template>
-
-<!-- <script setup>
-import { onMounted, ref, watch } from 'vue'
-import { useChat } from '@/composables/useChat'
-import ChatSidebar from '@/components/ChatSidebar.vue'
-import ChatMessage from '@/components/ChatMessage.vue'
-import ChatInput from '@/components/ChatInput.vue'
-import PromptPageDefault from '@/components/PromptPageDefault.vue'
-
-const {
-  chatHistory,
-  currentChat,
-  isLoading,
-  startNewChat,
-  loadChat,
-  deleteChat,
-  sendMessage,
-  loadSavedHistory,
-} = useChat()
-
-const messagesContainer = ref(null)
-
-const scrollToBottom = () => {
-  setTimeout(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-    }
-  }, 100)
-}
-
-watch(() => currentChat.value.messages, scrollToBottom, { deep: true })
-
-onMounted(() => {
-  loadSavedHistory()
-})
-
-const handleSearch = (query) => {
-  // Filter your chat history based on the query
-  // This is just an example implementation
-  filteredChatHistory.value = chatHistory.value.filter((chat) =>
-    chat.title.toLowerCase().includes(query.toLowerCase())
-  )
-}
-</script> -->
 
 <script setup>
 import { onMounted, ref, watch } from 'vue'

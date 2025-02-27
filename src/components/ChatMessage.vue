@@ -18,9 +18,9 @@
 </template> -->
 
 <template>
-  <div :class="['message', message.role]">
+  <div :class="['message', message.sender]">
     <div class="message-content">
-      <template v-if="message.role === 'assistant'">
+      <template v-if="message.sender === 'assistant'">
         <div class="avatar">🤖</div>
       </template>
       <div class="text">
@@ -31,7 +31,7 @@
           <span class="sources-list">{{ message.sources.join(', ') }}</span>
         </div>
       </div>
-      <template v-if="message.role === 'user'">
+      <template v-if="message.sender === 'user'">
         <div class="avatar">👤</div>
       </template>
       <div class="actions">
@@ -54,11 +54,11 @@ const props = defineProps({
 })
 
 const formattedContent = computed(() => {
-  return DOMPurify.sanitize(marked(props.message.content))
+  return DOMPurify.sanitize(marked(props.message.message_text))
 })
 
 const copyMessage = () => {
-  navigator.clipboard.writeText(props.message.content)
+  navigator.clipboard.writeText(props.message.message_text)
 }
 </script>
 
