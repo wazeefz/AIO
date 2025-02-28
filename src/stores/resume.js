@@ -2,14 +2,21 @@ import { defineStore } from 'pinia'
 
 export const useResumeStore = defineStore('resume', {
   state: () => ({
-    resumeData: null, // Will store the stringified resume response
+    resumeData: JSON.parse(localStorage.getItem('resumeData')) || null,
   }),
   actions: {
     setResumeData(data) {
-      this.resumeData = JSON.stringify(data) // Convert to string before storing
+      this.resumeData = data
+      localStorage.setItem('resumeData', JSON.stringify(data)) // Store in localStorage
     },
     getResumeData() {
-      return this.resumeData ? JSON.parse(this.resumeData) : null
+      return this.resumeData
+        ? JSON.parse(localStorage.getItem('resumeData'))
+        : null
+    },
+    clearResumeData() {
+      this.resumeData = null
+      localStorage.removeItem('resumeData') // Remove from localStorage
     },
   },
 })
