@@ -533,7 +533,7 @@ const getDisplayName = computed(() => {
 const getSalaryDisplay = computed(() => {
   const salary =
     props.result.basic_salary || props.result.salary || props.result.daily_rate
-  return salary ? `$${salary.toLocaleString()}` : 'N/A'
+  return salary ? `RM${salary.toLocaleString()}` : 'N/A'
 })
 
 // Handle department display

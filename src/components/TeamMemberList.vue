@@ -124,6 +124,7 @@ import { useFilterStore } from '@/stores/filterStore'
 import { useProjectManagementStore } from '@/stores/projectStore'
 import ProfileCard from '@/components/profileCard.vue'
 import AddProfileModal from '@/components/addProfileModal.vue'
+import ActionBtn from '@/components/ActionBtn.vue'
 
 const filterStore = useFilterStore()
 const projectStore = useProjectManagementStore()

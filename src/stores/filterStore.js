@@ -7,17 +7,17 @@ export const useFilterStore = defineStore('filter', {
     // Separate filters for team members and add modal
     teamFilters: {
       skills: [],
-      salary: [],
+      basic_salary: [],
       title: [],
+      role: [],
       department: [],
-      employment: [],
     },
     modalFilters: {
       skills: [],
-      salary: [],
+      basic_salary: [],
       title: [],
+      role: [],
       department: [],
-      employment: [],
     },
   }),
 
@@ -111,22 +111,22 @@ export const useFilterStore = defineStore('filter', {
     },
 
     clearTeamFilters(category = null) {
-      if (category) {
-        this.teamFilters[category] = []
-      } else {
+      if (category === 'all') {
         Object.keys(this.teamFilters).forEach((key) => {
           this.teamFilters[key] = []
         })
+      } else if (category) {
+        this.teamFilters[category] = []
       }
     },
 
     clearModalFilters(category = null) {
-      if (category) {
-        this.modalFilters[category] = []
-      } else {
+      if (category === 'all') {
         Object.keys(this.modalFilters).forEach((key) => {
           this.modalFilters[key] = []
         })
+      } else if (category) {
+        this.modalFilters[category] = []
       }
     },
 
@@ -142,43 +142,98 @@ export const useFilterStore = defineStore('filter', {
 
 // Helper functions
 function extractSalaryValue(salary) {
-  return parseInt(salary.replace(/[^\d]/g, ''))
+  if (!salary || (typeof salary !== 'string' && typeof salary !== 'number'))
+    return 0
+  // Handle both string and number inputs
+  const salaryStr = typeof salary === 'number' ? salary.toString() : salary
+  // Remove "Up to" prefix if it exists
+  const withoutPrefix = salaryStr.replace(/^Up to /i, '')
+  // Remove currency symbols and spaces
+  const cleanSalary = withoutPrefix.replace(/[$RM\s,]/g, '')
+  return parseInt(cleanSalary) || 0
 }
 
 function isSalaryInRange(salary, range) {
-  const salaryValue = extractSalaryValue(salary)
+  // Handle invalid inputs
+  if (!salary) return false
 
-  if (range.includes('-')) {
-    const [minStr, maxStr] = range.split('-')
-    const min = parseInt(minStr.replace(/[^\d]/g, ''))
-    const max = parseInt(maxStr.replace(/[^\d]/g, ''))
-    return salaryValue >= min && salaryValue <= max
-  } else if (range.includes('+')) {
-    const min = parseInt(range.replace(/[^\d]/g, ''))
-    return salaryValue >= min
-  } else if (range.startsWith('Up to')) {
-    const max = parseInt(range.replace(/[^\d]/g, ''))
-    return salaryValue <= max
+  // Convert salary to number if it's not already
+  const salaryValue =
+    typeof salary === 'number' ? salary : extractSalaryValue(salary)
+  if (!salaryValue) return false
+
+  try {
+    // Handle different range formats
+    if (range.includes('-')) {
+      // Range format: "1000-2000"
+      const [minStr, maxStr] = range.split('-')
+      const min = extractSalaryValue(minStr)
+      const max = extractSalaryValue(maxStr)
+      return salaryValue >= min && salaryValue <= max
+    } else if (range.includes('+')) {
+      // Minimum format: "1000+"
+      const min = extractSalaryValue(range)
+      return salaryValue >= min
+    } else if (range.toLowerCase().startsWith('up to')) {
+      // Maximum format: "Up to 2000"
+      const max = extractSalaryValue(range)
+      console.log('Max salary filter (Up to):', {
+        max,
+        salaryValue,
+        result: salaryValue <= max,
+      })
+      return salaryValue <= max
+    } else {
+      // Plain number format
+      const max = extractSalaryValue(range)
+      console.log('Max salary filter (plain):', {
+        max,
+        salaryValue,
+        result: salaryValue <= max,
+      })
+      return salaryValue <= max
+    }
+  } catch (error) {
+    console.error('Error processing salary range:', error)
+    return false
   }
-  return false
 }
 
 function applyFilters(item, category, selectedFilters) {
+  if (!item || !category || !selectedFilters) return false
+
   switch (category) {
     case 'skills':
-      return selectedFilters.every((skill) => item.skills.includes(skill))
-    case 'salary':
-      return selectedFilters.some((range) =>
-        isSalaryInRange(item.salary, range)
-      )
+      return selectedFilters.every((skill) => item.skills?.includes(skill))
+    case 'basic_salary':
+      console.log('Filtering salary:', {
+        salary: item.basic_salary,
+        filters: selectedFilters,
+      })
+      return selectedFilters.some((range) => {
+        const result = isSalaryInRange(item.basic_salary, range)
+        console.log('Salary range check:', {
+          range,
+          salary: item.basic_salary,
+          result,
+        })
+        return result
+      })
     case 'title':
       return selectedFilters.some((searchTerm) =>
-        item.title.toLowerCase().includes(searchTerm.toLowerCase())
+        item.job_title?.toLowerCase().includes(searchTerm?.toLowerCase())
       )
+    case 'role':
+      return selectedFilters.some((roleType) => {
+        if (roleType === 'Lead') {
+          return item.role?.toLowerCase().includes('lead')
+        } else if (roleType === 'Non-Lead') {
+          return !item.role?.toLowerCase().includes('lead')
+        }
+        return true
+      })
     case 'department':
-      return selectedFilters.includes(item.department)
-    case 'employment':
-      return selectedFilters.includes(item.employment)
+      return selectedFilters.includes(item.department_name)
     default:
       return true
   }
