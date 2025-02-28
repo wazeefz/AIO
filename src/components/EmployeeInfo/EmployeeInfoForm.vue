@@ -221,13 +221,15 @@ import EducationSection from './EmployeeEducation.vue'
 import ExperienceSection from './JobExperience.vue'
 import CertificationSection from './ProfessionalCert.vue'
 import Assessment from './Assessment.vue'
+import { useResumeStore } from '@/stores/resume'
 
 const router = useRouter()
 const route = useRoute()
+const resumeStore = useResumeStore()
 
-const queryParams = route.query
-console.log('Query Params:', queryParams?.data)
-const props = queryParams?.data ? JSON.parse(queryParams.data) : {}
+const storedResume = resumeStore.getResumeData()
+
+console.log('Stored Resume:', storedResume)
 
 // Form refs and state
 const form = ref(null)
@@ -242,44 +244,44 @@ const showPreview = ref(false)
 // Initialize form data
 const formData = reactive({
   // Personal Info
-  profilePic: props?.profilePic,
-  firstName: props?.firstName,
-  lastName: props?.lastName,
-  email: props?.email,
-  phone: props?.phone,
-  dateOfBirth: props?.dateOfBirth,
-  age: props?.age,
-  gender: props?.gender,
-  maritalStatus: props?.maritalStatus,
+  profilePic: storedResume?.profilePic,
+  firstName: storedResume?.firstName,
+  lastName: storedResume?.lastName,
+  email: storedResume?.email,
+  phone: storedResume?.phone,
+  dateOfBirth: storedResume?.dateOfBirth,
+  age: storedResume?.age,
+  gender: storedResume?.gender,
+  maritalStatus: storedResume?.maritalStatus,
 
   // Location
-  currentCountry: props?.currentCountry,
-  currentCity: props?.currentCity,
-  willingToRelocate: props?.willingToRelocate,
-  relocationPreferences: props?.relocationPreferences,
+  currentCountry: storedResume?.currentCountry,
+  currentCity: storedResume?.currentCity,
+  willingToRelocate: storedResume?.willingToRelocate,
+  relocationPreferences: storedResume?.relocationPreferences,
 
   // Professional Summary
-  summary: props?.summary,
-  experience: props?.experience,
+  summary: storedResume?.summary,
+  experience: storedResume?.experience,
 
   // Skills
-  skills: props?.skills,
+  skills: storedResume?.skills,
 
   // Arrays for sections
-  education: props?.education,
-  experiences: props?.experiences,
-  certifications: props?.certifications,
+  education: storedResume?.education,
+  experiences: storedResume?.experiences,
+  certifications: storedResume?.certifications,
 
   // Job Details
-  jobTitle: props?.jobTitle,
-  jobPosition: props?.jobPosition,
-  department: props?.department,
-  employmentType: props?.employmentType,
-  contractDuration: props?.contractDuration,
-  employmentRemarks: props?.employmentRemarks,
+  jobTitle: storedResume?.jobTitle,
+  jobPosition: storedResume?.jobPosition,
+  department: storedResume?.department,
+  employmentType: storedResume?.employmentType,
+  contractDuration: storedResume?.contractDuration,
+  employmentRemarks: storedResume?.employmentRemarks,
 
   // Salary
-  salary: props?.salary,
+  salary: storedResume?.salary,
 
   // Assessment
   assessment: {
@@ -327,9 +329,6 @@ const expandedPanels = reactive({
   salary: 0,
   assessment: 0,
 })
-
-// console.log('props', props)
-// const formData = props
 
 // Methods for expanding/collapsing sections
 const expandAll = () => {
@@ -630,8 +629,8 @@ onMounted(() => {
   //   }
   // }
 
-  // if (props) {
-  //   Object.assign(formData, props)
+  // if (storedResume) {
+  //   Object.assign(formData, storedResume)
   // }
 
   const container = document.querySelector('.form-container')

@@ -112,9 +112,11 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useResumeStore } from '@/stores/resume'
 import { useResume } from '@/composables/useResume' // Import useResume composable
 
 const router = useRouter()
+const resumeStore = useResumeStore()
 const primaryColor = '#B1A184'
 const activeTab = ref('single')
 const isDragging = ref(false)
@@ -165,12 +167,16 @@ const uploadToBackend = async (file) => {
 
   try {
     const response = await uploadResume(file)
-    console.log('Resume Upload Response:', response)
+
+    // Store in resume store (stringified)
+    resumeStore.setResumeData(response)
+
+    // Update UI state
     uploadedResumeData.value = response
     uploadedFiles.value[0].status = 'done'
   } catch (err) {
     showErrorMessage(
-      error.value || 'Failed to upload resume. Please try again.'
+      err.message || 'Failed to upload resume. Please try again.'
     )
   } finally {
     loading.value = false
@@ -190,7 +196,6 @@ const submitUploads = () => {
 
   router.push({
     path: '/upload-cv/employee-info',
-    query: { data: JSON.stringify(uploadedResumeData.value) },
   })
 }
 </script>
