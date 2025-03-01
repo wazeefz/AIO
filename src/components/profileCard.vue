@@ -220,8 +220,16 @@
           <slot name="modal-actions" :close="closeModal" :result="result">
             <!-- Check if it's being called by addProfileModal -->
             <template v-if="isAddMode">
-              <v-btn color="error" @click="closeModal">Cancel</v-btn>
-              <v-btn color="primary" @click="handleConfirmAdd">Confirm</v-btn>
+              <v-btn color="error" variant="text" @click="closeModal"
+                >Cancel</v-btn
+              >
+              <v-btn
+                color="primary"
+                :disabled="isTeamMember"
+                @click="showAddConfirmation = true"
+              >
+                Add to Team
+              </v-btn>
             </template>
             <!-- Default close button for normal view -->
             <template v-else>
@@ -230,6 +238,119 @@
               </v-btn>
             </template>
           </slot>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Add Team Member Confirmation Dialog -->
+    <v-dialog v-model="showAddConfirmation" max-width="500px" persistent>
+      <v-card>
+        <v-card-title class="text-h6">
+          Confirm Team Member Addition
+        </v-card-title>
+        <v-card-text>
+          <v-alert v-if="addError" type="error" class="mb-4" closable>
+            {{ addError }}
+          </v-alert>
+
+          <p class="mb-4">
+            Add <strong>{{ getDisplayName }}</strong> to
+            <strong>{{
+              projectStore.getCurrentProject?.name || 'the current project'
+            }}</strong
+            >?
+          </p>
+
+          <!-- Role input field - REQUIRED -->
+          <v-text-field
+            v-model="assignmentRole"
+            label="Role in Project*"
+            placeholder="e.g. Developer, Designer, Project Manager"
+            hint="This field is required"
+            :rules="[(v) => !!v || 'Role is required']"
+            class="mb-4"
+            :disabled="addLoading"
+            required
+          ></v-text-field>
+
+          <!-- Optional Assignment Dates -->
+          <v-expansion-panels>
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                Additional Details (Optional)
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <v-row>
+                  <v-col cols="12" sm="6">
+                    <v-menu
+                      v-model="startDateMenu"
+                      :close-on-content-click="false"
+                      transition="scale-transition"
+                      min-width="auto"
+                    >
+                      <template v-slot:activator="{ props }">
+                        <v-text-field
+                          v-model="assignmentStartDate"
+                          label="Start Date"
+                          readonly
+                          v-bind="props"
+                          clearable
+                          @click:clear="assignmentStartDate = null"
+                        ></v-text-field>
+                      </template>
+                      <v-date-picker
+                        v-model="assignmentStartDate"
+                        @update:model-value="startDateMenu = false"
+                      ></v-date-picker>
+                    </v-menu>
+                  </v-col>
+
+                  <v-col cols="12" sm="6">
+                    <v-menu
+                      v-model="endDateMenu"
+                      :close-on-content-click="false"
+                      transition="scale-transition"
+                      min-width="auto"
+                    >
+                      <template v-slot:activator="{ props }">
+                        <v-text-field
+                          v-model="assignmentEndDate"
+                          label="End Date"
+                          readonly
+                          v-bind="props"
+                          clearable
+                          @click:clear="assignmentEndDate = null"
+                        ></v-text-field>
+                      </template>
+                      <v-date-picker
+                        v-model="assignmentEndDate"
+                        @update:model-value="endDateMenu = false"
+                      ></v-date-picker>
+                    </v-menu>
+                  </v-col>
+                </v-row>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="grey"
+            variant="text"
+            @click="cancelAddMember"
+            :disabled="addLoading"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            @click="handleAddTeamMember"
+            :loading="addLoading"
+            :disabled="addLoading || !assignmentRole"
+          >
+            Confirm
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -278,6 +399,14 @@ const emit = defineEmits([
 ])
 const showModal = ref(false)
 const showConfirmDialog = ref(false)
+const showAddConfirmation = ref(false)
+const addLoading = ref(false)
+const addError = ref(null)
+const assignmentRole = ref('')
+const assignmentStartDate = ref(null)
+const assignmentEndDate = ref(null)
+const startDateMenu = ref(false)
+const endDateMenu = ref(false)
 const visibleCount = ref(0) // Initialize to 0 instead of undefined skills length
 const skillsContainer = ref(null)
 const skillChips = ref([])
@@ -442,6 +571,11 @@ const openModal = () => {
 
 const closeModal = () => {
   showModal.value = false
+  showAddConfirmation.value = false
+  addError.value = null
+  assignmentRole.value = ''
+  assignmentStartDate.value = null
+  assignmentEndDate.value = null
   emit('modal-closed')
 }
 
@@ -461,11 +595,11 @@ const confirmAndRemove = () => {
 
 const handleConfirmAdd = () => {
   if (props.isAddMode && !isTeamMember.value) {
-    handleAddTeamMember()
+    showAddConfirmation.value = true
   } else {
     emit('confirm-add-profile', props.result)
+    closeModal()
   }
-  closeModal()
 }
 
 // Add computed property to check if talent is in current project team
@@ -560,16 +694,56 @@ const handleRemoveTeamMember = async () => {
   }
 }
 
+const cancelAddMember = () => {
+  showAddConfirmation.value = false
+  addError.value = null
+  assignmentRole.value = ''
+  assignmentStartDate.value = null
+  assignmentEndDate.value = null
+}
+
 const handleAddTeamMember = async () => {
   try {
+    // Validate role field
+    if (!assignmentRole.value) {
+      addError.value = 'Role is required'
+      return
+    }
+
+    addLoading.value = true
+    addError.value = null
+
     const projectId = projectStore.getCurrentProject?.project_id
     if (!projectId) throw new Error('No current project selected')
 
-    await projectStore.addTeamMembers(projectId, [props.result.talent_id])
+    // Prepare the assignment data with the required role
+    const assignmentData = {
+      project_id: projectId,
+      talent_id: props.result.talent_id,
+      role: assignmentRole.value,
+    }
+
+    // Add optional dates if provided
+    if (assignmentStartDate.value) {
+      assignmentData.assignment_start_date = assignmentStartDate.value
+    }
+
+    if (assignmentEndDate.value) {
+      assignmentData.assignment_end_date = assignmentEndDate.value
+    }
+
+    // Use createProjectAssignment method directly to pass all assignment data
+    await projectStore.createProjectAssignment(assignmentData)
+
+    showAddConfirmation.value = false
     emit('confirm-add-profile', props.result)
     closeModal()
   } catch (error) {
+    addError.value =
+      error.message || 'Failed to add team member. Please try again.'
     console.error('Error adding team member:', error)
+  } finally {
+    addLoading.value = false
   }
 }
 </script>

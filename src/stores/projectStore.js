@@ -249,8 +249,9 @@ export const useProjectManagementStore = defineStore('projectManagement', {
      * Add multiple team members to a project
      * @param {number} projectId - The project ID
      * @param {number[]} memberIds - Array of talent IDs to add
+     * @param {string} [defaultRole='Team Member'] - Default role to assign (prevents NULL violations)
      */
-    async addTeamMembers(projectId, memberIds) {
+    async addTeamMembers(projectId, memberIds, defaultRole = 'Team Member') {
       if (!projectId || !memberIds?.length) {
         this.error = 'Invalid project ID or member IDs'
         return
@@ -260,10 +261,17 @@ export const useProjectManagementStore = defineStore('projectManagement', {
         this.loading = true
         this.error = null
 
-        await api.post(
-          `/project-assignments/batch-assign/${projectId}`,
-          memberIds
-        )
+        // Add members one by one using the available endpoint
+        const assignmentPromises = memberIds.map((talentId) => {
+          const assignment = {
+            project_id: projectId,
+            talent_id: talentId,
+            role: defaultRole, // Use default role to prevent NOT NULL violations
+          }
+          return api.post('/project-assignments', assignment)
+        })
+
+        await Promise.all(assignmentPromises)
         await this.setCurrentProject(projectId)
       } catch (error) {
         this.error = error.message
