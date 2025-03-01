@@ -62,18 +62,19 @@
 
             <!-- Team Members Section -->
             <div class="team-members-section">
-              <h2>
+              <h2 class="mb-4">
                 Team Members ({{ filterStore.filteredTeamMembers.length }})
               </h2>
 
               <!-- ProfileCard Component -->
               <div class="scrollable-cards-container">
-                <v-row class="gap-4">
+                <v-row>
                   <v-col
                     v-for="result in filterStore.filteredTeamMembers"
                     :key="result.id"
                     cols="12"
                     sm="6"
+                    class="pa-2"
                   >
                     <ProfileCard
                       :result="result"
@@ -280,32 +281,54 @@ const closeFilterDialog = () => {
 
 <style scoped>
 .team-members-section {
-  height: calc(
-    100vh - 300px
-  ); /* Adjust this value based on your header/navigation height */
   display: flex;
   flex-direction: column;
+  height: calc(100vh - 350px);
+  min-height: 400px;
+  margin-top: 16px;
+  position: relative;
+  padding-bottom: 24px;
 }
 
 .scrollable-cards-container {
   flex: 1;
   overflow-y: auto;
-  padding-right: 16px; /* Add some padding for the scrollbar */
+  padding: 8px;
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 8px;
+  bottom: 24px;
+  margin-bottom: 2px;
+}
+
+.scrollable-cards-container .v-row {
+  margin: -8px;
+  min-height: min-content;
+  height: auto;
+  padding-bottom: 2px;
+}
+
+.scrollable-cards-container .v-col {
+  padding: 10px;
 }
 
 /* Custom scrollbar styling */
 .scrollable-cards-container::-webkit-scrollbar {
   width: 8px;
+  margin-right: 8px;
 }
 
 .scrollable-cards-container::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 4px;
+  margin-bottom: 7px;
 }
 
 .scrollable-cards-container::-webkit-scrollbar-thumb {
   background: #888;
   border-radius: 4px;
+  margin-bottom: 4px;
 }
 
 .scrollable-cards-container::-webkit-scrollbar-thumb:hover {
