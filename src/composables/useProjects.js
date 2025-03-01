@@ -1,3 +1,4 @@
+// useProjects.js
 import { defineStore } from 'pinia'
 
 const API_URL = 'http://localhost:8000'
@@ -25,11 +26,16 @@ export const useProjects = defineStore('project', {
       return [...starred, ...unstarred]
     },
     formatCurrency: () => (value) => {
-      if (!value && value !== 0) return '$0.00'
-      return new Intl.NumberFormat('en-US', {
+      if (!value && value !== 0) return 'MYR0.00'
+
+      const formatter = new Intl.NumberFormat('en-MY', {
+        // or 'en-US'
         style: 'currency',
-        currency: 'USD',
-      }).format(value)
+        currency: 'MYR',
+        currencyDisplay: 'code', // or 'symbol', 'name'
+      })
+
+      return formatter.format(value).replace('MYR', 'MYR ') // Add space after code
     },
   },
 
@@ -50,7 +56,7 @@ export const useProjects = defineStore('project', {
         this.projects = apiProjects.map((project) => ({
           ...project,
           id: project.project_id,
-          cvCount: project.cv_count || 0,
+          teamSize: project.team_size || 0, // Use team_size
           starred: project.starred || false,
         }))
 
@@ -75,7 +81,7 @@ export const useProjects = defineStore('project', {
           name: updatedProject.name,
           project_description: updatedProject.project_description,
           starred: updatedProject.starred,
-          cv_count: updatedProject.cvCount,
+          team_size: updatedProject.teamSize, // Use team_size
           progress: updatedProject.progress,
           status: updatedProject.status ?? undefined,
           budget: updatedProject.budget ?? undefined,
@@ -110,7 +116,7 @@ export const useProjects = defineStore('project', {
             ...this.projects[index],
             ...responseData,
             id: responseData.project_id,
-            cvCount: responseData.cv_count,
+            teamSize: responseData.team_size, // Use team_size
           }
         }
 
