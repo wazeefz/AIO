@@ -71,8 +71,8 @@
         </div>
       </v-col>
       <v-col>
-        <!-- Role Filter -->
-        <div class="mb-4">
+        <!-- Role Filter - Hide in modal context -->
+        <div class="mb-4" v-if="!isModal">
           <h4>Role</h4>
           <v-select
             v-model="selectedRole"
@@ -264,9 +264,7 @@ const applyFilters = () => {
       if (tempFilters.value.title) {
         filterStore.addModalFilter('title', tempFilters.value.title)
       }
-      if (tempFilters.value.role) {
-        filterStore.addModalFilter('role', tempFilters.value.role)
-      }
+      // Skip adding role filter in modal mode
     } else {
       filterStore.clearTeamFilters('all')
 
@@ -316,7 +314,12 @@ const clearFilters = () => {
   salaryMax.value = ''
   salaryError.value = ''
   title.value = ''
-  selectedRole.value = 'All'
+
+  // Only reset role when not in modal mode
+  if (!props.isModal) {
+    selectedRole.value = 'All'
+  }
+
   selectedDepartments.value = []
   selectedEmployment.value = []
 
@@ -325,7 +328,7 @@ const clearFilters = () => {
     skills: [],
     basic_salary: '',
     title: '',
-    role: '',
+    role: props.isModal ? '' : 'All',
     department: [],
     employment: [],
   }
@@ -383,6 +386,11 @@ onMounted(async () => {
     title.value = currentFilters.title?.[0] || ''
     selectedDepartments.value = currentFilters.department || []
     selectedEmployment.value = currentFilters.employment || []
+
+    // Only set role selection when not in modal mode
+    if (!props.isModal) {
+      selectedRole.value = currentFilters.role?.[0] || 'All'
+    }
 
     if (currentFilters.basic_salary?.length) {
       const { min, max } = parseSalaryRange(currentFilters.basic_salary[0])
