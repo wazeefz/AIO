@@ -148,9 +148,10 @@ const confirmAddProfile = async (employee) => {
     error.value = null
 
     // Add the team member using the store
-    await projectStore.addTeamMembers(props.currentProject.project_id, [
-      employee.talent_id,
-    ])
+    await projectStore.createProjectAssignment(
+      props.currentProject.project_id,
+      [employee.talent_id]
+    )
 
     // Emit the event with the added employee
     emit('profiles-added', [employee])
