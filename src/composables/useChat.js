@@ -186,6 +186,12 @@ export function useChat(userId) {
       )
       currentChat.value.messages.push(userMessage.data)
 
+      // Add a temporary loading message for the assistant
+      currentChat.value.messages.push({
+        message_text: '', // Empty message to show loading animation
+        sender: 'assistant',
+      })
+
       // Get AI response
       const aiResponse = await axios.get(
         `http://127.0.0.1:8000/chat/ask-question/`,
@@ -194,7 +200,7 @@ export function useChat(userId) {
         }
       )
 
-      // Send AI message
+      // Replace the loading message with the actual response
       const aiMessage = await axios.post(
         `http://127.0.0.1:8000/chat/${userId}/${currentChat.value.id}/message`,
         {
@@ -205,7 +211,8 @@ export function useChat(userId) {
           sender: 'assistant',
         }
       )
-      currentChat.value.messages.push(aiMessage.data)
+      currentChat.value.messages[currentChat.value.messages.length - 1] =
+        aiMessage.data
 
       await loadUserChats()
     } catch (error) {
@@ -256,6 +263,14 @@ export function useChat(userId) {
             firstMessage.slice(0, 30) + (firstMessage.length > 30 ? '...' : '')
         }
       }
+    },
+    () => {
+      setTimeout(() => {
+        if (messagesContainer.value) {
+          messagesContainer.value.scrollTop =
+            messagesContainer.value.scrollHeight
+        }
+      }, 100)
     },
     { deep: true }
   )

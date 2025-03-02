@@ -24,8 +24,20 @@
         <div class="avatar">🤖</div>
       </template>
       <div class="text">
-        <div v-html="formattedContent"></div>
-        <!-- Added sources display -->
+        <!-- Show loading animation if the message is empty and isLoading is true -->
+        <div
+          v-if="isLoading && !message.message_text"
+          class="loading-animation"
+        >
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <!-- Show the actual message content when loaded -->
+        <div v-else v-html="formattedContent"></div>
+        <!-- Sources display -->
         <div v-if="message.sources && message.sources.length" class="sources">
           <span class="sources-label">Sources:</span>
           <span class="sources-list">{{ message.sources.join(', ') }}</span>
@@ -51,6 +63,7 @@ import DOMPurify from 'dompurify'
 
 const props = defineProps({
   message: Object,
+  isLoading: Boolean, // Add isLoading prop
 })
 
 const formattedContent = computed(() => {
@@ -140,6 +153,60 @@ const copyMessage = () => {
   flex: 1;
   line-height: 1.6;
   padding: 0 10px;
+}
+
+/* Loading animation */
+.loading-animation {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px; /* Space between dots */
+  padding: 10px;
+}
+
+.dot {
+  width: 10px; /* Slightly larger dots */
+  height: 10px;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out;
+}
+
+/* Capybara-inspired color shades */
+.dot:nth-child(1) {
+  background-color: #4a4039; /* Dark brown */
+  animation-delay: 0s;
+}
+
+.dot:nth-child(2) {
+  background-color: #8c764e; /* Light brown */
+  animation-delay: -0.16s;
+}
+
+.dot:nth-child(3) {
+  background-color: #bd955c; /* Beige */
+  animation-delay: -0.32s;
+}
+
+.dot:nth-child(4) {
+  background-color: #d1c7b8; /* Light beige */
+  animation-delay: -0.48s;
+}
+
+.dot:nth-child(5) {
+  background-color: #eae3d6; /* Off-white */
+  animation-delay: -0.64s;
+}
+
+/* Bounce animation */
+@keyframes bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
 }
 
 .message.user .text {
