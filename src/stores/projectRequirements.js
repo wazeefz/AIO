@@ -23,7 +23,7 @@ export const useProjectRequirementsStore = defineStore('projectRequirements', {
       try {
         const requirementsString = this.formatRequirementsString(formData)
         const response = await fetch(
-          `http://127.0.0.1:8000/rag/assemble-team?project_requirements=${encodeURIComponent(
+          `http://127.0.0.1:8000/rag/assemble-team/kai?project_requirements=${encodeURIComponent(
             requirementsString
           )}`
         )
