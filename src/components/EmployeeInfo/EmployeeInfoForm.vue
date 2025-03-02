@@ -208,7 +208,7 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import HeaderSection from './HeaderSection.vue'
 import SidebarSection from './Sidebar.vue'
 import PersonalInfoSection from './PersonalInfo.vue'
@@ -221,8 +221,15 @@ import EducationSection from './EmployeeEducation.vue'
 import ExperienceSection from './JobExperience.vue'
 import CertificationSection from './ProfessionalCert.vue'
 import Assessment from './Assessment.vue'
+import { useResumeStore } from '@/stores/resume'
 
 const router = useRouter()
+const route = useRoute()
+const resumeStore = useResumeStore()
+
+const storedResume = resumeStore.getResumeData()
+
+console.log('Stored Resume:', storedResume)
 
 // Form refs and state
 const form = ref(null)
@@ -237,44 +244,44 @@ const showPreview = ref(false)
 // Initialize form data
 const formData = reactive({
   // Personal Info
-  profilePic: '',
-  firstName: '',
-  lastName: '',
-  email: '',
-  phone: '',
-  dateOfBirth: '',
-  age: '',
-  gender: '',
-  maritalStatus: '',
+  profilePic: storedResume?.profilePic,
+  firstName: storedResume?.firstName,
+  lastName: storedResume?.lastName,
+  email: storedResume?.email,
+  phone: storedResume?.phone,
+  dateOfBirth: storedResume?.dateOfBirth,
+  age: storedResume?.age,
+  gender: storedResume?.gender,
+  maritalStatus: storedResume?.maritalStatus,
 
   // Location
-  currentCountry: '',
-  currentCity: '',
-  willingToRelocate: false,
-  relocationPreferences: [],
+  currentCountry: storedResume?.currentCountry,
+  currentCity: storedResume?.currentCity,
+  willingToRelocate: storedResume?.willingToRelocate,
+  relocationPreferences: storedResume?.relocationPreferences,
 
   // Professional Summary
-  summary: '',
-  experience: '',
+  summary: storedResume?.summary,
+  experience: storedResume?.experience,
 
   // Skills
-  skills: [],
+  skills: storedResume?.skills,
 
   // Arrays for sections
-  education: [],
-  experiences: [],
-  certifications: [],
+  education: storedResume?.education,
+  experiences: storedResume?.experiences,
+  certifications: storedResume?.certifications,
 
   // Job Details
-  jobTitle: '',
-  jobPosition: '',
-  department: '',
-  employmentType: 'fullTime',
-  contractDuration: '',
-  employmentRemarks: '',
+  jobTitle: storedResume?.jobTitle,
+  jobPosition: storedResume?.jobPosition,
+  department: storedResume?.department,
+  employmentType: storedResume?.employmentType,
+  contractDuration: storedResume?.contractDuration,
+  employmentRemarks: storedResume?.employmentRemarks,
 
   // Salary
-  salary: '',
+  salary: storedResume?.salary,
 
   // Assessment
   assessment: {
@@ -399,11 +406,11 @@ const completionProgress = computed(() => {
   }
 
   // Check assessment
-  if (formData.assessment) {
+  if (formData?.assessment) {
     // Check interview ratings
     total += 2 // Two interview ratings
-    if (formData.assessment.interview[0].rating > 0) completed++
-    if (formData.assessment.interview[1].rating > 0) completed++
+    if (formData?.assessment?.interview[0]?.rating > 0) completed++
+    if (formData?.assessment?.interview[1]?.rating > 0) completed++
 
     // Check projects
     total++
@@ -612,15 +619,19 @@ const handleSubmit = async () => {
 
 // Lifecycle hooks
 onMounted(() => {
-  const savedData = localStorage.getItem('employeeFormData')
-  if (savedData) {
-    try {
-      const parsedData = JSON.parse(savedData)
-      Object.assign(formData, parsedData)
-    } catch (error) {
-      console.error('Error loading saved form data:', error)
-    }
-  }
+  // const savedData = localStorage.getItem('employeeFormData')
+  // if (savedData) {
+  //   try {
+  //     const parsedData = JSON.parse(savedData)
+  //     Object.assign(formData, parsedData)
+  //   } catch (error) {
+  //     console.error('Error loading saved form data:', error)
+  //   }
+  // }
+
+  // if (storedResume) {
+  //   Object.assign(formData, storedResume)
+  // }
 
   const container = document.querySelector('.form-container')
   if (container) {
