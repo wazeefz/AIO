@@ -1,9 +1,13 @@
 <template>
-  <v-dialog v-model="localShowModal" max-width="800px">
+  <v-dialog
+    v-model="localShowModal"
+    max-width="800px"
+    @update:model-value="handleDialogUpdate"
+  >
     <v-card>
       <v-card-title class="headline d-flex justify-space-between align-center">
         <span>Add Team Members to {{ currentProject.projectName }}</span>
-        <v-btn icon @click="closeModal">
+        <v-btn icon @click="closeModal" variant="plain">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-card-title>
@@ -11,16 +15,22 @@
       <v-card-text>
         <!-- Filter Button -->
         <div class="d-flex justify-end mb-4">
-          <v-card
-            class="d-inline-flex align-center"
-            rounded="pill"
-            color="#EAE3D6"
-            elevation="0"
-          >
-            <v-btn icon @click="showFilterDialog = true">
-              <v-icon color="#292D32">mdi-tune-vertical</v-icon>
-            </v-btn>
-          </v-card>
+          <v-row>
+            <!-- Results -->
+            <v-col cols="12" md="8">
+              <h2>Active Filters</h2>
+              <!-- Chips component -->
+              <base-chips
+                :chips="filterChips"
+                :closable="true"
+                :use-color-mapping="true"
+                @remove-chip="handleFilterRemoval"
+              />
+            </v-col>
+          </v-row>
+          <v-btn color="#EAE3D6" icon @click="showFilterDialog = true">
+            <v-icon color="#292D32">mdi-tune-vertical</v-icon>
+          </v-btn>
         </div>
 
         <!-- Filter Dialog -->
@@ -35,19 +45,6 @@
         </v-dialog>
 
         <div class="mt-4">
-          <v-row>
-            <!-- Results -->
-            <v-col cols="12" md="8">
-              <h2>Active Filters</h2>
-              <!-- Chips component -->
-              <base-chips
-                :chips="filterChips"
-                :closable="true"
-                :use-color-mapping="true"
-                @remove-chip="handleFilterRemoval"
-              />
-            </v-col>
-          </v-row>
           <h3 class="text-h6 mb-3">
             Available Employees ({{ availableEmployees.length }})
           </h3>
@@ -61,51 +58,14 @@
               <ProfileCard
                 :result="employee"
                 :selectable="true"
+                :is-add-mode="true"
                 @click="showDetail(employee)"
+                @modal-closed="closeDetailModal"
+                @confirm-add-profile="confirmAddProfile"
               />
             </v-col>
           </v-row>
         </div>
-
-        <!-- Detailed Profile Card Modal -->
-        <v-dialog v-model="showDetailModal" max-width="600px" persistent>
-          <v-card>
-            <v-card-title
-              class="headline d-flex justify-space-between align-center"
-            >
-              <span>{{ selectedEmployee?.name }}</span>
-              <v-btn icon @click="closeDetailModal">
-                <v-icon>mdi-close</v-icon>
-              </v-btn>
-            </v-card-title>
-
-            <v-card-text>
-              <p><strong>Title:</strong> {{ selectedEmployee?.title }}</p>
-              <p>
-                <strong>Department:</strong> {{ selectedEmployee?.department }}
-              </p>
-              <p><strong>Salary:</strong> {{ selectedEmployee?.salary }}</p>
-              <p>
-                <strong>Employment Type:</strong>
-                {{ selectedEmployee?.employment }}
-              </p>
-              <p><strong>Skills:</strong></p>
-              <v-chip
-                v-for="skill in selectedEmployee?.skills"
-                :key="skill"
-                class="mr-2 mb-2"
-              >
-                {{ skill }}
-              </v-chip>
-            </v-card-text>
-
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn color="error" @click="closeDetailModal">Cancel</v-btn>
-              <v-btn color="primary" @click="confirmAddProfile">Confirm</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -157,31 +117,14 @@ const availableEmployees = computed(() => {
   }
 })
 
-const closeModal = () => {
-  localShowModal.value = false
-  selectedProfiles.value = []
-  filterStore.clearModalFilters() // Clear modal filters when closing
-  emit('update:showModal', false)
-}
-
-const showDetail = (employee) => {
-  selectedEmployee.value = employee
-  showDetailModal.value = true
-}
-
-const closeDetailModal = () => {
-  showDetailModal.value = false
-  selectedEmployee.value = null
-}
-
-const confirmAddProfile = () => {
-  selectedProfiles.value.push(selectedEmployee.value)
-  emit('profiles-added', selectedProfiles.value)
-  closeDetailModal()
-}
-
 const handleFiltersApplied = () => {
   emit('filter-chips-updated', filterStore.activeModalFilters)
+}
+
+const confirmAddProfile = (employee) => {
+  // Just emit the single employee being added
+  emit('profiles-added', [employee])
+  closeDetailModal()
 }
 
 const filterChips = computed(() => {
@@ -205,23 +148,55 @@ const closeFilterDialog = () => {
   showFilterDialog.value = false
 }
 
-watch(
-  () => props.showModal,
-  (newVal) => {
-    localShowModal.value = newVal
-    if (!newVal) {
-      selectedProfiles.value = []
-      filterStore.clearModalFilters() // Clear filters when modal is closed
-    }
+// Add this new function to handle dialog updates to prevent it from not opening if you dont click close button
+const handleDialogUpdate = (value) => {
+  if (!value) {
+    // If the dialog is being closed
+    cleanupModal()
   }
-)
+}
+
+// Create a cleanup function to handle all cleanup operations
+const cleanupModal = () => {
+  selectedProfiles.value = []
+  filterStore.clearModalFilters()
+  showFilterDialog.value = false // Make sure filter dialog is closed
+  showDetailModal.value = false // Make sure detail modal is closed
+  selectedEmployee.value = null
+  emit('update:showModal', false)
+}
+
+// Modify your existing closeModal function to use cleanupModal
+const closeModal = () => {
+  cleanupModal()
+}
+
+const closeDetailModal = () => {
+  showDetailModal.value = false
+  selectedEmployee.value = null
+}
+
+const showDetail = (employee) => {
+  selectedEmployee.value = employee
+  showDetailModal.value = true
+}
 
 watch(
-  () => localShowModal.value,
-  (newVal) => {
-    if (!newVal) {
-      selectedProfiles.value = []
-      filterStore.clearModalFilters() // Clear filters when modal is closed
+  [() => props.showModal, () => localShowModal.value],
+  ([newShowModal, newLocalShowModal], [oldShowModal, oldLocalShowModal]) => {
+    // Only sync from props to local when props changes
+    if (newShowModal !== oldShowModal) {
+      localShowModal.value = newShowModal
+    }
+
+    // Only cleanup when actually closing (both values transitioning to false)
+    if (
+      oldShowModal &&
+      oldLocalShowModal &&
+      !newShowModal &&
+      !newLocalShowModal
+    ) {
+      cleanupModal()
     }
   }
 )

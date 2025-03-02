@@ -11,7 +11,7 @@
     >
     </v-btn>
 
-    <!-- Confirmation Dialog -->
+    <!-- Confirmation Dialog for Removal-->
     <v-dialog v-model="showConfirmDialog" max-width="300">
       <v-card>
         <v-card-title class="text-h6"> Confirm Removal </v-card-title>
@@ -34,40 +34,90 @@
       rounded="lg"
     >
       <v-card-text class="pa-6">
-        <!-- Card Header -->
-        <slot name="card-header" :result="result">
-          <v-card-title class="text-h5 font-weight-medium pa-0 text-white mb-1">
-            {{ result.name }}
-          </v-card-title>
-          <v-card-subtitle class="pa-0 text-white mb-2">
-            {{ result.title }}
-          </v-card-subtitle>
-          <v-card-subtitle class="pa-0 text-white mb-2">
-            {{ result.department }}
-          </v-card-subtitle>
-          <v-card-subtitle class="pa-0 text-white mb-4">
-            {{ result.salary }}
-          </v-card-subtitle>
-          <v-card-subtitle class="pa-0 text-white mb-4">
-            {{ result.employment }}
-          </v-card-subtitle>
-        </slot>
-
-        <!-- Skills Slot -->
-        <slot name="skills" :skills="skillChips">
-          <div class="d-flex flex-wrap gap-2">
-            <v-chip
-              v-for="skill in skillChips"
-              :key="skill.label"
-              variant="elevated"
-              class="mr-2 mb-2"
-              color="#2d2d2d"
-              text-color="white"
-            >
-              {{ skill.label }}
-            </v-chip>
+        <div class="d-flex">
+          <!-- Team Lead Badge -->
+          <div v-if="result.isTeamLead" class="team-lead-badge">
+            <v-tooltip text="Team Lead">
+              <template v-slot:activator="{ props }">
+                <v-icon
+                  v-bind="props"
+                  icon="mdi-account-multiple"
+                  color="white"
+                  size="20"
+                ></v-icon>
+              </template>
+            </v-tooltip>
           </div>
-        </slot>
+          <!-- Profile Image -->
+          <div class="profile-image-container mr-4">
+            <v-avatar size="80" :rounded="true" class="rounded-lg">
+              <v-img
+                :src="profileImageUrl"
+                :alt="result.name"
+                cover
+                class="profile-image"
+              ></v-img>
+            </v-avatar>
+          </div>
+
+          <!-- Profile Info -->
+          <div class="profile-info">
+            <slot name="card-header" :result="result">
+              <div class="text-h5 font-weight-medium text-white mt-1">
+                {{ result.name }}
+              </div>
+              <v-divider
+                class="my-4"
+                bg-color="white"
+                thickness="2"
+              ></v-divider>
+              <div class="text-subtitle-1 text-white mb-2">
+                {{ result.title }}
+              </div>
+              <div class="d-flex align-center mb-2">
+                <v-icon size="small" color="white" class="mr-1"
+                  >mdi-currency-usd</v-icon
+                >
+                <span class="text-white">{{ result.salary }} </span>
+              </div>
+              <div class="text-subtitle-2 text-white mb-4">
+                Department: {{ result.department }}
+              </div>
+              <!-- Skills Slot -->
+              <slot name="skills" :skills="skillChips">
+                <div
+                  ref="skillsContainer"
+                  class="d-flex flex-wrap gap-2 skills-container"
+                >
+                  <template
+                    v-for="(skill, index) in visibleSkills"
+                    :key="skill.label"
+                  >
+                    <v-chip
+                      ref="skillChips"
+                      variant="elevated"
+                      class="mr-2 mb-2 skill-chip"
+                      color="#2d2d2d"
+                      text-color="white"
+                    >
+                      {{ skill.label }}
+                    </v-chip>
+                  </template>
+                  <v-chip
+                    v-if="hiddenSkillsCount > 0"
+                    ref="overflowChip"
+                    variant="elevated"
+                    class="mr-2 mb-2 overflow-chip"
+                    color="#2d2d2d"
+                    text-color="white"
+                  >
+                    +{{ hiddenSkillsCount }}
+                  </v-chip>
+                </div>
+              </slot>
+            </slot>
+          </div>
+        </div>
       </v-card-text>
     </v-card>
 
@@ -77,15 +127,30 @@
         <!-- Modal Header Slot -->
         <slot name="modal-header" :result="result" :close="closeModal">
           <div class="d-flex align-center justify-space-between pa-4">
+            <!-- Profile Image -->
+            <div class="profile-image-container">
+              <v-avatar size="80" :rounded="true" class="rounded-lg">
+                <v-img
+                  :src="profileImageUrl"
+                  :alt="result.name"
+                  cover
+                  class="profile-image"
+                ></v-img>
+              </v-avatar>
+            </div>
+            <div class="mb-14">
+              <v-btn
+                icon="mdi-close"
+                variant="text"
+                size="small"
+                @click="closeModal"
+              ></v-btn>
+            </div>
+          </div>
+          <div class="d-flex align-center justify-space-between pl-4">
             <v-card-title class="text-h5 pa-0">
               {{ result.name }}
             </v-card-title>
-            <v-btn
-              icon="mdi-close"
-              variant="text"
-              size="small"
-              @click="closeModal"
-            ></v-btn>
           </div>
         </slot>
 
@@ -105,7 +170,7 @@
               <p>{{ result.salary }}</p>
 
               <h3 class="text-h6 mt-4">Skills</h3>
-              <base-chips :chips="skillChips" :use-color-mapping="true" />
+              <base-chips :chips="skillChipsData" :use-color-mapping="true" />
             </div>
           </slot>
         </v-card-text>
@@ -113,10 +178,17 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <slot name="modal-actions" :close="closeModal" :result="result">
-            <!-- Default actions -->
-            <v-btn color="primary" variant="text" @click="closeModal">
-              Close
-            </v-btn>
+            <!-- Check if it's being called by addProfileModal -->
+            <template v-if="isAddMode">
+              <v-btn color="error" @click="closeModal">Cancel</v-btn>
+              <v-btn color="primary" @click="handleConfirmAdd">Confirm</v-btn>
+            </template>
+            <!-- Default close button for normal view -->
+            <template v-else>
+              <v-btn color="primary" variant="text" @click="closeModal">
+                Close
+              </v-btn>
+            </template>
           </slot>
         </v-card-actions>
       </v-card>
@@ -126,7 +198,9 @@
 
 <script setup>
 import BaseChips from '@/components/Chips.vue'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
+// Import a default placeholder image stored locally
+import placeholderImage from '@/assets/profilePic/placeholder.png'
 
 const props = defineProps({
   result: {
@@ -137,17 +211,173 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  selectable: {
+    type: Boolean,
+    default: false,
+  },
+  isAddMode: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['modal-opened', 'modal-closed', 'remove-item'])
+const emit = defineEmits([
+  'modal-opened',
+  'modal-closed',
+  'remove-profile',
+  'confirm-add-profile',
+])
 const showModal = ref(false)
 const showConfirmDialog = ref(false)
+const visibleCount = ref(props.result.skills.length)
+const skillsContainer = ref(null)
+const skillChips = ref([])
+const resizeObserver = ref(null)
 
-const skillChips = computed(() => {
+// Data for skills is here
+const skillChipsData = computed(() => {
   return props.result.skills.map((skill) => ({
     label: skill,
     category: 'skills',
   }))
+})
+
+const visibleSkills = computed(() => {
+  return skillChipsData.value.slice(0, visibleCount.value)
+})
+
+const hiddenSkillsCount = computed(() => {
+  return Math.max(0, skillChipsData.value.length - visibleCount.value)
+})
+
+const calculateVisibleChips = async () => {
+  if (!skillsContainer.value) return
+
+  const containerWidth = skillsContainer.value.offsetWidth
+  const chipGap = 8
+  const overflowChipWidth = 60
+
+  // Always start by showing all chips
+  visibleCount.value = skillChipsData.value.length
+  await nextTick()
+
+  // Get all chip elements
+  const chipElements = Array.from(
+    skillsContainer.value.querySelectorAll('.skill-chip')
+  )
+
+  // Early return if no chips
+  if (chipElements.length === 0) return
+
+  // Calculate total width needed for each chip
+  const chipWidths = chipElements.map((chip) => chip.offsetWidth + chipGap)
+  const totalWidth = chipWidths.reduce((sum, width) => sum + width, 0)
+
+  // If all chips fit, show them all
+  if (totalWidth <= containerWidth) {
+    visibleCount.value = chipElements.length
+    return
+  }
+
+  // Otherwise, calculate how many fit with overflow chip
+  let availableWidth = containerWidth - overflowChipWidth
+  let totalUsedWidth = 0
+  let visibleChips = 0
+
+  for (const chipWidth of chipWidths) {
+    if (totalUsedWidth + chipWidth > availableWidth) break
+    totalUsedWidth += chipWidth
+    visibleChips++
+  }
+
+  // Ensure at least one chip is visible
+  visibleCount.value = Math.max(1, visibleChips)
+}
+
+// Initialize resize observer with debounce
+onMounted(() => {
+  if (skillsContainer.value) {
+    let timeoutId = null
+    resizeObserver.value = new ResizeObserver(() => {
+      // Clear any existing timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+      // Set new timeout
+      timeoutId = setTimeout(() => {
+        // Reset visible count before recalculating
+        visibleCount.value = skillChipsData.value.length
+        nextTick(() => {
+          calculateVisibleChips()
+        })
+      }, 100) // Debounce time of 100ms
+    })
+    resizeObserver.value.observe(skillsContainer.value)
+  }
+  calculateVisibleChips()
+})
+
+// Watch for container width changes
+watch(
+  () => skillsContainer.value?.offsetWidth,
+  (newWidth, oldWidth) => {
+    if (skillsContainer.value && newWidth !== oldWidth) {
+      // Reset visible count before recalculating
+      visibleCount.value = skillChipsData.value.length
+      nextTick(() => {
+        calculateVisibleChips()
+      })
+    }
+  }
+)
+
+// Watch for changes in skills data
+watch(
+  () => props.result.skills,
+  () => {
+    // Reset visible count before recalculating
+    visibleCount.value = skillChipsData.value.length
+    nextTick(() => {
+      calculateVisibleChips()
+    })
+  },
+  { deep: true }
+)
+
+// Local method to get profile picture
+const profileImageUrl = computed(() => {
+  try {
+    console.log('Profile Picture Prop:', props.result.profilePicture) // Debugging: Log the prop value
+
+    // If profilePicture is undefined or null, return the placeholder
+    if (!props.result.profilePicture) {
+      console.warn('Profile picture is undefined or null. Using placeholder.')
+      return placeholderImage
+    }
+
+    // If it's a URL (starts with http/https)
+    if (props.result.profilePicture.match(/^https?:\/\//)) {
+      console.log('Profile picture is a URL:', props.result.profilePicture)
+      return props.result.profilePicture
+    }
+
+    // For local assets, use the direct import
+    try {
+      const imagePath = `../assets/profilePic/${props.result.profilePicture}`
+      console.log('Attempting to load local image:', imagePath) // Debugging: Log the image path
+
+      const imageUrl = new URL(imagePath, import.meta.url).href
+      console.log('Local image URL:', imageUrl) // Debugging: Log the generated URL
+
+      return imageUrl
+    } catch (error) {
+      console.error('Error loading local image:', error)
+      return placeholderImage
+    }
+  } catch (error) {
+    console.error('Error in profileImageUrl:', error)
+    return placeholderImage
+  }
 })
 
 const openModal = () => {
@@ -167,7 +397,12 @@ const confirmRemove = (event) => {
 
 const confirmAndRemove = () => {
   showConfirmDialog.value = false
-  emit('remove-profile', props.result.id) // Emit the memberId to remove
+  emit('remove-profile', props.result.id)
+}
+
+const handleConfirmAdd = () => {
+  emit('confirm-add-profile', props.result)
+  closeModal()
 }
 </script>
 
@@ -274,5 +509,38 @@ const confirmAndRemove = () => {
 
 .gap-2 {
   gap: 0.5rem;
+}
+
+.skills-container {
+  max-width: 100%;
+  min-height: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skill-chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.overflow-chip {
+  min-width: 45px;
+  text-align: center;
+}
+
+/*For profile picture rounding */
+.rounded-lg {
+  border-radius: 16px !important;
+}
+
+.team-lead-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 4px;
+  border-radius: 4px;
 }
 </style>

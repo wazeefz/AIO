@@ -110,7 +110,7 @@ export const useFilterStore = defineStore('filter', {
       }
     },
 
-    clearTeamFilters(category) {
+    clearTeamFilters(category = null) {
       if (category) {
         this.teamFilters[category] = []
       } else {
@@ -120,13 +120,21 @@ export const useFilterStore = defineStore('filter', {
       }
     },
 
-    clearModalFilters(category) {
+    clearModalFilters(category = null) {
       if (category) {
         this.modalFilters[category] = []
       } else {
         Object.keys(this.modalFilters).forEach((key) => {
           this.modalFilters[key] = []
         })
+      }
+    },
+
+    clearFilters(type = 'team', category = null) {
+      if (type === 'team') {
+        this.clearTeamFilters(category)
+      } else if (type === 'modal') {
+        this.clearModalFilters(category)
       }
     },
   },

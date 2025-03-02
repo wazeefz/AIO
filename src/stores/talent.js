@@ -1,166 +1,104 @@
 import { defineStore } from 'pinia'
-import crossfilter from 'crossfilter2'
+
+const API_URL = 'http://localhost:8000'
 
 export const useTalentStore = defineStore('talent', {
-  state: () => {
-    const talents = [
-      {
-        id: 1,
-        name: 'Damaris',
-        last: 'Taib',
-        email: 'd@gmail.com',
-        phone: '123456789',
-        title: 'Software Engineer',
-        employment: 'fulltime',
-        gender: 'female',
-        dob: '1973-02-18',
-        marital: false,
-        department: 'IT',
-        skill: ['Vue', 'SEO', 'Python'],
-        wage: 5000,
-      },
-      {
-        id: 2,
-        name: 'John',
-        last: 'Smith',
-        email: 'john.s@gmail.com',
-        phone: '987654321',
-        title: 'Frontend Developer',
-        employment: 'fulltime',
-        gender: 'male',
-        dob: '1990-05-15',
-        marital: true,
-        department: 'IT',
-        skill: ['Javascript', 'CRM'],
-        wage: 4800,
-      },
-      {
-        id: 3,
-        name: 'Sarah',
-        last: 'Johnson',
-        email: 'sarah.j@gmail.com',
-        phone: '456789123',
-        title: 'UX Designer',
-        employment: 'parttime',
-        gender: 'female',
-        dob: '1988-11-30',
-        marital: true,
-        department: 'Design',
-        skill: ['Javascript', 'Vue'],
-        wage: 4200,
-      },
-      {
-        id: 4,
-        name: 'Michael',
-        last: 'Chen',
-        email: 'm.chen@gmail.com',
-        phone: '789123456',
-        title: 'Backend Developer',
-        employment: 'fulltime',
-        gender: 'male',
-        dob: '1985-07-22',
-        marital: false,
-        department: 'IT',
-        skill: ['Node', 'Python'],
-        wage: 5200,
-      },
-      {
-        id: 5,
-        name: 'Emma',
-        last: 'Wilson',
-        email: 'e.wilson@gmail.com',
-        phone: '321654987',
-        title: 'Project Manager',
-        employment: 'fulltime',
-        gender: 'female',
-        dob: '1982-09-10',
-        marital: true,
-        department: 'Management',
-        skill: ['CRM', 'SEO', 'Excel'],
-        wage: 6000,
-      },
-      {
-        id: 6,
-        name: 'David',
-        last: 'Lee',
-        email: 'd.lee@gmail.com',
-        phone: '147258369',
-        title: 'Data Scientist',
-        employment: 'fulltime',
-        gender: 'male',
-        dob: '1992-03-25',
-        marital: false,
-        department: 'Data',
-        skill: ['Python', 'Excel'],
-        wage: 5500,
-      },
-      {
-        id: 7,
-        name: 'Lisa',
-        last: 'Garcia',
-        email: 'l.garcia@gmail.com',
-        phone: '258369147',
-        title: 'Marketing Specialist',
-        employment: 'parttime',
-        gender: 'female',
-        dob: '1991-12-05',
-        marital: false,
-        department: 'Marketing',
-        skill: ['Word', 'Excel', 'CRM'],
-        wage: 3800,
-      },
-      {
-        id: 8,
-        name: 'Robert',
-        last: 'Taylor',
-        email: 'r.taylor@gmail.com',
-        phone: '369147258',
-        title: 'DevOps Engineer',
-        employment: 'fulltime',
-        gender: 'male',
-        dob: '1987-08-15',
-        marital: true,
-        department: 'IT',
-        skill: ['Node', 'Python', 'Vue'],
-        wage: 5800,
-      },
-      {
-        id: 9,
-        name: 'Amanda',
-        last: 'Brown',
-        email: 'a.brown@gmail.com',
-        phone: '741852963',
-        title: 'HR Manager',
-        employment: 'fulltime',
-        gender: 'female',
-        dob: '1984-06-20',
-        marital: true,
-        department: 'HR',
-        skill: ['CRM', 'Word', 'Excel'],
-        wage: 5300,
-      },
-      {
-        id: 10,
-        name: 'Kevin',
-        last: 'Martinez',
-        email: 'k.martinez@gmail.com',
-        phone: '963852741',
-        title: 'Quality Assurance',
-        employment: 'fulltime',
-        gender: 'male',
-        dob: '1989-04-12',
-        marital: false,
-        department: 'IT',
-        skill: ['Python', 'Node'],
-        wage: 4600,
-      },
-    ]
+  state: () => ({
+    talents: [],
+    isLoading: false,
+    error: null,
+  }),
 
-    const cf = crossfilter(talents)
+  getters: {
+    getTalentById: (state) => (id) => {
+      return state.talents.find((talent) => talent.talent_id === id)
+    },
+  },
 
-    return {
-      talents,
-      people: cf,
-    }
+  actions: {
+    async fetchTalents() {
+      this.isLoading = true
+      try {
+        const response = await fetch(`${API_URL}/talents/`)
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        this.talents = await response.json()
+        this.error = null
+      } catch (error) {
+        this.error = error.message
+        console.error('Error fetching talents:', error)
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    async addTalent(talent) {
+      try {
+        const response = await fetch(`${API_URL}/talents/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(talent),
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const newTalent = await response.json()
+        this.talents.push(newTalent)
+        return newTalent
+      } catch (error) {
+        console.error('Error adding talent:', error)
+        throw error
+      }
+    },
+
+    async updateTalent(talent) {
+      try {
+        const response = await fetch(`${API_URL}/talents/${talent.talent_id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(talent),
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const updatedTalent = await response.json()
+        const index = this.talents.findIndex(
+          (t) => t.talent_id === talent.talent_id
+        )
+        if (index !== -1) {
+          this.talents[index] = updatedTalent
+        }
+        return updatedTalent
+      } catch (error) {
+        console.error('Error updating talent:', error)
+        throw error
+      }
+    },
+
+    async deleteTalent(talentId) {
+      try {
+        const response = await fetch(`${API_URL}/talents/${talentId}`, {
+          method: 'DELETE',
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        this.talents = this.talents.filter((t) => t.talent_id !== talentId)
+      } catch (error) {
+        console.error('Error deleting talent:', error)
+        throw error
+      }
+    },
   },
 })

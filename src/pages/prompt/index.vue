@@ -1,6 +1,6 @@
 <template>
   <div class="chat-container">
-    <!-- <ChatSidebar
+    <ChatSidebar
       :chat-history="chatHistory"
       :current-chat-id="currentChat.id"
       :is-sidebar-collapsed="isSidebarCollapsed"
@@ -8,7 +8,7 @@
       @load-chat="loadChat"
       @delete-chat="deleteChat"
       @toggle-sidebar="toggleSidebar"
-    /> -->
+    />
 
     <div class="main-content">
       <div
@@ -21,8 +21,8 @@
           </div>
           <div v-else key="message">
             <ChatMessage
-              v-for="(message, index) in currentChat.messages"
-              :key="index"
+              v-for="message in currentChat.messages"
+              :key="message.message_id"
               :message="message"
             />
           </div>
@@ -37,12 +37,12 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue'
 import { useChat } from '@/composables/useChat'
-import { useSidebar } from '@/composables/useSidebar'
 import ChatSidebar from '@/components/ChatSidebar.vue'
 import ChatMessage from '@/components/ChatMessage.vue'
 import ChatInput from '@/components/ChatInput.vue'
 import PromptPageDefault from '@/components/PromptPageDefault.vue'
 
+const userId = ref(1) // Get this from your user state/store
 const {
   chatHistory,
   currentChat,
@@ -51,26 +51,22 @@ const {
   loadChat,
   deleteChat,
   sendMessage,
-  loadSavedHistory,
-} = useChat()
-
-const { isSidebarCollapsed, toggleSidebar } = useSidebar()
+} = useChat(userId.value)
 
 const messagesContainer = ref(null)
 
-const scrollToBottom = () => {
-  setTimeout(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-    }
-  }, 100)
-}
-
-watch(() => currentChat.value.messages, scrollToBottom, { deep: true })
-
-onMounted(() => {
-  loadSavedHistory()
-})
+// Scroll to bottom when messages change
+watch(
+  () => currentChat.value.messages,
+  () => {
+    setTimeout(() => {
+      if (messagesContainer.value) {
+        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+      }
+    }, 100)
+  },
+  { deep: true }
+)
 </script>
 
 <style>
