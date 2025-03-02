@@ -24,6 +24,11 @@
               v-for="message in currentChat.messages"
               :key="message.message_id"
               :message="message"
+              :is-loading="
+                isLoading &&
+                message.sender === 'assistant' &&
+                !message.message_text
+              "
             />
           </div>
         </transition>
@@ -70,7 +75,7 @@ watch(
 </script>
 
 <style>
-.chat-container {
+/* .chat-container {
   display: flex;
   justify-content: space-evenly;
   height: 100vh;
@@ -113,6 +118,74 @@ watch(
   max-width: 800px;
   margin: 0 auto;
   width: 100%;
+}
+
+.avatar {
+  font-size: 1.5em;
+  width: 30px;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.fade-enter-to,
+.fade-leave-from {
+  opacity: 1;
+} */
+
+.chat-container {
+  display: flex;
+  height: 100vh; /* Full viewport height */
+  background-color: #ffffff;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100% - 260px); /* Adjust based on sidebar width */
+  height: 100%; /* Take full height */
+}
+
+.messages {
+  flex: 1; /* Take remaining space */
+  overflow-y: auto; /* Enable scrolling */
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Ensure messages align properly */
+.message {
+  display: flex;
+  padding: 10px;
+  max-width: 800px; /* Limit message width for readability */
+  margin: 0 auto; /* Center messages */
+  width: 100%; /* Take full width of container */
+}
+
+.message.user {
+  background-color: #f7f7f8;
+  border-radius: 15px 15px 0 15px; /* Rounded corners for user messages */
+}
+
+.message.assistant {
+  background-color: #ffffff;
+  border-radius: 15px 15px 15px 0; /* Rounded corners for assistant messages */
+}
+
+.message-content {
+  display: flex;
+  gap: 15px;
+  width: 100%; /* Take full width */
 }
 
 .avatar {

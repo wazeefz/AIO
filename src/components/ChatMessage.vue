@@ -24,8 +24,18 @@
         <div class="avatar">🤖</div>
       </template>
       <div class="text">
-        <div v-html="formattedContent"></div>
-        <!-- Added sources display -->
+        <!-- Show loading animation if the message is empty and isLoading is true -->
+        <div
+          v-if="isLoading && !message.message_text"
+          class="loading-animation"
+        >
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <!-- Show the actual message content when loaded -->
+        <div v-else v-html="formattedContent"></div>
+        <!-- Sources display -->
         <div v-if="message.sources && message.sources.length" class="sources">
           <span class="sources-label">Sources:</span>
           <span class="sources-list">{{ message.sources.join(', ') }}</span>
@@ -51,6 +61,7 @@ import DOMPurify from 'dompurify'
 
 const props = defineProps({
   message: Object,
+  isLoading: Boolean, // Add isLoading prop
 })
 
 const formattedContent = computed(() => {
@@ -140,6 +151,41 @@ const copyMessage = () => {
   flex: 1;
   line-height: 1.6;
   padding: 0 10px;
+}
+
+.loading-animation {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  background-color: #7c6556;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: -0.32s;
+}
+
+@keyframes bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
 }
 
 .message.user .text {
