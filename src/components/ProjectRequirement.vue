@@ -52,6 +52,43 @@
             {{ section.title }}
           </v-list-item-title>
         </v-list-item>
+
+        <!-- Submit Project Button in Side Nav -->
+        <v-list-item class="mt-4 px-4 button-container">
+          <v-btn
+            color="#B1A184"
+            block
+            size="large"
+            class="submit-button"
+            :loading="false"
+            @click="handleSubmit"
+            :disabled="loading"
+          >
+            <template v-if="!loading">
+              <v-icon left class="mr-2">mdi-account-group</v-icon>
+              Generate Team Report
+            </template>
+            <template v-else>
+              <div class="loading-text">
+                <span
+                  v-for="(letter, index) in 'AI Assembling the Team...'.split(
+                    ''
+                  )"
+                  :key="index"
+                  :style="{ animationDelay: `${index * 0.05}s` }"
+                  class="bounce-letter"
+                >
+                  {{ letter === ' ' ? '&nbsp;' : letter }}
+                </span>
+              </div>
+            </template>
+          </v-btn>
+
+          <!-- Hint text below button -->
+          <div class="button-hint mt-2">
+            Click here once requirement(s) is finalized
+          </div>
+        </v-list-item>
       </v-list>
     </nav>
 
@@ -59,73 +96,17 @@
     <main class="main-content" ref="mainContent">
       <v-container>
         <v-card class="form-card">
-          <v-card-title class="text-h4 mb-6 primary-color font-weight-medium">
+          <v-card-title class="text-h4 mb-2 primary-color font-weight-medium">
             Project Requirements Form
           </v-card-title>
+          <v-card-subtitle class="form-hint px-0">
+            All fields are optional. For optimal results, please provide a
+            project description and key technical requirements to help our AI
+            identify the most suitable talent for your needs.
+          </v-card-subtitle>
 
           <v-form @submit.prevent="handleSubmit" ref="form">
-            <!-- Project Classification -->
-            <v-expansion-panels
-              v-model="expandedPanels.classification"
-              id="classification"
-            >
-              <v-expansion-panel>
-                <v-expansion-panel-title>
-                  <div class="d-flex align-center">
-                    <v-icon color="#B1A184" class="mr-2"
-                      >mdi-file-document-outline</v-icon
-                    >
-                    <span>Project Classification</span>
-                  </div>
-                </v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <div class="section-content">
-                    <v-row>
-                      <v-col cols="12" sm="6">
-                        <v-combobox
-                          v-model="formData.department"
-                          :items="departments"
-                          label="Department"
-                          hint="Select or enter department"
-                          @change="handleDepartmentChange"
-                          clearable
-                        ></v-combobox>
-                      </v-col>
-                      <v-col cols="12" sm="6">
-                        <v-combobox
-                          v-model="formData.projectType"
-                          :items="getProjectTypes"
-                          label="Project Type"
-                          hint="Select or enter project type"
-                          clearable
-                        ></v-combobox>
-                      </v-col>
-                    </v-row>
-                    <v-row>
-                      <v-col cols="12" sm="6">
-                        <v-text-field
-                          v-model="formData.sponsor"
-                          label="Project Sponsor"
-                          hint="Name of project sponsor"
-                          clearable
-                        ></v-text-field>
-                      </v-col>
-                      <v-col cols="12" sm="6">
-                        <v-text-field
-                          v-model="formData.sponsorEmail"
-                          label="Sponsor Email"
-                          hint="Email of project sponsor"
-                          type="email"
-                          clearable
-                        ></v-text-field>
-                      </v-col>
-                    </v-row>
-                  </div>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-            </v-expansion-panels>
-
-            <!-- Project Details -->
+            <!-- Project Details (Moved to first position) -->
             <v-expansion-panels v-model="expandedPanels.details" id="details">
               <v-expansion-panel>
                 <v-expansion-panel-title>
@@ -147,7 +128,7 @@
 
                     <v-textarea
                       v-model="formData.description"
-                      label="Project Description"
+                      label="Project Description/Overview"
                       hint="Describe project objectives and scope"
                       rows="3"
                       clearable
@@ -192,6 +173,67 @@
                           hint="Select or enter complexity level"
                           clearable
                         ></v-combobox>
+                      </v-col>
+                    </v-row>
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+
+            <!-- Project Classification -->
+            <v-expansion-panels
+              v-model="expandedPanels.classification"
+              id="classification"
+            >
+              <v-expansion-panel>
+                <v-expansion-panel-title>
+                  <div class="d-flex align-center">
+                    <v-icon color="#B1A184" class="mr-2"
+                      >mdi-file-document-outline</v-icon
+                    >
+                    <span>Project Classification</span>
+                  </div>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div class="section-content">
+                    <v-row>
+                      <v-col cols="12" sm="6">
+                        <v-combobox
+                          v-model="formData.department"
+                          :items="departments"
+                          label="Project Sponsor Department"
+                          hint="Select or enter department"
+                          @change="handleDepartmentChange"
+                          clearable
+                        ></v-combobox>
+                      </v-col>
+                      <v-col cols="12" sm="6">
+                        <v-combobox
+                          v-model="formData.projectType"
+                          :items="getProjectTypes"
+                          label="Project Type"
+                          hint="Select or enter project type"
+                          clearable
+                        ></v-combobox>
+                      </v-col>
+                    </v-row>
+                    <v-row>
+                      <v-col cols="12" sm="6">
+                        <v-text-field
+                          v-model="formData.sponsor"
+                          label="Project Sponsor"
+                          hint="Name of project sponsor"
+                          clearable
+                        ></v-text-field>
+                      </v-col>
+                      <v-col cols="12" sm="6">
+                        <v-text-field
+                          v-model="formData.sponsorEmail"
+                          label="Sponsor Email"
+                          hint="Email of project sponsor"
+                          type="email"
+                          clearable
+                        ></v-text-field>
                       </v-col>
                     </v-row>
                   </div>
@@ -658,18 +700,6 @@
                 </v-expansion-panel-text>
               </v-expansion-panel>
             </v-expansion-panels>
-
-            <!-- Submit Button -->
-            <v-btn
-              color="#B1A184"
-              type="submit"
-              block
-              class="mt-6"
-              size="large"
-              :loading="loading"
-            >
-              Submit Project Requirements
-            </v-btn>
           </v-form>
         </v-card>
       </v-container>
@@ -690,11 +720,11 @@
 </template>
 
 <script setup>
-const router = useRouter()
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useProjectRequirementsStore } from '@/stores/projectRequirements'
 import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const projectRequirementsStore = useProjectRequirementsStore()
 
 // Form reference and state management
@@ -702,18 +732,19 @@ const mainContent = ref(null)
 const showScrollButton = ref(false)
 const form = ref(null)
 const loading = ref(false)
+const submitButton = ref(null)
 
 // Sections configuration for side navigation
 const sections = [
   {
-    title: 'Project Classification',
-    value: 'classification',
-    icon: 'mdi-file-document-outline',
-  },
-  {
     title: 'Project Details',
     value: 'details',
     icon: 'mdi-clipboard-text-outline',
+  },
+  {
+    title: 'Project Classification',
+    value: 'classification',
+    icon: 'mdi-file-document-outline',
   },
   {
     title: 'Work Preferences',
@@ -748,8 +779,8 @@ const collapseAll = () => {
 
 // Expansion panels state
 const expandedPanels = reactive({
-  classification: 0,
   details: 0,
+  classification: 0,
   workPreferences: 0,
   budgetTimeline: 0,
   technical: 0,
@@ -1055,12 +1086,32 @@ const handleSubmit = async () => {
   try {
     const result = await projectRequirementsStore.submitRequirements(formData)
     // Use regular Vue Router navigation
-    router.push('/projects/results')
+    router.push('/assemble-team/results')
   } catch (error) {
     console.error('Submission error:', error)
     alert('Error submitting project requirements. Please try again.')
   } finally {
     loading.value = false
+  }
+}
+
+const submitForm = async () => {
+  try {
+    loading.value = true // Start loading animation
+
+    await nextTick() // Ensure submitButton is rendered
+
+    if (submitButton.value) {
+      submitButton.value.$el.click()
+    } else {
+      console.warn(
+        'Submit button ref not available, falling back to direct submission.'
+      )
+      handleSubmit() // Fallback in case the button ref is not available
+    }
+  } catch (error) {
+    console.error('Error during submitForm:', error)
+    handleSubmit() // Even if there's an error getting the ref, try direct submission
   }
 }
 
@@ -1386,5 +1437,124 @@ body {
 
 :deep(.v-field__prefix) {
   padding-right: 8px;
+}
+
+.loading-text {
+  display: flex;
+  justify-content: center;
+  min-width: 240px;
+}
+
+.bounce-letter {
+  display: inline-block;
+  animation: bounce 1s infinite;
+  font-weight: 500;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Make the button taller to accommodate the animation */
+.submit-button {
+  min-height: 48px;
+  background-color: #b1a184 !important;
+  color: white !important;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  padding: 12px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.submit-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  background-color: #a08f73 !important;
+}
+
+.submit-button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transform: translateX(-100%);
+}
+
+.submit-button:hover::after {
+  animation: shine 1.5s infinite;
+}
+
+@keyframes shine {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Make the submit button more prominent */
+.side-nav .v-list-item.mt-4 {
+  padding: 8px 16px;
+  margin-top: 16px !important;
+}
+
+.button-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.button-hint {
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+  line-height: 1.2;
+  margin-top: 8px;
+}
+
+/* Optional: Add a subtle pulsing effect to draw attention */
+.button-hint {
+  animation: subtle-pulse 3s infinite;
+}
+
+@keyframes subtle-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.form-hint {
+  color: #666;
+  line-height: 1.4;
+  text-align: left;
+  padding-left: 0 !important;
+  margin-bottom: 24px;
+  font-size: 14px;
+  white-space: normal;
+  max-width: 100%;
+}
+
+/* Fix Vuetify's default card subtitle padding */
+:deep(.v-card-subtitle) {
+  padding-left: 0;
+  padding-right: 0;
+  white-space: normal;
 }
 </style>
