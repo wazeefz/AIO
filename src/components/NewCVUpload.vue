@@ -113,6 +113,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResume } from '@/composables/useResume' // Import useResume composable
+import { useGoogleDriveUpload } from '@/composables/useUpload'
 
 const router = useRouter()
 const primaryColor = '#B1A184'
@@ -125,6 +126,7 @@ const errorMessage = ref('')
 const loading = ref(false)
 const { resumeData, error, uploadResume } = useResume() // Using the composable
 const uploadedResumeData = ref(null)
+const { uploadFileToGoogleDrive, error: uploadError } = useGoogleDriveUpload() // Use the composable
 
 const formatList = computed(() => acceptedFormats.join(' and '))
 
@@ -160,17 +162,34 @@ const processFiles = (files) => {
   uploadToBackend(file)
 }
 
+// const uploadToBackend = async (file) => {
+//   loading.value = true
+
+//   try {
+//     const response = await uploadResume(file)
+//     console.log('Resume Upload Response:', response)
+//     uploadedResumeData.value = response
+//     uploadedFiles.value[0].status = 'done'
+//   } catch (err) {
+//     showErrorMessage(
+//       error.value || 'Failed to upload resume. Please try again.'
+//     )
+//   } finally {
+//     loading.value = false
+//   }
+// }
+
 const uploadToBackend = async (file) => {
   loading.value = true
 
   try {
-    const response = await uploadResume(file)
-    console.log('Resume Upload Response:', response)
+    const response = await uploadFileToGoogleDrive(file) // Use the composable function
+    console.log('File Upload Response:', response)
     uploadedResumeData.value = response
     uploadedFiles.value[0].status = 'done'
   } catch (err) {
     showErrorMessage(
-      error.value || 'Failed to upload resume. Please try again.'
+      uploadError.value || 'Failed to upload file. Please try again.'
     )
   } finally {
     loading.value = false
