@@ -1,11 +1,9 @@
-// src/composables/useGoogleDriveUpload.js
 import { ref } from 'vue'
 import axios from 'axios'
 
 export function useGoogleDriveUpload() {
-  const loading = ref(false)
   const error = ref(null)
-  const uploadedFileData = ref(null)
+  const loading = ref(false)
 
   const uploadFileToGoogleDrive = async (file) => {
     loading.value = true
@@ -15,7 +13,6 @@ export function useGoogleDriveUpload() {
       const formData = new FormData()
       formData.append('file', file)
 
-      // Replace with your FastAPI backend endpoint
       const response = await axios.post(
         'http://localhost:8000/upload-pdf/',
         formData,
@@ -26,7 +23,6 @@ export function useGoogleDriveUpload() {
         }
       )
 
-      uploadedFileData.value = response.data
       return response.data
     } catch (err) {
       error.value =
@@ -38,9 +34,8 @@ export function useGoogleDriveUpload() {
   }
 
   return {
-    loading,
-    error,
-    uploadedFileData,
     uploadFileToGoogleDrive,
+    error,
+    loading,
   }
 }

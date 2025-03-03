@@ -109,7 +109,7 @@
   </div>
 </template>
 
-<script setup>
+<!-- <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResumeStore } from '@/stores/resume'
@@ -216,5 +216,111 @@ const submitUploads = () => {
   router.push({
     path: '/upload-cv/employee-info',
   })
+}
+</script> -->
+
+<script setup>
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useResumeStore } from '@/stores/resume'
+import { useResume } from '@/composables/useResume'
+import { useGoogleDriveUpload } from '@/composables/useUpload'
+
+const router = useRouter()
+const resumeStore = useResumeStore()
+const primaryColor = '#B1A184'
+const activeTab = ref('single')
+const isDragging = ref(false)
+const uploadedFiles = ref([])
+const acceptedFormats = ['.pdf', '.docx']
+const showError = ref(false)
+const errorMessage = ref('')
+const loading = ref(false)
+const { resumeData, error, uploadResume } = useResume()
+const uploadedResumeData = ref(null)
+const { uploadFileToGoogleDrive, error: uploadError } = useGoogleDriveUpload()
+
+const formatList = computed(() => acceptedFormats.join(' and '))
+
+const switchTab = (tab) => {
+  activeTab.value = tab
+  uploadedFiles.value = []
+}
+
+const handleDragOver = () => (isDragging.value = true)
+const handleDragLeave = () => (isDragging.value = false)
+
+const handleDrop = (e) => {
+  isDragging.value = false
+  processFiles(e.dataTransfer.files)
+}
+
+const handleFileSelect = (e) => {
+  processFiles(e.target.files)
+}
+
+const processFiles = (files) => {
+  if (files.length === 0) return
+
+  const file = files[0]
+  const fileExtension = '.' + file.name.split('.').pop().toLowerCase()
+
+  if (!acceptedFormats.includes(fileExtension)) {
+    showErrorMessage(`File ${file.name} has an invalid format`)
+    return
+  }
+
+  uploadedFiles.value = [{ file, name: file.name, status: 'uploading' }]
+  uploadToBackend(file)
+}
+
+const uploadToBackend = async (file) => {
+  loading.value = true
+
+  try {
+    const response = await uploadResume(file)
+
+    // Store in resume store (stringified)
+    resumeStore.setResumeData(response)
+
+    // Update UI state
+    uploadedResumeData.value = response
+    uploadedFiles.value[0].status = 'done'
+  } catch (err) {
+    showErrorMessage(
+      err.message || 'Failed to upload resume. Please try again.'
+    )
+  } finally {
+    loading.value = false
+  }
+}
+
+const showErrorMessage = (message) => {
+  errorMessage.value = message
+  showError.value = true
+}
+
+const submitUploads = async () => {
+  if (!uploadedResumeData.value) {
+    showErrorMessage('Please upload a file before proceeding.')
+    return
+  }
+
+  try {
+    // Upload the file to Google Drive
+    const file = uploadedFiles.value[0].file
+    const googleDriveResponse = await uploadFileToGoogleDrive(file)
+
+    console.log('Google Drive Upload Response:', googleDriveResponse)
+
+    // Navigate to the next page
+    router.push({
+      path: '/upload-cv/employee-info',
+    })
+  } catch (err) {
+    showErrorMessage(
+      uploadError.value || 'Failed to upload file to Google Drive.'
+    )
+  }
 }
 </script>
