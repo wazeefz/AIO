@@ -88,8 +88,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { useProjectStore } from '@/stores/project'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import { useProjectMetricsStore } from '@/stores/project'
 import StatCard from '@/components/StatCard.vue'
 import BarChart from '@/components/BarChart.vue'
 import PieChart from '@/components/PieChart.vue'
@@ -98,7 +98,7 @@ import * as dc from 'dc'
 import * as d3 from 'd3'
 import crossfilter from 'crossfilter2'
 
-const projectStore = useProjectStore()
+const projectStore = useProjectMetricsStore()
 const allDimensions = ref([])
 const dataCount = ref(null)
 const ndx = ref(null)
@@ -145,8 +145,8 @@ const initializeCrossfilter = () => {
       project: ndx.value.dimension((d) => d.name),
       status: ndx.value.dimension((d) => d.status),
       department: ndx.value.dimension((d) => d.department),
-      budget: ndx.value.dimension((d) => d.budget),
-      teamSize: ndx.value.dimension((d) => d.team_size),
+      budget: ndx.value.dimension((d) => d.budget || 0),
+      teamSize: ndx.value.dimension((d) => d.team_size || 0),
     }
 
     // Create groups
