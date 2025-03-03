@@ -12,8 +12,23 @@
     </v-btn>
 
     <!-- Confirmation Dialog for Removal-->
-    <v-dialog v-model="showConfirmDialog" max-width="300">
-      <v-card>
+    <v-dialog
+      v-model="showConfirmDialog"
+      max-width="300"
+      @click.stop
+      @mousedown.stop
+      @mouseup.stop
+      @keydown.stop
+      @keyup.stop
+      persistent
+    >
+      <v-card
+        @click.stop
+        @mousedown.stop
+        @mouseup.stop
+        @keydown.stop
+        @keyup.stop
+      >
         <v-card-title class="text-h6"> Confirm Removal </v-card-title>
         <v-card-text> Are you sure you want to remove this item? </v-card-text>
         <v-card-actions>
@@ -21,7 +36,9 @@
           <v-btn color="grey" text @click="showConfirmDialog = false">
             Cancel
           </v-btn>
-          <v-btn color="error" text @click="confirmAndRemove"> Remove </v-btn>
+          <v-btn color="error" text @click="confirmAndRemove($event)">
+            Remove
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -584,22 +601,25 @@ const confirmRemove = (event) => {
   showConfirmDialog.value = true
 }
 
-const confirmAndRemove = () => {
+const confirmAndRemove = (event) => {
+  // Add event parameter and stop propagation
+  if (event) {
+    event.stopPropagation()
+  }
+
+  console.log(
+    'Confirming removal of team member:',
+    props.result.talent_id,
+    getDisplayName.value
+  )
+
   if (isTeamMember.value) {
-    handleRemoveTeamMember()
+    // Just emit the event for the parent to handle - don't call remove directly
+    emit('remove-profile', props.result.talent_id)
   } else {
     emit('remove-profile', props.result.talent_id || props.result.id)
   }
   showConfirmDialog.value = false
-}
-
-const handleConfirmAdd = () => {
-  if (props.isAddMode && !isTeamMember.value) {
-    showAddConfirmation.value = true
-  } else {
-    emit('confirm-add-profile', props.result)
-    closeModal()
-  }
 }
 
 // Add computed property to check if talent is in current project team
@@ -681,19 +701,6 @@ const getJobTitle = computed(() => {
 })
 
 // Methods for project assignment actions
-const handleRemoveTeamMember = async () => {
-  try {
-    const projectId = projectStore.getCurrentProject?.project_id
-    if (!projectId) throw new Error('No current project selected')
-
-    await projectStore.removeTeamMember(projectId, props.result.talent_id)
-    showConfirmDialog.value = false
-    emit('remove-profile', props.result.talent_id)
-  } catch (error) {
-    console.error('Error removing team member:', error)
-  }
-}
-
 const cancelAddMember = () => {
   showAddConfirmation.value = false
   addError.value = null
