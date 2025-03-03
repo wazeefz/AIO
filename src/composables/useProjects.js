@@ -85,6 +85,18 @@ export const useProjects = defineStore('project', {
           progress: updatedProject.progress,
           status: updatedProject.status ?? undefined,
           budget: updatedProject.budget ?? undefined,
+          project_period: updatedProject.project_period,
+          tech_skill: updatedProject.tech_skill,
+          quality: updatedProject.quality,
+          collaboration: updatedProject.collaboration,
+          remarks: updatedProject.remarks,
+
+          cv_count: updatedProject.cv_count, // Default value if not set in the frontend
+          user_id: updatedProject.user_id, // Ensure frontend provides user_id
+          start_date: updatedProject.start_date, // Ensure this is in ISO format: "YYYY-MM-DDTHH:mm:ss"
+          required_skills: updatedProject.required_skills ?? [], // Ensure array of skill IDs
+          min_experience_years: updatedProject.min_experience_years ?? 0, // Ensure this is a number
+          project_id: updatedProject.project_id,
         }
 
         const response = await fetch(
