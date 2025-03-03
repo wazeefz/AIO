@@ -71,30 +71,28 @@
         </div>
       </v-col>
       <v-col>
-        <!-- Employment Filter -->
-        <div class="mb-4">
-          <h4>Employment Type</h4>
-          <v-combobox
-            v-model="selectedEmployment"
-            :items="availableEmploymentTypes"
-            label="Select employment type"
+        <!-- Role Filter - Hide in modal context -->
+        <div class="mb-4" v-if="!isModal">
+          <h4>Role</h4>
+          <v-select
+            v-model="selectedRole"
+            :items="['All', 'Lead', 'Non-Lead']"
+            label="Select role type"
             variant="outlined"
             density="compact"
-            multiple
-            chips
+            @update:modelValue="handleRoleChange"
             clearable
-            @update:modelValue="handleEmploymentChange"
           />
         </div>
       </v-col>
     </v-row>
 
-    <!-- Title Filter -->
+    <!-- Job Title Filter -->
     <div class="mb-4">
-      <h4>Role</h4>
+      <h4>Job Title</h4>
       <v-text-field
         v-model="title"
-        label="Search role"
+        label="Search job title"
         variant="outlined"
         density="compact"
         @update:modelValue="handleTitleChange"
@@ -113,8 +111,8 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { useFilterStore } from '@/stores/filterStore'
-import { mockData } from '@/mockdata/mockData'
 import { parseSalaryRange } from '@/utils/salary'
+import axios from 'axios'
 
 const props = defineProps({
   isModal: {
@@ -128,31 +126,57 @@ const filterStore = useFilterStore()
 
 // Local state
 const selectedSkills = ref([])
+const availableSkills = ref([])
 const salaryMin = ref('')
 const salaryMax = ref('')
 const salaryError = ref('')
 const title = ref('')
+const selectedRole = ref('All')
 const selectedDepartments = ref([])
 const selectedEmployment = ref([])
+const availableDepartments = ref([])
+const availableEmploymentTypes = ref([
+  'Full Time',
+  'Part Time',
+  'Contract',
+  'Intern',
+])
+
 // Local state for temporary filter values
 const tempFilters = ref({
   skills: [],
-  salary: '',
+  basic_salary: '',
+  title: '',
+  role: '',
   department: [],
   employment: [],
-  title: '',
 })
 
-// Static data
-const availableSkills = [
-  ...new Set(mockData.flatMap((item) => item.skills)),
-].sort()
-const availableDepartments = [
-  ...new Set(mockData.map((item) => item.department)),
-].sort()
-const availableEmploymentTypes = [
-  ...new Set(mockData.map((item) => item.employment)),
-].sort()
+// Function to fetch departments from backend
+const fetchDepartments = async () => {
+  try {
+    const response = await axios.get('http://localhost:8000/departments')
+    availableDepartments.value = response.data
+      .map((dept) => dept.department_name)
+      .sort()
+  } catch (error) {
+    console.error('Error fetching departments:', error)
+    availableDepartments.value = []
+  }
+}
+
+// Function to fetch skills from backend
+const fetchSkills = async () => {
+  try {
+    const response = await axios.get('http://localhost:8000/skills')
+    availableSkills.value = response.data
+      .map((skill) => skill.skill_name)
+      .sort()
+  } catch (error) {
+    console.error('Error fetching skills:', error)
+    availableSkills.value = []
+  }
+}
 
 // Helper function to get current filters
 const getCurrentFilters = () => {
@@ -160,7 +184,6 @@ const getCurrentFilters = () => {
 }
 
 // Event handlers
-// Modified event handlers to update temporary state instead of store
 const handleSkillsChange = () => {
   tempFilters.value.skills = selectedSkills.value || []
 }
@@ -184,17 +207,22 @@ const handleSalaryChange = () => {
 
     let range = ''
     if (salaryMin.value && salaryMax.value) {
-      range = `RM${salaryMin.value}-RM${salaryMax.value}`
+      range = `${salaryMin.value}-${salaryMax.value}`
     } else if (salaryMin.value) {
-      range = `RM${salaryMin.value}+`
+      range = `${salaryMin.value}+`
     } else if (salaryMax.value) {
-      range = `Up to RM${salaryMax.value}`
+      range = `Up to ${salaryMax.value}`
     }
 
-    tempFilters.value.salary = range
+    tempFilters.value.basic_salary = range
   } catch (error) {
     console.error('Error handling salary change:', error)
   }
+}
+
+const handleRoleChange = () => {
+  tempFilters.value.role =
+    selectedRole.value === 'All' ? '' : selectedRole.value
 }
 
 const handleTitleChange = () => {
@@ -227,12 +255,16 @@ const applyFilters = () => {
           filterStore.addModalFilter('employment', type)
         )
       }
-      if (tempFilters.value.salary) {
-        filterStore.addModalFilter('salary', tempFilters.value.salary)
+      if (tempFilters.value.basic_salary) {
+        filterStore.addModalFilter(
+          'basic_salary',
+          tempFilters.value.basic_salary
+        )
       }
       if (tempFilters.value.title) {
         filterStore.addModalFilter('title', tempFilters.value.title)
       }
+      // Skip adding role filter in modal mode
     } else {
       filterStore.clearTeamFilters('all')
 
@@ -252,11 +284,17 @@ const applyFilters = () => {
           filterStore.addTeamFilter('employment', type)
         )
       }
-      if (tempFilters.value.salary) {
-        filterStore.addTeamFilter('salary', tempFilters.value.salary)
+      if (tempFilters.value.basic_salary) {
+        filterStore.addTeamFilter(
+          'basic_salary',
+          tempFilters.value.basic_salary
+        )
       }
       if (tempFilters.value.title) {
         filterStore.addTeamFilter('title', tempFilters.value.title)
+      }
+      if (tempFilters.value.role) {
+        filterStore.addTeamFilter('role', tempFilters.value.role)
       }
     }
     emit('close-filter-dialog')
@@ -276,16 +314,23 @@ const clearFilters = () => {
   salaryMax.value = ''
   salaryError.value = ''
   title.value = ''
+
+  // Only reset role when not in modal mode
+  if (!props.isModal) {
+    selectedRole.value = 'All'
+  }
+
   selectedDepartments.value = []
   selectedEmployment.value = []
 
   // Clear temporary filters
   tempFilters.value = {
     skills: [],
-    salary: '',
+    basic_salary: '',
+    title: '',
+    role: props.isModal ? '' : 'All',
     department: [],
     employment: [],
-    title: '',
   }
 }
 
@@ -311,7 +356,7 @@ watch(
 )
 
 watch(
-  () => getCurrentFilters().salary,
+  () => getCurrentFilters().basic_salary,
   (newSalary) => {
     try {
       if (!newSalary?.length) {
@@ -331,16 +376,24 @@ watch(
 )
 
 // Initialize filters
-onMounted(() => {
+onMounted(async () => {
   try {
+    // Fetch both skills and departments
+    await Promise.all([fetchSkills(), fetchDepartments()])
+
     const currentFilters = getCurrentFilters()
     selectedSkills.value = currentFilters.skills || []
     title.value = currentFilters.title?.[0] || ''
     selectedDepartments.value = currentFilters.department || []
     selectedEmployment.value = currentFilters.employment || []
 
-    if (currentFilters.salary?.length) {
-      const { min, max } = parseSalaryRange(currentFilters.salary[0])
+    // Only set role selection when not in modal mode
+    if (!props.isModal) {
+      selectedRole.value = currentFilters.role?.[0] || 'All'
+    }
+
+    if (currentFilters.basic_salary?.length) {
+      const { min, max } = parseSalaryRange(currentFilters.basic_salary[0])
       salaryMin.value = min !== 0 ? min.toString() : ''
       salaryMax.value = max !== Infinity ? max.toString() : ''
     }

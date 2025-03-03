@@ -36,7 +36,10 @@
       <v-card-text class="pa-6">
         <div class="d-flex">
           <!-- Team Lead Badge -->
-          <div v-if="result.isTeamLead" class="team-lead-badge">
+          <div
+            v-if="result.role && result.role.toLowerCase().includes('lead')"
+            class="team-lead-badge"
+          >
             <v-tooltip text="Team Lead">
               <template v-slot:activator="{ props }">
                 <v-icon
@@ -53,7 +56,7 @@
             <v-avatar size="80" :rounded="true" class="rounded-lg">
               <v-img
                 :src="profileImageUrl"
-                :alt="result.name"
+                :alt="getDisplayName"
                 cover
                 class="profile-image"
               ></v-img>
@@ -64,7 +67,7 @@
           <div class="profile-info">
             <slot name="card-header" :result="result">
               <div class="text-h5 font-weight-medium text-white mt-1">
-                {{ result.name }}
+                {{ getDisplayName }}
               </div>
               <v-divider
                 class="my-4"
@@ -72,26 +75,41 @@
                 thickness="2"
               ></v-divider>
               <div class="text-subtitle-1 text-white mb-2">
-                {{ result.title }}
+                <v-icon size="small" color="white" class="mr-1"
+                  >mdi-briefcase</v-icon
+                >
+                <span class="text-white">{{ getJobTitle }}</span>
+              </div>
+              <div class="text-subtitle-1 text-white mb-2">
+                <v-icon size="small" color="white" class="mr-1"
+                  >mdi-sitemap</v-icon
+                >
+                <span class="text-white">{{ assignmentDetails.role }} </span>
               </div>
               <div class="d-flex align-center mb-2">
                 <v-icon size="small" color="white" class="mr-1"
-                  >mdi-currency-usd</v-icon
+                  >mdi-cash</v-icon
                 >
-                <span class="text-white">{{ result.salary }} </span>
+                <span class="text-white">{{ getSalaryDisplay }} </span>
               </div>
               <div class="text-subtitle-2 text-white mb-4">
-                Department: {{ result.department }}
+                Department: {{ getDepartmentDisplay }}
               </div>
-              <!-- Skills Slot -->
-              <slot name="skills" :skills="skillChips">
+              <!-- Skills Section -->
+              <div v-if="result.skills && result.skills.length > 0">
+                <div class="text-subtitle-2 text-white mb-2">
+                  <v-icon size="small" color="white" class="mr-1"
+                    >mdi-lightbulb</v-icon
+                  >
+                  Skills
+                </div>
                 <div
                   ref="skillsContainer"
                   class="d-flex flex-wrap gap-2 skills-container"
                 >
                   <template
                     v-for="(skill, index) in visibleSkills"
-                    :key="skill.label"
+                    :key="index"
                   >
                     <v-chip
                       ref="skillChips"
@@ -99,8 +117,9 @@
                       class="mr-2 mb-2 skill-chip"
                       color="#2d2d2d"
                       text-color="white"
+                      size="small"
                     >
-                      {{ skill.label }}
+                      {{ skill }}
                     </v-chip>
                   </template>
                   <v-chip
@@ -110,11 +129,12 @@
                     class="mr-2 mb-2 overflow-chip"
                     color="#2d2d2d"
                     text-color="white"
+                    size="small"
                   >
                     +{{ hiddenSkillsCount }}
                   </v-chip>
                 </div>
-              </slot>
+              </div>
             </slot>
           </div>
         </div>
@@ -123,16 +143,16 @@
 
     <!-- Modal -->
     <v-dialog v-model="showModal" max-width="600px">
-      <v-card>
+      <v-card class="modal-card">
         <!-- Modal Header Slot -->
         <slot name="modal-header" :result="result" :close="closeModal">
-          <div class="d-flex align-center justify-space-between pa-4">
+          <div class="modal-header">
             <!-- Profile Image -->
             <div class="profile-image-container">
               <v-avatar size="80" :rounded="true" class="rounded-lg">
                 <v-img
                   :src="profileImageUrl"
-                  :alt="result.name"
+                  :alt="getDisplayName"
                   cover
                   class="profile-image"
                 ></v-img>
@@ -149,39 +169,67 @@
           </div>
           <div class="d-flex align-center justify-space-between pl-4">
             <v-card-title class="text-h5 pa-0">
-              {{ result.name }}
+              {{ getDisplayName }}
             </v-card-title>
           </div>
         </slot>
 
-        <v-card-text>
-          <slot name="modal-content" :result="result" :skills="skillChips">
+        <v-card-text class="modal-content">
+          <slot name="modal-content" :result="result">
             <div class="mt-4">
               <h3 class="text-h6 mt-4">Title</h3>
-              <p>{{ result.title }}</p>
+              <p>{{ getJobTitle }}</p>
 
               <h3 class="text-h6 mt-4">Department</h3>
-              <p>{{ result.department }}</p>
+              <p>{{ getDepartmentDisplay }}</p>
 
-              <h3 class="text-h6 mt-4">Employment Type</h3>
-              <p>{{ result.employment }}</p>
+              <template v-if="isTeamMember">
+                <h3 class="text-h6 mt-4">Role In Project</h3>
+                <p>{{ assignmentDetails.role }}</p>
+
+                <h3 class="text-h6 mt-4">Assignment Period</h3>
+                <p>From: {{ assignmentDetails.assignment_start_date }}</p>
+                <p>To: {{ assignmentDetails.assignment_end_date }}</p>
+              </template>
 
               <h3 class="text-h6 mt-4">Salary</h3>
-              <p>{{ result.salary }}</p>
+              <p>{{ getSalaryDisplay }}</p>
 
-              <h3 class="text-h6 mt-4">Skills</h3>
-              <base-chips :chips="skillChipsData" :use-color-mapping="true" />
+              <!-- Skills Section in Modal -->
+              <template v-if="result.skills && result.skills.length > 0">
+                <h3 class="text-h6 mt-4">Skills</h3>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                  <v-chip
+                    v-for="(skill, index) in result.skills"
+                    :key="index"
+                    variant="elevated"
+                    class="mr-2 mb-2"
+                    color="primary"
+                    size="small"
+                  >
+                    {{ skill }}
+                  </v-chip>
+                </div>
+              </template>
             </div>
           </slot>
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="modal-actions">
           <v-spacer></v-spacer>
           <slot name="modal-actions" :close="closeModal" :result="result">
             <!-- Check if it's being called by addProfileModal -->
             <template v-if="isAddMode">
-              <v-btn color="error" @click="closeModal">Cancel</v-btn>
-              <v-btn color="primary" @click="handleConfirmAdd">Confirm</v-btn>
+              <v-btn color="error" variant="text" @click="closeModal"
+                >Cancel</v-btn
+              >
+              <v-btn
+                color="primary"
+                :disabled="isTeamMember"
+                @click="showAddConfirmation = true"
+              >
+                Add to Team
+              </v-btn>
             </template>
             <!-- Default close button for normal view -->
             <template v-else>
@@ -193,19 +241,137 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Add Team Member Confirmation Dialog -->
+    <v-dialog v-model="showAddConfirmation" max-width="500px" persistent>
+      <v-card>
+        <v-card-title class="text-h6">
+          Confirm Team Member Addition
+        </v-card-title>
+        <v-card-text>
+          <v-alert v-if="addError" type="error" class="mb-4" closable>
+            {{ addError }}
+          </v-alert>
+
+          <p class="mb-4">
+            Add <strong>{{ getDisplayName }}</strong> to
+            <strong>{{
+              projectStore.getCurrentProject?.name || 'the current project'
+            }}</strong
+            >?
+          </p>
+
+          <!-- Role input field - REQUIRED -->
+          <v-text-field
+            v-model="assignmentRole"
+            label="Role in Project*"
+            placeholder="e.g. Developer, Designer, Project Manager"
+            hint="This field is required"
+            :rules="[(v) => !!v || 'Role is required']"
+            class="mb-4"
+            :disabled="addLoading"
+            required
+          ></v-text-field>
+
+          <!-- Optional Assignment Dates -->
+          <v-expansion-panels>
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                Additional Details (Optional)
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <v-row>
+                  <v-col cols="12" sm="6">
+                    <v-menu
+                      v-model="startDateMenu"
+                      :close-on-content-click="false"
+                      transition="scale-transition"
+                      min-width="auto"
+                    >
+                      <template v-slot:activator="{ props }">
+                        <v-text-field
+                          v-model="assignmentStartDate"
+                          label="Start Date"
+                          readonly
+                          v-bind="props"
+                          clearable
+                          @click:clear="assignmentStartDate = null"
+                        ></v-text-field>
+                      </template>
+                      <v-date-picker
+                        v-model="assignmentStartDate"
+                        @update:model-value="startDateMenu = false"
+                      ></v-date-picker>
+                    </v-menu>
+                  </v-col>
+
+                  <v-col cols="12" sm="6">
+                    <v-menu
+                      v-model="endDateMenu"
+                      :close-on-content-click="false"
+                      transition="scale-transition"
+                      min-width="auto"
+                    >
+                      <template v-slot:activator="{ props }">
+                        <v-text-field
+                          v-model="assignmentEndDate"
+                          label="End Date"
+                          readonly
+                          v-bind="props"
+                          clearable
+                          @click:clear="assignmentEndDate = null"
+                        ></v-text-field>
+                      </template>
+                      <v-date-picker
+                        v-model="assignmentEndDate"
+                        @update:model-value="endDateMenu = false"
+                      ></v-date-picker>
+                    </v-menu>
+                  </v-col>
+                </v-row>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="grey"
+            variant="text"
+            @click="cancelAddMember"
+            :disabled="addLoading"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            @click="handleAddTeamMember"
+            :loading="addLoading"
+            :disabled="addLoading || !assignmentRole"
+          >
+            Confirm
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup>
 import BaseChips from '@/components/Chips.vue'
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
-// Import a default placeholder image stored locally
+import { useProjectManagementStore } from '@/stores/projectStore'
 import placeholderImage from '@/assets/profilePic/placeholder.png'
+
+const projectStore = useProjectManagementStore()
 
 const props = defineProps({
   result: {
     type: Object,
     required: true,
+    validator: (value) => {
+      return value && typeof value === 'object'
+    },
   },
   isEditing: {
     type: Boolean,
@@ -219,6 +385,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  forceTeamMember: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits([
@@ -229,37 +399,51 @@ const emit = defineEmits([
 ])
 const showModal = ref(false)
 const showConfirmDialog = ref(false)
-const visibleCount = ref(props.result.skills.length)
+const showAddConfirmation = ref(false)
+const addLoading = ref(false)
+const addError = ref(null)
+const assignmentRole = ref('')
+const assignmentStartDate = ref(null)
+const assignmentEndDate = ref(null)
+const startDateMenu = ref(false)
+const endDateMenu = ref(false)
+const visibleCount = ref(0) // Initialize to 0 instead of undefined skills length
 const skillsContainer = ref(null)
 const skillChips = ref([])
 const resizeObserver = ref(null)
 
-// Data for skills is here
+// Data for skills with null check
 const skillChipsData = computed(() => {
-  return props.result.skills.map((skill) => ({
+  const skills = props.result.skills || [] // Provide default empty array if skills is undefined
+  return skills.map((skill) => ({
     label: skill,
     category: 'skills',
   }))
 })
 
 const visibleSkills = computed(() => {
-  return skillChipsData.value.slice(0, visibleCount.value)
+  return props.result.skills
+    ? props.result.skills.slice(0, visibleCount.value)
+    : []
 })
 
 const hiddenSkillsCount = computed(() => {
-  return Math.max(0, skillChipsData.value.length - visibleCount.value)
+  return props.result.skills
+    ? Math.max(0, props.result.skills.length - visibleCount.value)
+    : 0
 })
 
 const calculateVisibleChips = async () => {
-  if (!skillsContainer.value) return
+  if (!skillsContainer.value || !props.result.skills) return
+
+  // Set initial visible count to the total number of skills
+  visibleCount.value = props.result.skills.length
+
+  await nextTick()
 
   const containerWidth = skillsContainer.value.offsetWidth
   const chipGap = 8
   const overflowChipWidth = 60
-
-  // Always start by showing all chips
-  visibleCount.value = skillChipsData.value.length
-  await nextTick()
 
   // Get all chip elements
   const chipElements = Array.from(
@@ -387,6 +571,11 @@ const openModal = () => {
 
 const closeModal = () => {
   showModal.value = false
+  showAddConfirmation.value = false
+  addError.value = null
+  assignmentRole.value = ''
+  assignmentStartDate.value = null
+  assignmentEndDate.value = null
   emit('modal-closed')
 }
 
@@ -396,13 +585,166 @@ const confirmRemove = (event) => {
 }
 
 const confirmAndRemove = () => {
+  if (isTeamMember.value) {
+    handleRemoveTeamMember()
+  } else {
+    emit('remove-profile', props.result.talent_id || props.result.id)
+  }
   showConfirmDialog.value = false
-  emit('remove-profile', props.result.id)
 }
 
 const handleConfirmAdd = () => {
-  emit('confirm-add-profile', props.result)
-  closeModal()
+  if (props.isAddMode && !isTeamMember.value) {
+    showAddConfirmation.value = true
+  } else {
+    emit('confirm-add-profile', props.result)
+    closeModal()
+  }
+}
+
+// Add computed property to check if talent is in current project team
+const isTeamMember = computed(() => {
+  // If forceTeamMember is true, always return true (useful for explicit team member views)
+  if (props.forceTeamMember) return true
+
+  const currentProjectTeam = projectStore.getCurrentProjectTeam
+  const talentId = props.result.talent_id
+
+  // If we don't have a team or talent ID, they're not a member
+  if (!currentProjectTeam || !talentId) return false
+
+  // Check if the talent is in the current project team
+  return currentProjectTeam.some((member) => member.talent_id === talentId)
+})
+
+// Update assignmentDetails to use the team member data if available
+const assignmentDetails = computed(() => {
+  if (isTeamMember.value) {
+    // Find the team member data
+    const teamMemberData = projectStore.getCurrentProjectTeam.find(
+      (member) => member.talent_id === props.result.talent_id
+    )
+
+    if (teamMemberData) {
+      return {
+        role: teamMemberData.role || 'Not Assigned',
+        performance_rating: teamMemberData.performance_rating || 'N/A',
+        assignment_start_date: teamMemberData.assignment_start_date
+          ? new Date(teamMemberData.assignment_start_date).toLocaleDateString()
+          : 'Not Set',
+        assignment_end_date: teamMemberData.assignment_end_date
+          ? new Date(teamMemberData.assignment_end_date).toLocaleDateString()
+          : 'Not Set',
+      }
+    }
+  }
+
+  // Fallback to default data
+  return {
+    role: props.result.role || 'Not Assigned',
+    performance_rating: props.result.performance_rating || 'N/A',
+    assignment_start_date: props.result.assignment_start_date
+      ? new Date(props.result.assignment_start_date).toLocaleDateString()
+      : 'Not Set',
+    assignment_end_date: props.result.assignment_end_date
+      ? new Date(props.result.assignment_end_date).toLocaleDateString()
+      : 'Not Set',
+  }
+})
+
+// Update getDisplayName to handle both talent and team member formats
+const getDisplayName = computed(() => {
+  if (props.result.first_name && props.result.last_name) {
+    return `${props.result.first_name} ${props.result.last_name}`.trim()
+  }
+  if (props.result.name) {
+    return props.result.name
+  }
+  return 'No Name'
+})
+
+// Handle salary/rate display
+const getSalaryDisplay = computed(() => {
+  const salary =
+    props.result.basic_salary || props.result.salary || props.result.daily_rate
+  return salary ? `RM${salary.toLocaleString()}` : 'N/A'
+})
+
+// Handle department display
+const getDepartmentDisplay = computed(() => {
+  return props.result.department_name || props.result.department || 'N/A'
+})
+
+// Handle job title display
+const getJobTitle = computed(() => {
+  return props.result.job_title || props.result.title || 'No title'
+})
+
+// Methods for project assignment actions
+const handleRemoveTeamMember = async () => {
+  try {
+    const projectId = projectStore.getCurrentProject?.project_id
+    if (!projectId) throw new Error('No current project selected')
+
+    await projectStore.removeTeamMember(projectId, props.result.talent_id)
+    showConfirmDialog.value = false
+    emit('remove-profile', props.result.talent_id)
+  } catch (error) {
+    console.error('Error removing team member:', error)
+  }
+}
+
+const cancelAddMember = () => {
+  showAddConfirmation.value = false
+  addError.value = null
+  assignmentRole.value = ''
+  assignmentStartDate.value = null
+  assignmentEndDate.value = null
+}
+
+const handleAddTeamMember = async () => {
+  try {
+    // Validate role field
+    if (!assignmentRole.value) {
+      addError.value = 'Role is required'
+      return
+    }
+
+    addLoading.value = true
+    addError.value = null
+
+    const projectId = projectStore.getCurrentProject?.project_id
+    if (!projectId) throw new Error('No current project selected')
+
+    // Prepare the assignment data with the required role
+    const assignmentData = {
+      project_id: projectId,
+      talent_id: props.result.talent_id,
+      role: assignmentRole.value,
+    }
+
+    // Add optional dates if provided
+    if (assignmentStartDate.value) {
+      assignmentData.assignment_start_date = assignmentStartDate.value
+    }
+
+    if (assignmentEndDate.value) {
+      assignmentData.assignment_end_date = assignmentEndDate.value
+    }
+
+    // Use createProjectAssignment method directly to pass all assignment data
+    await projectStore.createProjectAssignment(assignmentData)
+
+    showAddConfirmation.value = false
+    emit('confirm-add-profile', props.result)
+    closeModal()
+  } catch (error) {
+    addError.value =
+      error.message || 'Failed to add team member. Please try again.'
+    console.error('Error adding team member:', error)
+  } finally {
+    addLoading.value = false
+  }
 }
 </script>
 
@@ -516,12 +858,14 @@ const handleConfirmAdd = () => {
   min-height: 32px;
   position: relative;
   overflow: hidden;
+  margin-top: 8px;
 }
 
 .skill-chip {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.875rem;
 }
 
 .overflow-chip {
@@ -542,5 +886,56 @@ const handleConfirmAdd = () => {
   background-color: rgba(0, 0, 0, 0.6);
   padding: 4px;
   border-radius: 4px;
+}
+
+/* Modal styles */
+.modal-card {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.modal-header {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.modal-actions {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  z-index: 1;
+  padding: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
 }
 </style>
