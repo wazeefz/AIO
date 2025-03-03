@@ -207,6 +207,14 @@ const handleRemoveItem = async (memberId) => {
       error.value = 'No project selected'
       return
     }
+
+    console.log(
+      'TeamMemberList.handleRemoveItem called with memberId:',
+      memberId,
+      'in project:',
+      currentProject.value.project_id
+    )
+
     loading.value = true
     error.value = null
     await projectStore.removeTeamMember(

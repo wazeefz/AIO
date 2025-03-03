@@ -257,10 +257,25 @@ export const useProjectManagementStore = defineStore('projectManagement', {
       }
 
       try {
+        console.log(
+          'Store.removeTeamMember called with projectId:',
+          projectId,
+          'memberId:',
+          memberId
+        )
+
         this.loading = true
         this.error = null
 
+        console.log(
+          'Making API delete call to:',
+          `/project-assignments/${projectId}/${memberId}`
+        )
+
         await api.delete(`/project-assignments/${projectId}/${memberId}`)
+
+        console.log('API delete call successful, now refreshing project data')
+
         await this.setCurrentProject(projectId)
       } catch (error) {
         this.error = error.message
