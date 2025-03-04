@@ -53,21 +53,36 @@
           </v-select>
         </v-col>
 
-        <!-- Add Join Date field -->
         <v-col cols="12" md="6">
           <v-text-field
-            v-model="localFormData.joinDate"
-            @update:model-value="updateFormData('joinDate', $event)"
-            label="Join Date"
+            v-model="localFormData.hireDate"
+            @update:model-value="updateFormData('hireDate', $event)"
+            label="Hire Date"
             type="date"
             :rules="[rules.required]"
             variant="outlined"
             density="comfortable"
           >
             <template v-slot:prepend-inner>
-              <v-icon>mdi-calendar</v-icon>
+              <v-icon>mdi-calendar-check</v-icon>
             </template>
           </v-text-field>
+        </v-col>
+
+        <v-col cols="12" md="6">
+          <v-select
+            v-model="localFormData.availabilityStatus"
+            @update:model-value="updateFormData('availabilityStatus', $event)"
+            :items="availabilityStatuses"
+            label="Availability Status"
+            :rules="[rules.required]"
+            variant="outlined"
+            density="comfortable"
+          >
+            <template v-slot:prepend-inner>
+              <v-icon>mdi-clock-outline</v-icon>
+            </template>
+          </v-select>
         </v-col>
       </v-row>
 
@@ -109,16 +124,16 @@
         </div>
       </v-expand-transition>
 
-      <!-- Remarks field for all employment types -->
+      <!-- Career preferences field -->
       <v-textarea
-        v-model="localFormData.employmentRemarks"
-        @update:model-value="updateFormData('employmentRemarks', $event)"
-        label="Remarks/Career Preference (Optional)"
+        v-model="localFormData.careerPreferences"
+        @update:model-value="updateFormData('careerPreferences', $event)"
+        label="Career Preferences"
         variant="outlined"
         density="comfortable"
-        rows="2"
+        rows="3"
         class="mt-3"
-        hint="Add any additional information about the employment arrangement"
+        hint="Add any information about career goals and preferences"
         persistent-hint
       ></v-textarea>
     </v-card-text>
@@ -136,10 +151,11 @@ const props = defineProps({
       jobTitle: '',
       jobPosition: '',
       department: '',
-      joinDate: '',
+      hireDate: '',
       employmentType: 'fullTime',
       contractDuration: '',
-      employmentRemarks: '',
+      availabilityStatus: '',
+      careerPreferences: '',
     }),
   },
   rules: {
@@ -174,15 +190,24 @@ const departments = [
   'R&D',
 ]
 
+const availabilityStatuses = [
+  'Available',
+  'Partially Available',
+  'Unavailable',
+  'On Leave',
+  'On Project',
+]
+
 // Local form data
 const localFormData = ref({
   jobTitle: '',
   jobPosition: '',
   department: '',
-  joinDate: '',
+  hireDate: '',
   employmentType: 'fullTime',
   contractDuration: '',
-  employmentRemarks: '',
+  availabilityStatus: '',
+  careerPreferences: '',
 })
 
 // Watch for external changes
@@ -193,10 +218,11 @@ watch(
       jobTitle: newVal.jobTitle || '',
       jobPosition: newVal.jobPosition || '',
       department: newVal.department || '',
-      joinDate: newVal.joinDate || '',
+      hireDate: newVal.hireDate || '',
       employmentType: newVal.employmentType || 'fullTime',
       contractDuration: newVal.contractDuration || '',
-      employmentRemarks: newVal.employmentRemarks || '',
+      availabilityStatus: newVal.availabilityStatus || '',
+      careerPreferences: newVal.careerPreferences || '',
     }
   },
   { immediate: true, deep: true }

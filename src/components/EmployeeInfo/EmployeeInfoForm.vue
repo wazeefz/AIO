@@ -132,7 +132,10 @@
               <v-expansion-panel-title>Skills</v-expansion-panel-title>
               <v-expansion-panel-text>
                 <SkillsSection
-                  :model-value="{ skills: formData.skills }"
+                  :model-value="{
+                    skills: formData.skills,
+                    skillDetails: formData.skillDetails,
+                  }"
                   :rules="rules"
                   @update:model-value="updateSkills"
                 />
@@ -208,7 +211,7 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import HeaderSection from './HeaderSection.vue'
 import SidebarSection from './Sidebar.vue'
 import PersonalInfoSection from './PersonalInfo.vue'
@@ -224,7 +227,6 @@ import Assessment from './Assessment.vue'
 import { useResumeStore } from '@/stores/resume'
 
 const router = useRouter()
-const route = useRoute()
 const resumeStore = useResumeStore()
 
 const storedResume = resumeStore.getResumeData()
@@ -266,6 +268,7 @@ const formData = reactive({
 
   // Skills
   skills: storedResume?.skills,
+  skillDetails: storedResume?.skillDetails || {},
 
   // Arrays for sections
   education: storedResume?.education,
@@ -278,7 +281,9 @@ const formData = reactive({
   department: storedResume?.department,
   employmentType: storedResume?.employmentType,
   contractDuration: storedResume?.contractDuration,
-  employmentRemarks: storedResume?.employmentRemarks,
+  hireDate: storedResume?.hireDate,
+  availabilityStatus: storedResume?.availabilityStatus,
+  careerPreferences: storedResume?.careerPreferences,
 
   // Salary
   salary: storedResume?.salary,
@@ -506,6 +511,7 @@ const updateEducation = (value) => {
 const updateSkills = (newValue) => {
   if (Array.isArray(newValue.skills)) {
     formData.skills = [...newValue.skills]
+    formData.skillDetails = newValue.skillDetails || {}
     saveFormData()
   }
 }
@@ -536,6 +542,7 @@ const saveFormData = debounce(() => {
       certifications: [...formData.certifications],
       education: [...formData.education],
       skills: Array.isArray(formData.skills) ? [...formData.skills] : [],
+      skillDetails: { ...formData.skillDetails },
       relocationPreferences: [...formData.relocationPreferences],
     }
     localStorage.setItem('employeeFormData', JSON.stringify(dataToSave))

@@ -26,8 +26,8 @@
           <div class="d-flex justify-space-between">
             <div>
               <div class="text-subtitle-1 font-weight-medium">
-                {{ edu.qualificationType }}
-                <span v-if="edu.fieldOfStudy"> in {{ edu.fieldOfStudy }}</span>
+                {{ edu.level }}
+                <span v-if="edu.field"> in {{ edu.field }}</span>
               </div>
               <div class="text-subtitle-2 text-grey">
                 {{ edu.institution }}
@@ -70,8 +70,8 @@
         <v-card-text class="pa-4">
           <v-form ref="form" v-model="isFormValid">
             <v-combobox
-              v-model="editingEducation.qualificationType"
-              :items="qualificationTypes"
+              v-model="editingEducation.level"
+              :items="level"
               label="Qualification Type"
               :rules="[(v) => !!v || 'Qualification type is required']"
               variant="outlined"
@@ -80,8 +80,8 @@
             />
 
             <v-combobox
-              v-model="editingEducation.fieldOfStudy"
-              :items="fieldOfStudyOptions"
+              v-model="editingEducation.field"
+              :items="field"
               label="Field of Study (Optional)"
               variant="outlined"
               density="comfortable"
@@ -165,18 +165,16 @@ const loading = ref(false)
 // Local state management
 const localEducation = ref([...props.modelValue])
 
-const qualificationTypes = [
+const level = [
   "Bachelor's Degree",
   "Master's Degree",
   'Ph.D.',
   'Diploma',
-  'Certificate',
   'High School Diploma',
   "Associate's Degree",
-  'Professional Certification',
 ]
 
-const fieldOfStudyOptions = [
+const field = [
   'Computer Science',
   'Information Technology',
   'Business Administration',
@@ -192,8 +190,8 @@ const fieldOfStudyOptions = [
 ]
 
 const editingEducation = reactive({
-  qualificationType: '',
-  fieldOfStudy: '',
+  level: '',
+  field: '',
   institution: '',
   startDate: '',
   endDate: '',
@@ -232,8 +230,8 @@ const validateEndDate = (v) => {
 
 const resetForm = () => {
   Object.assign(editingEducation, {
-    qualificationType: '',
-    fieldOfStudy: '',
+    level: '',
+    field: '',
     institution: '',
     startDate: '',
     endDate: '',
