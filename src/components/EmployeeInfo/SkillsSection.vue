@@ -37,8 +37,6 @@
           <tr>
             <th>Skill</th>
             <th>Proficiency Level</th>
-            <th>Years of Experience</th>
-            <th>Last Used</th>
           </tr>
         </thead>
         <tbody>
@@ -55,28 +53,6 @@
                 hide-details
                 @update:model-value="updateSkillDetails"
               ></v-select>
-            </td>
-            <td>
-              <v-text-field
-                v-model="skill.yearsOfExperience"
-                type="number"
-                variant="outlined"
-                density="compact"
-                hide-details
-                step="0.5"
-                min="0"
-                @update:model-value="updateSkillDetails"
-              ></v-text-field>
-            </td>
-            <td>
-              <v-text-field
-                v-model="skill.lastUsedDate"
-                type="date"
-                variant="outlined"
-                density="compact"
-                hide-details
-                @update:model-value="updateSkillDetails"
-              ></v-text-field>
             </td>
           </tr>
         </tbody>

@@ -6,6 +6,6 @@
 import EmployeeInfoForm from '@/components/EmployeeInfo/EmployeeInfoForm.vue'
 </script>
 
-<!-- <script setup>
+<!-- <script setup> 
 import EmployeeInfoForm from '@/components/NewCVUpload.vue'
 </script> -->

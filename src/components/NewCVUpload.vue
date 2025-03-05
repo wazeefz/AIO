@@ -164,28 +164,21 @@ const processFiles = (files) => {
   uploadToBackend(file)
 }
 
-// const uploadToBackend = async (file) => {
-//   loading.value = true
-
-//   try {
-//     const response = await uploadResume(file)
-//     console.log('Resume Upload Response:', response)
-//     uploadedResumeData.value = response
-//     uploadedFiles.value[0].status = 'done'
-//   } catch (err) {
-//     showErrorMessage(
-//       error.value || 'Failed to upload resume. Please try again.'
-//     )
-//   } finally {
-//     loading.value = false
-//   }
-// }
-
 const uploadToBackend = async (file) => {
   loading.value = true
 
   try {
     const response = await uploadResume(file)
+
+    // Store CV file details in localStorage
+    localStorage.setItem(
+      'cvData',
+      JSON.stringify({
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+      })
+    )
 
     // Store in resume store (stringified)
     resumeStore.setResumeData(response)
@@ -193,6 +186,12 @@ const uploadToBackend = async (file) => {
     // Update UI state
     uploadedResumeData.value = response
     uploadedFiles.value[0].status = 'done'
+
+    console.log('CV data stored in localStorage:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+    })
   } catch (err) {
     showErrorMessage(
       err.message || 'Failed to upload resume. Please try again.'

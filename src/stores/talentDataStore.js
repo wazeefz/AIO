@@ -15,7 +15,22 @@ export const useTalentResumeStore = defineStore('talentResume', {
       this.isLoading = true
       this.error = null
       try {
-        console.log('Starting talent submission process...')
+        console.log(
+          'Starting talent submission process with complete form data:',
+          formData
+        )
+
+        // Get CV data from localStorage if available
+        let cvData = null
+        try {
+          const cvDataString = localStorage.getItem('cvData')
+          if (cvDataString) {
+            cvData = JSON.parse(cvDataString)
+            console.log('CV data retrieved from localStorage:', cvData)
+          }
+        } catch (error) {
+          console.error('Error parsing CV data from localStorage:', error)
+        }
 
         // Step 1: Create or update the talent profile (personal info)
         const personalInfo = {
@@ -23,52 +38,44 @@ export const useTalentResumeStore = defineStore('talentResume', {
           first_name: formData.firstName,
           last_name: formData.lastName,
           email: formData.email,
-          phone: formData.phone,
+          phone: formData.phone || null,
           date_of_birth: this.formatDateForBackend(formData.dateOfBirth),
-          age: formData.age,
-          gender: formData.gender,
+          gender: formData.gender || null,
           marital_status: formData.maritalStatus === 'married', // Convert to boolean
-          profile_pic: formData.profilePic,
 
           // Location fields
           current_country: formData.currentCountry,
           current_city: formData.currentCity,
           willing_to_relocate: formData.willingToRelocate || false,
-          relocation_preferences: JSON.stringify(
-            formData.relocationPreferences || []
-          ),
 
           // Professional summary
-          professional_summary: formData.summary || '',
-          total_experience_years: formData.experience || 0,
+          professional_summary: formData.summary || null,
+          total_experience_years: parseFloat(formData.experience) || 0,
 
           // Job details
-          job_title: formData.jobTitle || '',
+          job_title: formData.jobTitle || null,
           position_level: formData.jobPosition || 'Entry Level',
           employment_type: formData.employmentType || 'fullTime',
-          contract_duration: formData.contractDuration || null,
-          employment_remarks: formData.employmentRemarks || '',
-          department: formData.department || '',
-          join_date: this.formatDateForBackend(formData.joinDate),
 
-          // Salary
+          // Required fields with default values
+          department_id: formData.departmentId || null,
           basic_salary: parseFloat(formData.salary?.replace(/,/g, '')) || 0,
+          availability_status: formData.availabilityStatus || 'Available',
+          career_preferences: formData.careerPreferences || null,
 
           // Assessment
           tech_skill: formData.assessment?.interview?.[0]?.rating || 0,
           soft_skill: formData.assessment?.interview?.[1]?.rating || 0,
-          interview_remarks: formData.assessment?.interviewRemarks || '',
-          assessment_projects: JSON.stringify(
-            formData.assessment?.projects || []
-          ),
+          interview_remarks: formData.assessment?.interviewRemarks || null,
 
-          // Required fields with default values
-          department_id: 1, // Default department ID
-          availability_status: 'Available',
-          career_preferences: formData.summary || '',
+          // Required field
+          age: formData.age || 0,
+
+          // CV filename - use from formData if available, otherwise from localStorage
+          resume_filename: formData.resumeFilename || cvData?.fileName || null,
         }
 
-        console.log('Prepared talent data:', personalInfo)
+        console.log('Formatted personal info for backend:', personalInfo)
 
         // Create or update the talent in the database
         let talentId = this.currentResumeId
@@ -76,6 +83,10 @@ export const useTalentResumeStore = defineStore('talentResume', {
 
         if (talentId) {
           console.log(`Updating existing talent with ID: ${talentId}`)
+          console.log(
+            'PUT request body:',
+            JSON.stringify(personalInfo, null, 2)
+          )
           talentResponse = await fetch(`${API_URL}/talents/${talentId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -83,6 +94,10 @@ export const useTalentResumeStore = defineStore('talentResume', {
           })
         } else {
           console.log('Creating new talent record')
+          console.log(
+            'POST request body:',
+            JSON.stringify(personalInfo, null, 2)
+          )
           talentResponse = await fetch(`${API_URL}/talents/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -105,12 +120,68 @@ export const useTalentResumeStore = defineStore('talentResume', {
 
         // Step 2: Store skills
         if (Array.isArray(formData.skills) && formData.skills.length > 0) {
-          console.log(`Processing ${formData.skills.length} skills`)
-          const formattedSkills = formData.skills.map((skill) => ({
-            name: skill,
-            proficiency: 3, // Default proficiency
-            experience: 0, // Default experience
-          }))
+          console.log('Processing skills:', formData.skills)
+          console.log('Skill details:', formData.skillDetails)
+
+          // Extract skill categories
+          const skillCategories = this.extractSkillCategories(formData)
+          console.log('Extracted skill categories:', skillCategories)
+
+          // Store skill categories in localStorage for future use
+          this.storeSkillCategories(skillCategories)
+
+          const formattedSkills = formData.skills
+            .map((skill) => {
+              // Handle both string skills and object skills
+              if (typeof skill === 'string') {
+                const skillObj = {
+                  name: skill,
+                  proficiency: 3, // Default proficiency
+                  category:
+                    skillCategories[skill] ||
+                    formData.skillDetails?.[skill]?.category ||
+                    'Other',
+                }
+                console.log('Formatted string skill:', skillObj)
+                return skillObj
+              } else if (typeof skill === 'object') {
+                // Map proficiency level text to numeric value if needed
+                let proficiencyValue = 3 // Default medium proficiency
+                if (skill.proficiency !== undefined) {
+                  proficiencyValue = parseInt(skill.proficiency) || 3
+                } else if (skill.proficiencyLevel) {
+                  // Convert text proficiency to numeric
+                  switch (skill.proficiencyLevel.toLowerCase()) {
+                    case 'beginner':
+                      proficiencyValue = 1
+                      break
+                    case 'intermediate':
+                      proficiencyValue = 2
+                      break
+                    case 'advanced':
+                      proficiencyValue = 3
+                      break
+                    case 'expert':
+                      proficiencyValue = 4
+                      break
+                    default:
+                      proficiencyValue = 1 // Default to intermediate
+                  }
+                }
+
+                const skillObj = {
+                  name: skill.name || skill.skill_name,
+                  proficiency: proficiencyValue,
+                  category:
+                    skill.category || skillCategories[skill.name] || 'Other',
+                }
+                console.log('Formatted object skill:', skillObj)
+                return skillObj
+              }
+            })
+            .filter(Boolean) // Remove any undefined entries
+
+          console.log('Final formatted skills for backend:', formattedSkills)
           await this.saveSkillsWithAssociation(talentId, formattedSkills)
         }
 
@@ -122,14 +193,31 @@ export const useTalentResumeStore = defineStore('talentResume', {
           console.log(
             `Processing ${formData.education.length} education entries`
           )
-          const formattedEducation = formData.education.map((edu) => ({
-            institution_name: edu.institution || edu.institutionName,
-            qualification_type: edu.degree || edu.qualificationType,
-            field_of_study: edu.fieldOfStudy || '',
-            start_date: this.formatDateForBackend(edu.startDate),
-            end_date: this.formatDateForBackend(edu.endDate),
-            talent_id: talentId,
-          }))
+          const formattedEducation = formData.education.map((edu) => {
+            // Convert year to date format if needed
+            let startDate = edu.startDate || edu.start_date
+            let endDate = edu.endDate || edu.end_date
+
+            // Handle start_year and graduation_year if present
+            if (!startDate && edu.start_year) {
+              startDate = `${edu.start_year}-01-01` // Default to January 1st
+            }
+
+            if (!endDate && edu.graduation_year) {
+              endDate = `${edu.graduation_year}-12-31` // Default to December 31st
+            }
+
+            return {
+              institution_name:
+                edu.institution_name || edu.institution || edu.institutionName,
+              qualification_type:
+                edu.qualification_type || edu.degree || edu.level,
+              field_of_study: edu.field_of_study || edu.field || '',
+              start_date: this.formatDateForBackend(startDate),
+              end_date: this.formatDateForBackend(endDate),
+              talent_id: talentId,
+            }
+          })
           await this.saveEducation(talentId, formattedEducation)
         }
 
@@ -141,18 +229,31 @@ export const useTalentResumeStore = defineStore('talentResume', {
           console.log(
             `Processing ${formData.experiences.length} experience entries`
           )
-          const formattedExperiences = formData.experiences.map((exp) => ({
-            company_name: exp.company || exp.companyName,
-            job_title: exp.title || exp.jobTitle,
-            location: exp.location || '',
-            employment_type: exp.employmentType || 'fullTime',
-            start_date: this.formatDateForBackend(exp.startDate),
-            end_date: this.formatDateForBackend(exp.endDate),
-            is_current_job: exp.isCurrent || false,
-            description: exp.description || '',
-            key_achievements: exp.achievements || [],
-            talent_id: talentId,
-          }))
+          const formattedExperiences = formData.experiences.map((exp) => {
+            // Handle different field names and formats
+            const description =
+              exp.description ||
+              (Array.isArray(exp.responsibilities)
+                ? exp.responsibilities.join('\n\n')
+                : exp.responsibilities) ||
+              ''
+
+            return {
+              company_name: exp.company_name || exp.company || exp.companyName,
+              job_title: exp.job_title || exp.title || exp.position,
+              location: exp.location || '',
+              employment_type:
+                exp.employment_type || exp.employmentType || 'fullTime',
+              start_date: this.formatDateForBackend(
+                exp.startDate || exp.start_date
+              ),
+              end_date: this.formatDateForBackend(exp.endDate || exp.end_date),
+              is_current_job: exp.is_current_job || exp.isCurrent || false,
+              description: description,
+              key_achievements: exp.key_achievements || exp.achievements || [],
+              talent_id: talentId,
+            }
+          })
           await this.saveExperiences(talentId, formattedExperiences)
         }
 
@@ -165,19 +266,38 @@ export const useTalentResumeStore = defineStore('talentResume', {
             `Processing ${formData.certifications.length} certification entries`
           )
           const formattedCertifications = formData.certifications.map(
-            (cert) => ({
-              certification_name: cert.name || cert.certificationName,
-              issuing_organization: cert.issuer || cert.issuingOrganization,
-              credential_id: cert.credentialId || null,
-              start_date: this.formatDateForBackend(
-                cert.issueDate || cert.startDate
-              ),
-              has_expiration_date: !!cert.expirationDate,
-              expiration_date: cert.expirationDate
-                ? this.formatDateForBackend(cert.expirationDate)
-                : null,
-              talent_id: talentId,
-            })
+            (cert) => {
+              // Handle year format if present
+              let startDate =
+                cert.issueDate || cert.startDate || cert.start_date
+
+              // If only year is provided, convert to date
+              if (!startDate && cert.year) {
+                startDate = `${cert.year}-01-01` // Default to January 1st of the year
+              }
+
+              return {
+                certification_name: cert.certification_name || cert.name,
+                issuing_organization:
+                  cert.issuing_organization || cert.issuer || cert.issuedBy,
+                credential_id: cert.credential_id || cert.credentialId || null,
+                start_date: this.formatDateForBackend(startDate),
+                has_expiration_date: !!(
+                  cert.has_expiration_date ||
+                  cert.expiration_date ||
+                  cert.expirationDate
+                ),
+                expiration_date:
+                  cert.has_expiration_date ||
+                  cert.expiration_date ||
+                  cert.expirationDate
+                    ? this.formatDateForBackend(
+                        cert.expiration_date || cert.expirationDate
+                      )
+                    : null,
+                talent_id: talentId,
+              }
+            }
           )
           await this.saveCertifications(talentId, formattedCertifications)
         }
@@ -198,15 +318,28 @@ export const useTalentResumeStore = defineStore('talentResume', {
       // First remove existing talent-skill associations
       await this.removeAllTalentSkills(talentId)
 
+      // Get stored skill categories if available
+      const storedCategories = this.getStoredSkillCategories()
+
       // For each skill
       for (const skill of skills) {
         try {
           let skillId
+          const skillName = skill.name.trim()
+
+          if (!skillName) {
+            console.warn('Skipping empty skill name')
+            continue
+          }
+
+          // Get category from skill object or from stored categories
+          const skillCategory =
+            skill.category || storedCategories[skillName] || 'Other'
 
           // Check if the skill exists by name
-          console.log(`Checking if skill "${skill.name}" exists`)
+          console.log(`Checking if skill "${skillName}" exists`)
           const searchResponse = await fetch(
-            `${API_URL}/skills/?skill_name=${encodeURIComponent(skill.name)}`
+            `${API_URL}/skills/?skill_name=${encodeURIComponent(skillName)}`
           )
           let searchResults = []
 
@@ -218,16 +351,45 @@ export const useTalentResumeStore = defineStore('talentResume', {
             // Skill exists
             skillId = searchResults[0].skill_id
             console.log(`Found existing skill with ID: ${skillId}`)
+
+            // Optionally update the skill category if it has changed
+            if (
+              skillCategory &&
+              skillCategory !== 'Other' &&
+              searchResults[0].skill_category !== skillCategory
+            ) {
+              console.log(
+                `Updating skill category from "${searchResults[0].skill_category}" to "${skillCategory}"`
+              )
+              const updateSkillResponse = await fetch(
+                `${API_URL}/skills/${skillId}`,
+                {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    skill_name: skillName,
+                    skill_category: skillCategory,
+                  }),
+                }
+              )
+
+              if (!updateSkillResponse.ok) {
+                console.warn(
+                  `Could not update skill category: ${updateSkillResponse.status}`
+                )
+              }
+            }
           } else {
             // Create the skill since it doesn't exist
-            console.log(`Creating new skill: ${skill.name}`)
+            console.log(
+              `Creating new skill: ${skillName} (Category: ${skillCategory})`
+            )
             const createSkillResponse = await fetch(`${API_URL}/skills/`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                skill_name: skill.name,
-                description: skill.description || '',
-                category: skill.category || 'Other',
+                skill_name: skillName,
+                skill_category: skillCategory,
               }),
             })
 
@@ -245,7 +407,7 @@ export const useTalentResumeStore = defineStore('talentResume', {
 
           // Now create the talent-skill association
           console.log(
-            `Creating talent-skill association for talent ${talentId} and skill ${skillId}`
+            `Creating talent-skill association for talent ${talentId} and skill ${skillId} with proficiency ${skill.proficiency}`
           )
           const associationResponse = await fetch(`${API_URL}/talentskills/`, {
             method: 'POST',
@@ -253,8 +415,7 @@ export const useTalentResumeStore = defineStore('talentResume', {
             body: JSON.stringify({
               talent_id: talentId,
               skill_id: skillId,
-              proficiency_level: skill.proficiency || 3, // Default to medium proficiency if not provided
-              years_of_experience: skill.experience || 0,
+              proficiency_level: parseInt(skill.proficiency) || 3, // Ensure proficiency is an integer
             }),
           })
 
@@ -346,8 +507,9 @@ export const useTalentResumeStore = defineStore('talentResume', {
           // Map form data to database fields
           const educationData = {
             talent_id: talentId,
-            institution_name: edu.institution || edu.institutionName,
-            qualification_type: edu.degree || edu.qualificationType,
+            institution_name:
+              edu.institution_name || edu.institution || edu.institutionName,
+            qualification_type: edu.qualification_type || edu.degree,
             field_of_study: edu.field_of_study,
             start_date: this.formatDateForBackend(edu.start_date),
             end_date: this.formatDateForBackend(edu.end_date),
@@ -430,15 +592,15 @@ export const useTalentResumeStore = defineStore('talentResume', {
           // Map form data to database fields
           const experienceData = {
             talent_id: talentId,
-            company_name: exp.company || exp.companyName,
-            job_title: exp.job_title,
+            company_name: exp.company_name || exp.company || exp.companyName,
+            job_title: exp.job_title || exp.title || exp.position,
             location: exp.location,
-            employment_type: exp.employment_type,
+            employment_type: exp.employment_type || exp.employmentType,
             start_date: this.formatDateForBackend(exp.start_date),
             end_date: this.formatDateForBackend(exp.end_date),
-            is_current_job: exp.is_current_job,
-            description: exp.description,
-            key_achievements: exp.key_achievements || [],
+            is_current_job: exp.is_current_job || exp.isCurrent || false,
+            description: exp.description || '',
+            key_achievements: exp.key_achievements || exp.achievements || [],
           }
 
           console.log('Experience data:', experienceData)
@@ -515,16 +677,25 @@ export const useTalentResumeStore = defineStore('talentResume', {
 
           console.log(`${method} certification to ${url}`)
 
+          // Determine if there's an expiration date
+          const hasExpirationDate = !!(
+            cert.has_expiration_date || cert.expiration_date
+          )
+
           // Map form data to database fields
           const certificationData = {
             talent_id: talentId,
-            certification_name: cert.certification_name,
-            issuing_organization: cert.issuing_organization,
-            credential_id: cert.credential_id,
-            start_date: this.formatDateForBackend(cert.start_date),
-            has_expiration_date: !!cert.has_expiration_date,
-            expiration_date: cert.has_expiration_date
-              ? this.formatDateForBackend(cert.expiration_date)
+            certification_name: cert.certification_name || cert.name,
+            issuing_organization: cert.issuing_organization || cert.issuer,
+            credential_id: cert.credential_id || cert.credentialId || null,
+            start_date: this.formatDateForBackend(
+              cert.start_date || cert.issueDate
+            ),
+            has_expiration_date: hasExpirationDate,
+            expiration_date: hasExpirationDate
+              ? this.formatDateForBackend(
+                  cert.expiration_date || cert.expirationDate
+                )
               : null,
           }
 
@@ -600,16 +771,29 @@ export const useTalentResumeStore = defineStore('talentResume', {
       try {
         // Handle different date formats
         let date
-        if (dateString.includes('/')) {
-          // Format: YYYY/MM/DD
-          const [year, month, day] = dateString.split('/')
-          date = new Date(year, month - 1, day)
-        } else if (dateString.includes('-')) {
-          // Format: YYYY-MM-DD
-          date = new Date(dateString)
+        if (typeof dateString === 'string') {
+          if (dateString.includes('/')) {
+            // Format: YYYY/MM/DD or MM/DD/YYYY
+            const parts = dateString.split('/')
+            if (parts[0].length === 4) {
+              // YYYY/MM/DD
+              date = new Date(parts[0], parts[1] - 1, parts[2])
+            } else {
+              // MM/DD/YYYY
+              date = new Date(parts[2], parts[0] - 1, parts[1])
+            }
+          } else if (dateString.includes('-')) {
+            // Format: YYYY-MM-DD
+            date = new Date(dateString)
+          } else {
+            // Try to parse as is
+            date = new Date(dateString)
+          }
+        } else if (dateString instanceof Date) {
+          date = dateString
         } else {
-          // Try to parse as is
-          date = new Date(dateString)
+          console.error('Invalid date type:', typeof dateString)
+          return null
         }
 
         // Check if date is valid
@@ -650,37 +834,58 @@ export const useTalentResumeStore = defineStore('talentResume', {
           `${API_URL}/talentskills/talent/${talentId}`
         )
         let skills = []
+        let formattedSkillDetails = {}
+
         if (skillsResponse.ok) {
           const talentSkills = await skillsResponse.json()
           console.log(`Retrieved ${talentSkills.length} skills`)
 
           // Map the talent-skill data to the format expected by the form
-          skills = await Promise.all(
-            talentSkills.map(async (ts) => {
+          const skillsMap = new Map() // Use a map to avoid duplicates
+
+          for (const ts of talentSkills) {
+            try {
               // Fetch the skill details
               const skillResponse = await fetch(
                 `${API_URL}/skills/${ts.skill_id}`
               )
-              let skillData = {
-                skill_name: 'Unknown Skill',
-                description: '',
-                category: 'Other',
-              }
 
               if (skillResponse.ok) {
-                skillData = await skillResponse.json()
-              }
+                const skillData = await skillResponse.json()
 
-              return {
-                id: ts.skill_id,
-                name: skillData.skill_name,
-                description: skillData.description || '',
-                category: skillData.category || 'Other',
-                proficiency: ts.proficiency_level,
-                experience: ts.years_of_experience,
+                // Create a skill object with all necessary details
+                const skillObj = {
+                  id: ts.skill_id,
+                  name: skillData.skill_name,
+                  category: skillData.skill_category || 'Other',
+                  proficiency: ts.proficiency_level,
+                }
+
+                // Add to map using skill_id as key to avoid duplicates
+                skillsMap.set(ts.skill_id, skillObj)
+
+                // Also build skillDetails object for the form
+                if (!formattedSkillDetails[skillData.skill_name]) {
+                  formattedSkillDetails[skillData.skill_name] = {
+                    category: skillData.skill_category || 'Other',
+                    proficiency: ts.proficiency_level,
+                  }
+                }
+              } else {
+                console.warn(
+                  `Could not fetch details for skill ID ${ts.skill_id}`
+                )
               }
-            })
-          )
+            } catch (error) {
+              console.error(`Error processing skill ${ts.skill_id}:`, error)
+            }
+          }
+
+          // Convert map to array
+          skills = Array.from(skillsMap.values())
+
+          // Create a simple array of skill names for the form
+          const skillNames = skills.map((s) => s.name)
         }
 
         // Get education
@@ -791,11 +996,18 @@ export const useTalentResumeStore = defineStore('talentResume', {
             projects: [],
           },
 
+          // Resume filename
+          resumeFilename: talentData.resume_filename,
+
           // Arrays for sections
-          skills,
+          skills: Array.isArray(skills) ? skills.map((s) => s.name) : [], // Use simple array of names for the form
+          skillDetails: formattedSkillDetails || {}, // Include skill details for the form
           education,
           experiences,
           certifications,
+
+          // Include the full skill objects with categories for reference
+          fullSkillsData: skills,
         }
 
         console.log('Resume data compiled successfully')
@@ -815,8 +1027,21 @@ export const useTalentResumeStore = defineStore('talentResume', {
       if (!dateString) return ''
 
       try {
-        const date = new Date(dateString)
-        if (isNaN(date.getTime())) return ''
+        // Handle different input types
+        let date
+        if (typeof dateString === 'string') {
+          date = new Date(dateString)
+        } else if (dateString instanceof Date) {
+          date = dateString
+        } else {
+          console.error('Invalid date type:', typeof dateString)
+          return ''
+        }
+
+        if (isNaN(date.getTime())) {
+          console.error('Invalid date:', dateString)
+          return ''
+        }
 
         // Format as YYYY/MM/DD
         const year = date.getFullYear()
@@ -834,6 +1059,87 @@ export const useTalentResumeStore = defineStore('talentResume', {
     clearCurrentResume() {
       this.currentResumeId = null
       this.error = null
+    },
+
+    // Initialize form with CV data from localStorage
+    initializeFormWithCVData(formData) {
+      try {
+        // Get CV data from localStorage if available
+        const cvDataString = localStorage.getItem('cvData')
+        if (cvDataString) {
+          const cvData = JSON.parse(cvDataString)
+          console.log('CV data retrieved for form initialization:', cvData)
+
+          // Add the filename to the form data
+          return {
+            ...formData,
+            resumeFilename: cvData.fileName || null,
+            resumeFileSize: cvData.fileSize || null,
+            resumeFileType: cvData.fileType || null,
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing CV data from localStorage:', error)
+      }
+
+      return formData
+    },
+
+    // Extract skill categories from form data
+    extractSkillCategories(formData) {
+      const skillCategories = {}
+
+      if (Array.isArray(formData.skills)) {
+        formData.skills.forEach((skill) => {
+          if (
+            typeof skill === 'string' &&
+            formData.skillDetails?.[skill]?.category
+          ) {
+            // If skill is a string and has category in skillDetails
+            skillCategories[skill] = formData.skillDetails[skill].category
+          } else if (
+            typeof skill === 'object' &&
+            skill.name &&
+            skill.category
+          ) {
+            // If skill is an object with name and category
+            skillCategories[skill.name] = skill.category
+          }
+        })
+      }
+
+      return skillCategories
+    },
+
+    // Store skill categories in localStorage
+    storeSkillCategories(skillCategories) {
+      try {
+        localStorage.setItem('skillCategories', JSON.stringify(skillCategories))
+        console.log('Skill categories stored in localStorage:', skillCategories)
+      } catch (error) {
+        console.error('Error storing skill categories in localStorage:', error)
+      }
+    },
+
+    // Retrieve skill categories from localStorage
+    getStoredSkillCategories() {
+      try {
+        const categoriesString = localStorage.getItem('skillCategories')
+        if (categoriesString) {
+          const categories = JSON.parse(categoriesString)
+          console.log(
+            'Skill categories retrieved from localStorage:',
+            categories
+          )
+          return categories
+        }
+      } catch (error) {
+        console.error(
+          'Error retrieving skill categories from localStorage:',
+          error
+        )
+      }
+      return {}
     },
   },
 })

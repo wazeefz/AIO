@@ -48,6 +48,13 @@
         </h2>
 
         <v-form ref="form" v-model="isValid" @submit.prevent="handleSubmit">
+          <!-- Hidden fields for CV data -->
+          <input
+            type="hidden"
+            name="resumeFilename"
+            v-model="formData.resumeFilename"
+          />
+
           <v-expansion-panels v-model="expandedPanels.personalInfo">
             <v-expansion-panel>
               <v-expansion-panel-title
@@ -169,7 +176,7 @@
             </v-expansion-panel>
           </v-expansion-panels>
 
-          <v-expansion-panels v-model="expandedPanels.assessment">
+          <!-- <v-expansion-panels v-model="expandedPanels.assessment">
             <v-expansion-panel>
               <v-expansion-panel-title>Assessment</v-expansion-panel-title>
               <v-expansion-panel-text>
@@ -179,7 +186,7 @@
                 />
               </v-expansion-panel-text>
             </v-expansion-panel>
-          </v-expansion-panels>
+          </v-expansion-panels> -->
         </v-form>
       </v-col>
     </v-row>
@@ -225,9 +232,11 @@ import ExperienceSection from './JobExperience.vue'
 import CertificationSection from './ProfessionalCert.vue'
 import Assessment from './Assessment.vue'
 import { useResumeStore } from '@/stores/resume'
+import { useTalentResumeStore } from '@/stores/talentDataStore'
 
 const router = useRouter()
 const resumeStore = useResumeStore()
+const talentStore = useTalentResumeStore()
 
 const storedResume = resumeStore.getResumeData()
 
@@ -260,20 +269,40 @@ const formData = reactive({
   currentCountry: storedResume?.currentCountry,
   currentCity: storedResume?.currentCity,
   willingToRelocate: storedResume?.willingToRelocate,
-  relocationPreferences: storedResume?.relocationPreferences,
+  relocationPreferences: storedResume?.relocationPreferences || [],
 
   // Professional Summary
   summary: storedResume?.summary,
   experience: storedResume?.experience,
 
-  // Skills
-  skills: storedResume?.skills,
-  skillDetails: storedResume?.skillDetails || {},
+  // Skills - store only skill names
+  skills: Array.isArray(storedResume?.skills)
+    ? storedResume.skills.map((skill) =>
+        typeof skill === 'string' ? skill : skill.name
+      )
+    : [],
+
+  // SkillDetails - store proficiency and category for each skill
+  skillDetails:
+    storedResume?.skills?.reduce((details, skill) => {
+      const skillName = typeof skill === 'string' ? skill : skill.name
+      details[skillName] = {
+        proficiency:
+          typeof skill === 'string'
+            ? storedResume?.skillDetails?.[skill]?.proficiency || 3
+            : skill.proficiency || 3,
+        category:
+          typeof skill === 'string'
+            ? storedResume?.skillDetails?.[skill]?.category || 'Other'
+            : skill.category || 'Other',
+      }
+      return details
+    }, {}) || {},
 
   // Arrays for sections
-  education: storedResume?.education,
-  experiences: storedResume?.experiences,
-  certifications: storedResume?.certifications,
+  education: storedResume?.education || [],
+  experiences: storedResume?.experiences || [],
+  certifications: storedResume?.certifications || [],
 
   // Job Details
   jobTitle: storedResume?.jobTitle,
@@ -289,7 +318,7 @@ const formData = reactive({
   salary: storedResume?.salary,
 
   // Assessment
-  assessment: {
+  assessment: storedResume?.assessment || {
     interview: [
       { rating: 0 }, // Technical Skills
       { rating: 0 }, // Soft Skills
@@ -297,6 +326,11 @@ const formData = reactive({
     interviewRemarks: '',
     projects: [],
   },
+
+  // CV data
+  resumeFilename: null,
+  resumeFileSize: null,
+  resumeFileType: null,
 })
 
 // Section configuration
@@ -405,7 +439,7 @@ const completionProgress = computed(() => {
   }
 
   // Check employment type additional fields
-  if (formData.employmentType !== 'fullTime') {
+  if (formData.employmentType !== 'Full Time') {
     total++
     if (formData.contractDuration) completed++
   }
@@ -510,8 +544,35 @@ const updateEducation = (value) => {
 
 const updateSkills = (newValue) => {
   if (Array.isArray(newValue.skills)) {
-    formData.skills = [...newValue.skills]
-    formData.skillDetails = newValue.skillDetails || {}
+    // Store only skill names in the skills array
+    formData.skills = newValue.skills.map((skill) =>
+      typeof skill === 'string' ? skill : skill.name
+    )
+
+    // Build skillDetails object with proficiency and category for each skill
+    const updatedSkillDetails = {}
+    newValue.skills.forEach((skill) => {
+      const skillName = typeof skill === 'string' ? skill : skill.name
+      updatedSkillDetails[skillName] = {
+        proficiency:
+          typeof skill === 'string'
+            ? newValue.skillDetails?.[skill]?.proficiency || 3
+            : skill.proficiency || 3,
+        category:
+          typeof skill === 'string'
+            ? newValue.skillDetails?.[skill]?.category || 'Other'
+            : skill.category || 'Other',
+      }
+    })
+    formData.skillDetails = updatedSkillDetails
+
+    // Extract and store skill categories
+    const skillCategories = talentStore.extractSkillCategories({
+      skills: formData.skills,
+      skillDetails: formData.skillDetails,
+    })
+    talentStore.storeSkillCategories(skillCategories)
+
     saveFormData()
   }
 }
@@ -543,7 +604,12 @@ const saveFormData = debounce(() => {
       education: [...formData.education],
       skills: Array.isArray(formData.skills) ? [...formData.skills] : [],
       skillDetails: { ...formData.skillDetails },
-      relocationPreferences: [...formData.relocationPreferences],
+      relocationPreferences: Array.isArray(formData.relocationPreferences)
+        ? [...formData.relocationPreferences]
+        : [],
+      resumeFilename: formData.resumeFilename,
+      resumeFileSize: formData.resumeFileSize,
+      resumeFileType: formData.resumeFileType,
     }
     localStorage.setItem('employeeFormData', JSON.stringify(dataToSave))
     console.log('Form data saved:', dataToSave)
@@ -613,9 +679,67 @@ const handleSubmit = async () => {
 
   try {
     isSubmitting.value = true
-    console.log('Submitting form data:', formData)
-    localStorage.removeItem('employeeFormData')
-    router.push('/upload-cv/bulk-employee-info')
+    console.log('=== FORM SUBMISSION TEST MODE ===')
+    console.log('Raw form data:', {
+      ...formData,
+      skills: formData.skills,
+      skillDetails: formData.skillDetails,
+    })
+
+    // Extract and store skill categories
+    const skillCategories = talentStore.extractSkillCategories(formData)
+    console.log('Extracted skill categories:', skillCategories)
+    talentStore.storeSkillCategories(skillCategories)
+
+    // Initialize form with CV data from localStorage
+    const formDataWithCV = talentStore.initializeFormWithCVData(formData)
+    console.log('Form data with CV details:', formDataWithCV)
+
+    // Log what would be sent to the backend
+    console.log('=== DATA THAT WOULD BE SENT TO BACKEND ===')
+    console.log('Personal Info:', {
+      first_name: formDataWithCV.firstName,
+      last_name: formDataWithCV.lastName,
+      email: formDataWithCV.email,
+      phone: formDataWithCV.phone,
+      date_of_birth: formDataWithCV.dateOfBirth,
+      gender: formDataWithCV.gender,
+      marital_status: formDataWithCV.maritalStatus === 'married',
+      current_country: formDataWithCV.currentCountry,
+      current_city: formDataWithCV.currentCity,
+      willing_to_relocate: formDataWithCV.willingToRelocate,
+      professional_summary: formDataWithCV.summary,
+      total_experience_years: parseFloat(formDataWithCV.experience) || 0,
+      job_title: formDataWithCV.jobTitle,
+      position_level: formDataWithCV.jobPosition,
+      employment_type: formDataWithCV.employmentType,
+      basic_salary: parseFloat(formDataWithCV.salary?.replace(/,/g, '')) || 0,
+      age: formDataWithCV.age || 0,
+      resume_filename: formDataWithCV.resumeFilename,
+    })
+
+    console.log('Skills:', formDataWithCV.skills)
+    console.log('Education:', formDataWithCV.education)
+    console.log('Experience:', formDataWithCV.experiences)
+    console.log('Certifications:', formDataWithCV.certifications)
+    console.log('Assessment:', formDataWithCV.assessment)
+
+    console.log('=== TEST MODE: Submission prevented ===')
+    alert(
+      'Form data logged to console. Backend submission prevented for testing.'
+    )
+
+    // Comment out the actual submission code
+    /*
+    const talentId = await talentStore.submitEmployeeInfo(formDataWithCV)
+    if (talentId) {
+      console.log('Form submitted successfully with talent ID:', talentId)
+      localStorage.removeItem('employeeFormData')
+      router.push('/upload-cv/bulk-employee-info')
+    } else {
+      throw new Error('Failed to submit form data')
+    }
+    */
   } catch (error) {
     console.error('Form submission error:', error)
     alert('An error occurred while submitting the form. Please try again.')
@@ -624,21 +748,61 @@ const handleSubmit = async () => {
   }
 }
 
+// Form validation
+const validateForm = async () => {
+  if (!form.value) return false
+
+  const { valid } = await form.value.validate()
+
+  if (!valid) {
+    // Find the first invalid section and expand it
+    const requiredFields = [
+      { field: 'firstName', section: 'personalInfo' },
+      { field: 'lastName', section: 'personalInfo' },
+      { field: 'email', section: 'personalInfo' },
+      { field: 'currentCountry', section: 'location' },
+      { field: 'currentCity', section: 'location' },
+    ]
+
+    for (const { field, section } of requiredFields) {
+      if (!formData[field]) {
+        expandedPanels[section] = 0
+        setTimeout(() => {
+          const element = document.querySelector(`[name="${field}"]`)
+          if (element) element.focus()
+        }, 300)
+        return false
+      }
+    }
+  }
+
+  return valid
+}
+
 // Lifecycle hooks
 onMounted(() => {
-  // const savedData = localStorage.getItem('employeeFormData')
-  // if (savedData) {
-  //   try {
-  //     const parsedData = JSON.parse(savedData)
-  //     Object.assign(formData, parsedData)
-  //   } catch (error) {
-  //     console.error('Error loading saved form data:', error)
-  //   }
-  // }
+  // Initialize form with CV data
+  const formDataWithCV = talentStore.initializeFormWithCVData(formData)
+  if (formDataWithCV.resumeFilename) {
+    console.log('CV filename loaded:', formDataWithCV.resumeFilename)
+    Object.assign(formData, formDataWithCV)
+  }
 
-  // if (storedResume) {
-  //   Object.assign(formData, storedResume)
-  // }
+  // Load saved form data if available
+  const savedData = localStorage.getItem('employeeFormData')
+  if (savedData) {
+    try {
+      const parsedData = JSON.parse(savedData)
+      Object.assign(formData, parsedData)
+    } catch (error) {
+      console.error('Error loading saved form data:', error)
+    }
+  }
+
+  // Load resume data if available
+  if (storedResume) {
+    Object.assign(formData, storedResume)
+  }
 
   const container = document.querySelector('.form-container')
   if (container) {
