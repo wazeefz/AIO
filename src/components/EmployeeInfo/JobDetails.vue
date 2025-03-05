@@ -141,7 +141,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -214,21 +214,31 @@ const localFormData = ref({
 watch(
   () => props.modelValue,
   (newVal) => {
-    localFormData.value = {
-      jobTitle: newVal.jobTitle || '',
-      jobPosition: newVal.jobPosition || '',
-      department: newVal.department || '',
-      hireDate: newVal.hireDate || '',
-      employmentType: newVal.employmentType || 'fullTime',
-      contractDuration: newVal.contractDuration || '',
-      availabilityStatus: newVal.availabilityStatus || '',
-      careerPreferences: newVal.careerPreferences || '',
+    // Only update if there are actual changes
+    const hasChanges = Object.keys(localFormData.value).some(
+      (key) => localFormData.value[key] !== (newVal[key] || '')
+    )
+
+    if (hasChanges) {
+      localFormData.value = {
+        jobTitle: newVal.jobTitle || '',
+        jobPosition: newVal.jobPosition || '',
+        department: newVal.department || '',
+        hireDate: newVal.hireDate || '',
+        employmentType: newVal.employmentType || 'fullTime',
+        contractDuration: newVal.contractDuration || '',
+        availabilityStatus: newVal.availabilityStatus || '',
+        careerPreferences: newVal.careerPreferences || '',
+      }
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true } // Remove deep watching
 )
 
 const updateFormData = (field, value) => {
+  // Check if the value has actually changed
+  if (localFormData.value[field] === value) return
+
   localFormData.value[field] = value
 
   // Only clear duration when switching to full time
@@ -236,11 +246,25 @@ const updateFormData = (field, value) => {
     localFormData.value.contractDuration = ''
   }
 
-  emit('update:model-value', {
-    ...props.modelValue,
-    ...localFormData.value,
-  })
+  // Debounce the emit to prevent rapid updates
+  if (updateFormData.timeout) {
+    clearTimeout(updateFormData.timeout)
+  }
+
+  updateFormData.timeout = setTimeout(() => {
+    emit('update:model-value', {
+      ...props.modelValue,
+      ...localFormData.value,
+    })
+  }, 300)
 }
+
+// Cleanup
+onBeforeUnmount(() => {
+  if (updateFormData.timeout) {
+    clearTimeout(updateFormData.timeout)
+  }
+})
 
 const getDurationLabel = computed(() => {
   return localFormData.value.employmentType === 'contract'

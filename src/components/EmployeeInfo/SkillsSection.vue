@@ -62,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -124,24 +124,35 @@ const localFormData = ref({
   skills: [],
 })
 
+// Watch for external changes
 watch(
   () => props.modelValue,
   (newVal) => {
-    localFormData.value = {
-      skills: Array.isArray(newVal.skills) ? [...newVal.skills] : [],
+    // Only update if there are actual changes
+    const currentSkills = JSON.stringify(localFormData.value.skills)
+    const newSkills = JSON.stringify(
+      Array.isArray(newVal.skills) ? newVal.skills : []
+    )
+
+    if (currentSkills !== newSkills) {
+      localFormData.value = {
+        skills: Array.isArray(newVal.skills) ? [...newVal.skills] : [],
+      }
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true } // Remove deep watching
 )
 
 const handleSkillsUpdate = (value) => {
   if (!Array.isArray(value)) return
-  console.log('Incoming skills:', value)
+
+  // Check if the update is actually different
+  const currentSkills = JSON.stringify(localFormData.value.skills)
+  const newSkills = JSON.stringify(value)
+  if (currentSkills === newSkills) return
 
   localFormData.value.skills = value.map((skill) => {
-    console.log('Processing skill:', skill)
     if (typeof skill === 'string') {
-      // Handle new or custom skills
       return {
         name: skill,
         proficiencyLevel: 1,
@@ -149,18 +160,16 @@ const handleSkillsUpdate = (value) => {
         lastUsedDate: new Date().toISOString().split('T')[0],
       }
     }
-    // Return existing skills as is, ensuring proficiencyLevel is preserved
     return {
       ...skill,
       name: skill.name || skill,
       proficiencyLevel:
         typeof skill.proficiencyLevel === 'string'
-          ? skill.proficiencyLevel // Keep string values like "Expert"
+          ? skill.proficiencyLevel
           : parseInt(skill.proficiencyLevel) || 1,
     }
   })
 
-  console.log('Updated skills:', localFormData.value.skills)
   updateSkillDetails()
 }
 
@@ -181,11 +190,25 @@ const getProficiencyTitle = (level) => {
 }
 
 const updateSkillDetails = () => {
-  emit('update:model-value', {
-    ...props.modelValue,
-    skills: localFormData.value.skills,
-  })
+  // Debounce the emit to prevent rapid updates
+  if (updateSkillDetails.timeout) {
+    clearTimeout(updateSkillDetails.timeout)
+  }
+
+  updateSkillDetails.timeout = setTimeout(() => {
+    emit('update:model-value', {
+      ...props.modelValue,
+      skills: localFormData.value.skills,
+    })
+  }, 300)
 }
+
+// Cleanup
+onBeforeUnmount(() => {
+  if (updateSkillDetails.timeout) {
+    clearTimeout(updateSkillDetails.timeout)
+  }
+})
 </script>
 
 <style scoped>

@@ -192,6 +192,15 @@ watch(
   () => dateInput.value,
   (newValue) => {
     localFormData.value.dateOfBirth = newValue
+
+    // Calculate age if date is valid
+    if (newValue && newValue.split('/').length === 3) {
+      const isValid = props.rules.dateFormat(newValue)
+      if (isValid === true) {
+        localFormData.value.age = calculateAge(newValue)
+        updateFormData()
+      }
+    }
   }
 )
 
@@ -199,14 +208,36 @@ const handleDateInput = (event) => {
   const input = event.target.value
   const cursorPosition = event.target.selectionStart
 
-  // Allow direct editing without auto-formatting during typing
-  // This prevents the cursor from jumping around
-  dateInput.value = input
+  // Format the input as the user types
+  let formattedInput = input.replace(/[^0-9/]/g, '')
+
+  // Auto-add slashes if needed
+  if (formattedInput.length === 4 && !formattedInput.includes('/')) {
+    formattedInput += '/'
+  } else if (
+    formattedInput.length === 7 &&
+    formattedInput.split('/').length === 2
+  ) {
+    formattedInput += '/'
+  }
+
+  dateInput.value = formattedInput
 
   // Restore cursor position after Vue updates the DOM
   setTimeout(() => {
-    event.target.setSelectionRange(cursorPosition, cursorPosition)
+    const newPosition =
+      cursorPosition + (formattedInput.length > input.length ? 1 : 0)
+    event.target.setSelectionRange(newPosition, newPosition)
   }, 0)
+
+  // Try to calculate age if we have a valid date
+  if (formattedInput.split('/').length === 3) {
+    const isValid = props.rules.dateFormat(formattedInput)
+    if (isValid === true) {
+      localFormData.value.age = calculateAge(formattedInput)
+      updateFormData()
+    }
+  }
 }
 
 const validateAndFormatDate = () => {

@@ -176,7 +176,7 @@
             </v-expansion-panel>
           </v-expansion-panels>
 
-          <!-- <v-expansion-panels v-model="expandedPanels.assessment">
+          <v-expansion-panels v-model="expandedPanels.assessment">
             <v-expansion-panel>
               <v-expansion-panel-title>Assessment</v-expansion-panel-title>
               <v-expansion-panel-text>
@@ -186,7 +186,7 @@
                 />
               </v-expansion-panel-text>
             </v-expansion-panel>
-          </v-expansion-panels> -->
+          </v-expansion-panels>
         </v-form>
       </v-col>
     </v-row>
@@ -523,8 +523,14 @@ const rules = {
 
 // Methods for updating form data
 const updateFormData = (newData) => {
+  // Only update if there are actual changes
+  const hasChanges = Object.keys(newData).some(
+    (key) => formData[key] !== newData[key]
+  )
+  if (!hasChanges) return
+
   Object.assign(formData, newData)
-  saveFormData()
+  debounce(saveFormData, 500)()
 }
 
 const updateExperiences = (value) => {
@@ -543,38 +549,48 @@ const updateEducation = (value) => {
 }
 
 const updateSkills = (newValue) => {
-  if (Array.isArray(newValue.skills)) {
-    // Store only skill names in the skills array
-    formData.skills = newValue.skills.map((skill) =>
+  if (!Array.isArray(newValue.skills)) return
+
+  // Check if skills have actually changed
+  const currentSkills = JSON.stringify(formData.skills)
+  const newSkills = JSON.stringify(
+    newValue.skills.map((skill) =>
       typeof skill === 'string' ? skill : skill.name
     )
+  )
 
-    // Build skillDetails object with proficiency and category for each skill
-    const updatedSkillDetails = {}
-    newValue.skills.forEach((skill) => {
-      const skillName = typeof skill === 'string' ? skill : skill.name
-      updatedSkillDetails[skillName] = {
-        proficiency:
-          typeof skill === 'string'
-            ? newValue.skillDetails?.[skill]?.proficiency || 3
-            : skill.proficiency || 3,
-        category:
-          typeof skill === 'string'
-            ? newValue.skillDetails?.[skill]?.category || 'Other'
-            : skill.category || 'Other',
-      }
-    })
-    formData.skillDetails = updatedSkillDetails
+  if (currentSkills === newSkills) return
 
-    // Extract and store skill categories
-    const skillCategories = talentStore.extractSkillCategories({
-      skills: formData.skills,
-      skillDetails: formData.skillDetails,
-    })
-    talentStore.storeSkillCategories(skillCategories)
+  // Update skills
+  formData.skills = newValue.skills.map((skill) =>
+    typeof skill === 'string' ? skill : skill.name
+  )
 
-    saveFormData()
-  }
+  // Update skill details
+  const updatedSkillDetails = {}
+  newValue.skills.forEach((skill) => {
+    const skillName = typeof skill === 'string' ? skill : skill.name
+    updatedSkillDetails[skillName] = {
+      proficiency:
+        typeof skill === 'string'
+          ? newValue.skillDetails?.[skill]?.proficiency || 3
+          : skill.proficiency || 3,
+      category:
+        typeof skill === 'string'
+          ? newValue.skillDetails?.[skill]?.category || 'Other'
+          : skill.category || 'Other',
+    }
+  })
+  formData.skillDetails = updatedSkillDetails
+
+  // Extract and store skill categories
+  const skillCategories = talentStore.extractSkillCategories({
+    skills: formData.skills,
+    skillDetails: formData.skillDetails,
+  })
+  talentStore.storeSkillCategories(skillCategories)
+
+  debounce(saveFormData, 500)()
 }
 
 const updateAssessment = (value) => {
