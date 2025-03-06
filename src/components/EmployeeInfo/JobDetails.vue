@@ -239,11 +239,23 @@ const updateFormData = (field, value) => {
   // Check if the value has actually changed
   if (localFormData.value[field] === value) return
 
-  localFormData.value[field] = value
+  // Map employment type values to backend-expected format if needed
+  if (field === 'employmentType') {
+    // Map internal values to backend-expected format
+    const employmentTypeMapping = {
+      fullTime: 'Full Time',
+      partTime: 'Part Time',
+      contract: 'Contract',
+    }
 
-  // Only clear duration when switching to full time
-  if (field === 'employmentType' && value === 'fullTime') {
-    localFormData.value.contractDuration = ''
+    localFormData.value[field] = employmentTypeMapping[value] || value
+
+    // Only clear duration when switching to full time
+    if (value === 'fullTime') {
+      localFormData.value.contractDuration = ''
+    }
+  } else {
+    localFormData.value[field] = value
   }
 
   // Debounce the emit to prevent rapid updates
@@ -266,7 +278,9 @@ onBeforeUnmount(() => {
   }
 })
 
+// Define the computed property properly
 const getDurationLabel = computed(() => {
+  if (!localFormData.value) return 'Duration (months)'
   return localFormData.value.employmentType === 'contract'
     ? 'Contract Duration (months)'
     : 'Part Time Duration (months)'

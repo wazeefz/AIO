@@ -62,9 +62,19 @@
               >
               <v-expansion-panel-text>
                 <PersonalInfoSection
-                  v-model="formData"
+                  :model-value="{
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    email: formData.email,
+                    phone: formData.phone,
+                    dateOfBirth: formData.dateOfBirth,
+                    age: formData.age,
+                    gender: formData.gender,
+                    maritalStatus: formData.maritalStatus,
+                    profilePic: formData.profilePic,
+                  }"
                   :rules="rules"
-                  @update:model-value="updateFormData"
+                  @update:model-value="updatePersonalInfo"
                 />
               </v-expansion-panel-text>
             </v-expansion-panel>
@@ -75,9 +85,14 @@
               <v-expansion-panel-title>Location</v-expansion-panel-title>
               <v-expansion-panel-text>
                 <LocationSection
-                  v-model="formData"
+                  :model-value="{
+                    currentCountry: formData.currentCountry,
+                    currentCity: formData.currentCity,
+                    willingToRelocate: formData.willingToRelocate,
+                    relocationPreferences: formData.relocationPreferences,
+                  }"
                   :rules="rules"
-                  @update:model-value="updateFormData"
+                  @update:model-value="updateLocation"
                 />
               </v-expansion-panel-text>
             </v-expansion-panel>
@@ -90,9 +105,12 @@
               >
               <v-expansion-panel-text>
                 <ProfessionalSummarySection
-                  v-model="formData"
+                  :model-value="{
+                    summary: formData.summary,
+                    experience: formData.experience,
+                  }"
                   :rules="rules"
-                  @update:model-value="updateFormData"
+                  @update:model-value="updateProfessionalSummary"
                 />
               </v-expansion-panel-text>
             </v-expansion-panel>
@@ -103,19 +121,21 @@
               <v-expansion-panel-title>Experience</v-expansion-panel-title>
               <v-expansion-panel-text>
                 <ExperienceSection
-                  :model-value="formData.experiences"
+                  :model-value="formData.experiences || []"
+                  :rules="rules"
                   @update:model-value="updateExperiences"
                 />
               </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
 
-          <v-expansion-panels v-model="expandedPanels.certification">
+          <v-expansion-panels v-model="expandedPanels.certifications">
             <v-expansion-panel>
-              <v-expansion-panel-title>Certification</v-expansion-panel-title>
+              <v-expansion-panel-title>Certifications</v-expansion-panel-title>
               <v-expansion-panel-text>
                 <CertificationSection
-                  :model-value="formData.certifications"
+                  :model-value="formData.certifications || []"
+                  :rules="rules"
                   @update:model-value="updateCertifications"
                 />
               </v-expansion-panel-text>
@@ -127,7 +147,8 @@
               <v-expansion-panel-title>Education</v-expansion-panel-title>
               <v-expansion-panel-text>
                 <EducationSection
-                  :model-value="formData.education"
+                  :model-value="formData.education || []"
+                  :rules="rules"
                   @update:model-value="updateEducation"
                 />
               </v-expansion-panel-text>
@@ -140,8 +161,8 @@
               <v-expansion-panel-text>
                 <SkillsSection
                   :model-value="{
-                    skills: formData.skills,
-                    skillDetails: formData.skillDetails,
+                    skills: formData.skills || [],
+                    skillDetails: formData.skillDetails || [],
                   }"
                   :rules="rules"
                   @update:model-value="updateSkills"
@@ -155,9 +176,18 @@
               <v-expansion-panel-title>Job Details</v-expansion-panel-title>
               <v-expansion-panel-text>
                 <JobDetailsSection
-                  v-model="formData"
+                  :model-value="{
+                    jobTitle: formData.jobTitle,
+                    jobPosition: formData.jobPosition,
+                    department: formData.department,
+                    employmentType: formData.employmentType,
+                    contractDuration: formData.contractDuration,
+                    hireDate: formData.hireDate,
+                    availabilityStatus: formData.availabilityStatus,
+                    careerPreferences: formData.careerPreferences,
+                  }"
                   :rules="rules"
-                  @update:model-value="updateFormData"
+                  @update:model-value="updateJobDetails"
                 />
               </v-expansion-panel-text>
             </v-expansion-panel>
@@ -168,9 +198,9 @@
               <v-expansion-panel-title>Salary</v-expansion-panel-title>
               <v-expansion-panel-text>
                 <Salary
-                  v-model="formData"
+                  :model-value="{ salary: formData.salary }"
                   :rules="rules"
-                  @update:model-value="updateFormData"
+                  @update:model-value="updateSalary"
                 />
               </v-expansion-panel-text>
             </v-expansion-panel>
@@ -181,8 +211,9 @@
               <v-expansion-panel-title>Assessment</v-expansion-panel-title>
               <v-expansion-panel-text>
                 <Assessment
-                  v-model="formData.assessment"
-                  @update:modelValue="updateAssessment"
+                  :model-value="formData.assessment || {}"
+                  :rules="rules"
+                  @update:model-value="updateAssessment"
                 />
               </v-expansion-panel-text>
             </v-expansion-panel>
@@ -355,31 +386,37 @@ const sections = [
   { title: 'Assessment', value: 'assessment', icon: 'mdi-account-star' },
 ]
 
-// Initialize expanded panels state
+// Modify the expandedPanels initialization
 const expandedPanels = reactive({
-  personalInfo: 0,
-  location: 0,
-  professionalSummary: 0,
-  experience: 0,
-  certification: 0,
-  education: 0,
-  skills: 0,
-  jobDetails: 0,
-  salary: 0,
-  assessment: 0,
+  personalInfo: null,
+  location: null,
+  professionalSummary: null,
+  experience: null,
+  certification: null,
+  education: null,
+  skills: null,
+  jobDetails: null,
+  salary: null,
+  assessment: null,
 })
 
 // Methods for expanding/collapsing sections
 const expandAll = () => {
-  Object.keys(expandedPanels).forEach((key) => {
-    expandedPanels[key] = 0
-  })
+  // Use setTimeout to ensure Vue has finished rendering
+  setTimeout(() => {
+    Object.keys(expandedPanels).forEach((key) => {
+      expandedPanels[key] = 0
+    })
+  }, 50)
 }
 
 const collapseAll = () => {
-  Object.keys(expandedPanels).forEach((key) => {
-    expandedPanels[key] = -1
-  })
+  // Use setTimeout to ensure Vue has finished rendering
+  setTimeout(() => {
+    Object.keys(expandedPanels).forEach((key) => {
+      expandedPanels[key] = null
+    })
+  }, 50)
 }
 
 // Computed properties
@@ -522,80 +559,69 @@ const rules = {
 }
 
 // Methods for updating form data
-const updateFormData = (newData) => {
-  // Only update if there are actual changes
-  const hasChanges = Object.keys(newData).some(
-    (key) => formData[key] !== newData[key]
-  )
-  if (!hasChanges) return
+const updatePersonalInfo = (value) => {
+  Object.assign(formData, value)
+  debounce(saveFormData, 500)()
+}
 
-  Object.assign(formData, newData)
+const updateLocation = (value) => {
+  Object.assign(formData, value)
+  debounce(saveFormData, 500)()
+}
+
+const updateProfessionalSummary = (value) => {
+  Object.assign(formData, value)
+  debounce(saveFormData, 500)()
+}
+
+const updateJobDetails = (value) => {
+  Object.assign(formData, value)
+  debounce(saveFormData, 500)()
+}
+
+const updateSalary = (value) => {
+  formData.salary = value.salary
   debounce(saveFormData, 500)()
 }
 
 const updateExperiences = (value) => {
-  formData.experiences = [...value]
-  saveFormData()
+  formData.experiences = Array.isArray(value) ? value : []
+  debounce(saveFormData, 500)()
 }
 
 const updateCertifications = (value) => {
-  formData.certifications = [...value]
+  console.log('Updating certifications with:', value)
+
+  // Ensure value is an array
+  if (!Array.isArray(value)) {
+    console.error('Expected array for certifications, got:', typeof value)
+    return
+  }
+
+  // Make a deep copy to avoid reference issues
+  formData.certifications = JSON.parse(JSON.stringify(value))
+
+  // Log the updated certifications
+  console.log('Updated certifications in formData:', formData.certifications)
+
+  // Save form data
   saveFormData()
 }
 
 const updateEducation = (value) => {
-  formData.education = [...value]
-  saveFormData()
+  formData.education = Array.isArray(value) ? value : []
+  debounce(saveFormData, 500)()
 }
 
-const updateSkills = (newValue) => {
-  if (!Array.isArray(newValue.skills)) return
-
-  // Check if skills have actually changed
-  const currentSkills = JSON.stringify(formData.skills)
-  const newSkills = JSON.stringify(
-    newValue.skills.map((skill) =>
-      typeof skill === 'string' ? skill : skill.name
-    )
-  )
-
-  if (currentSkills === newSkills) return
-
-  // Update skills
-  formData.skills = newValue.skills.map((skill) =>
-    typeof skill === 'string' ? skill : skill.name
-  )
-
-  // Update skill details
-  const updatedSkillDetails = {}
-  newValue.skills.forEach((skill) => {
-    const skillName = typeof skill === 'string' ? skill : skill.name
-    updatedSkillDetails[skillName] = {
-      proficiency:
-        typeof skill === 'string'
-          ? newValue.skillDetails?.[skill]?.proficiency || 3
-          : skill.proficiency || 3,
-      category:
-        typeof skill === 'string'
-          ? newValue.skillDetails?.[skill]?.category || 'Other'
-          : skill.category || 'Other',
-    }
-  })
-  formData.skillDetails = updatedSkillDetails
-
-  // Extract and store skill categories
-  const skillCategories = talentStore.extractSkillCategories({
-    skills: formData.skills,
-    skillDetails: formData.skillDetails,
-  })
-  talentStore.storeSkillCategories(skillCategories)
-
+const updateSkills = (value) => {
+  formData.skills = value.skills || []
+  formData.skillDetails = value.skillDetails || []
   debounce(saveFormData, 500)()
 }
 
 const updateAssessment = (value) => {
-  formData.assessment = value
-  saveFormData()
+  formData.assessment = value || {}
+  debounce(saveFormData, 500)()
 }
 
 // Save form data with debounce
@@ -613,11 +639,23 @@ const debounce = (fn, delay) => {
 
 const saveFormData = debounce(() => {
   try {
+    // Log before saving to check certifications
+    console.log(
+      'Saving form data with certifications:',
+      formData.certifications
+    )
+
     const dataToSave = {
       ...formData,
-      experiences: [...formData.experiences],
-      certifications: [...formData.certifications],
-      education: [...formData.education],
+      experiences: Array.isArray(formData.experiences)
+        ? [...formData.experiences]
+        : [],
+      certifications: Array.isArray(formData.certifications)
+        ? [...formData.certifications]
+        : [],
+      education: Array.isArray(formData.education)
+        ? [...formData.education]
+        : [],
       skills: Array.isArray(formData.skills) ? [...formData.skills] : [],
       skillDetails: { ...formData.skillDetails },
       relocationPreferences: Array.isArray(formData.relocationPreferences)
@@ -627,6 +665,10 @@ const saveFormData = debounce(() => {
       resumeFileSize: formData.resumeFileSize,
       resumeFileType: formData.resumeFileType,
     }
+
+    // Check if certifications are properly included
+    console.log('Certifications in dataToSave:', dataToSave.certifications)
+
     localStorage.setItem('employeeFormData', JSON.stringify(dataToSave))
     console.log('Form data saved:', dataToSave)
   } catch (error) {
@@ -636,24 +678,27 @@ const saveFormData = debounce(() => {
 
 // Scroll and navigation methods
 const scrollToSection = (sectionId) => {
-  expandedPanels[sectionId] = expandedPanels[sectionId] === 0 ? -1 : 0
+  // Toggle panel state
+  expandedPanels[sectionId] = expandedPanels[sectionId] === 0 ? null : 0
 
+  // Only scroll if we're expanding the panel
   if (expandedPanels[sectionId] === 0) {
-    const element = document.getElementById(sectionId)
-    if (element && mainContent.value) {
-      setTimeout(() => {
+    // Use setTimeout to ensure the panel has time to expand
+    setTimeout(() => {
+      const element =
+        document.getElementById(sectionId) ||
+        document.querySelector(`[data-section="${sectionId}"]`)
+      if (element) {
         const headerOffset = 20
         const elementPosition = element.getBoundingClientRect().top
-        const containerScrollTop = mainContent.value.scrollTop
-        const offsetPosition =
-          elementPosition + containerScrollTop - headerOffset
+        const offsetPosition = elementPosition + window.scrollY - headerOffset
 
-        mainContent.value.scrollTo({
+        window.scrollTo({
           top: offsetPosition,
           behavior: 'smooth',
         })
-      }, 100)
-    }
+      }
+    }, 100)
   }
 }
 
@@ -689,17 +734,86 @@ const confirmBack = () => {
   router.push('/upload-cv')
 }
 
-const handleSubmit = async () => {
-  const isValid = await validateForm()
-  if (!isValid) return
+// Add this function before handleSubmit
+const transformDataForBackend = (data) => {
+  // Create a deep copy to avoid modifying the original data
+  const transformedData = JSON.parse(JSON.stringify(data))
 
+  // Ensure certifications have the correct field names
+  if (Array.isArray(transformedData.certifications)) {
+    console.log(
+      'Processing certifications in transform function:',
+      transformedData.certifications
+    )
+
+    // Make sure certifications array is not empty
+    if (transformedData.certifications.length === 0) {
+      console.log('No certifications found in data')
+    }
+
+    transformedData.certifications = transformedData.certifications.map(
+      (cert) => {
+        console.log('Processing certification:', cert)
+        return {
+          name: cert.name,
+          issuing_organization:
+            cert.issuingOrganization || cert.issuing_organization,
+          credential_id: cert.credentialId || cert.credential_id || null,
+          issue_date: cert.issueDate || cert.issue_date,
+          expiry_date: cert.expiryDate || cert.expiry_date || null,
+          // Keep original fields for compatibility
+          issuingOrganization:
+            cert.issuingOrganization || cert.issuing_organization,
+          credentialId: cert.credentialId || cert.credential_id || null,
+          issueDate: cert.issueDate || cert.issue_date,
+          expiryDate: cert.expiryDate || cert.expiry_date || null,
+        }
+      }
+    )
+  } else {
+    console.log(
+      'Certifications is not an array:',
+      transformedData.certifications
+    )
+    // Initialize as empty array if undefined
+    transformedData.certifications = []
+  }
+
+  // Ensure employment_type is in the correct format
+  if (transformedData.employmentType) {
+    const employmentTypeMapping = {
+      fullTime: 'Full Time',
+      partTime: 'Part Time',
+      contract: 'Contract',
+    }
+    transformedData.employmentType =
+      employmentTypeMapping[transformedData.employmentType] ||
+      transformedData.employmentType
+  }
+
+  return transformedData
+}
+
+const handleSubmit = async () => {
   try {
     isSubmitting.value = true
+
+    // For testing purposes, we'll skip validation
+    // Uncomment this for production
+    /*
+    const isValid = await validateForm();
+    if (!isValid) {
+      isSubmitting.value = false;
+      return;
+    }
+    */
+
     console.log('=== FORM SUBMISSION TEST MODE ===')
     console.log('Raw form data:', {
       ...formData,
       skills: formData.skills,
       skillDetails: formData.skillDetails,
+      certifications: formData.certifications, // Log certifications explicitly
     })
 
     // Extract and store skill categories
@@ -709,56 +823,80 @@ const handleSubmit = async () => {
 
     // Initialize form with CV data from localStorage
     const formDataWithCV = talentStore.initializeFormWithCVData(formData)
-    console.log('Form data with CV details:', formDataWithCV)
+
+    // Log certifications before transformation
+    console.log(
+      'Certifications before transformation:',
+      formDataWithCV.certifications
+    )
+
+    // Transform data for backend compatibility
+    const transformedData = transformDataForBackend(formDataWithCV)
+    console.log('Form data with CV details (transformed):', transformedData)
+
+    // Log certifications after transformation
+    console.log(
+      'Certifications after transformation:',
+      transformedData.certifications
+    )
+
+    // Create a structured payload for the backend
+    const backendPayload = {
+      personal_info: {
+        first_name: transformedData.firstName,
+        last_name: transformedData.lastName,
+        email: transformedData.email,
+        phone: transformedData.phone,
+        date_of_birth: transformedData.dateOfBirth,
+        gender: transformedData.gender,
+        marital_status: transformedData.maritalStatus === 'married',
+        current_country: transformedData.currentCountry,
+        current_city: transformedData.currentCity,
+        willing_to_relocate: transformedData.willingToRelocate,
+        professional_summary: transformedData.summary,
+        total_experience_years: parseFloat(transformedData.experience) || 0,
+        job_title: transformedData.jobTitle,
+        position_level: transformedData.jobPosition,
+        employment_type: transformedData.employmentType,
+        basic_salary:
+          parseFloat(transformedData.salary?.replace(/,/g, '')) || 0,
+        age: transformedData.age || 0,
+        resume_filename: transformedData.resumeFilename,
+      },
+      skills: transformedData.skills,
+      education: transformedData.education,
+      experience: transformedData.experiences,
+      certifications: transformedData.certifications || [], // Ensure certifications are included with a fallback
+      assessment: transformedData.assessment,
+    }
 
     // Log what would be sent to the backend
     console.log('=== DATA THAT WOULD BE SENT TO BACKEND ===')
-    console.log('Personal Info:', {
-      first_name: formDataWithCV.firstName,
-      last_name: formDataWithCV.lastName,
-      email: formDataWithCV.email,
-      phone: formDataWithCV.phone,
-      date_of_birth: formDataWithCV.dateOfBirth,
-      gender: formDataWithCV.gender,
-      marital_status: formDataWithCV.maritalStatus === 'married',
-      current_country: formDataWithCV.currentCountry,
-      current_city: formDataWithCV.currentCity,
-      willing_to_relocate: formDataWithCV.willingToRelocate,
-      professional_summary: formDataWithCV.summary,
-      total_experience_years: parseFloat(formDataWithCV.experience) || 0,
-      job_title: formDataWithCV.jobTitle,
-      position_level: formDataWithCV.jobPosition,
-      employment_type: formDataWithCV.employmentType,
-      basic_salary: parseFloat(formDataWithCV.salary?.replace(/,/g, '')) || 0,
-      age: formDataWithCV.age || 0,
-      resume_filename: formDataWithCV.resumeFilename,
-    })
-
-    console.log('Skills:', formDataWithCV.skills)
-    console.log('Education:', formDataWithCV.education)
-    console.log('Experience:', formDataWithCV.experiences)
-    console.log('Certifications:', formDataWithCV.certifications)
-    console.log('Assessment:', formDataWithCV.assessment)
-
+    console.log('Backend Payload:', backendPayload)
+    console.log('Certifications in payload:', backendPayload.certifications) // Log certifications explicitly
     console.log('=== TEST MODE: Submission prevented ===')
-    alert(
+
+    // Display alert - using vanilla JavaScript alert to avoid any Vue reactivity issues
+    window.alert(
       'Form data logged to console. Backend submission prevented for testing.'
     )
 
     // Comment out the actual submission code
     /*
-    const talentId = await talentStore.submitEmployeeInfo(formDataWithCV)
+    const talentId = await talentStore.submitEmployeeInfo(backendPayload);
     if (talentId) {
-      console.log('Form submitted successfully with talent ID:', talentId)
-      localStorage.removeItem('employeeFormData')
-      router.push('/upload-cv/bulk-employee-info')
+      console.log('Form submitted successfully with talent ID:', talentId);
+      localStorage.removeItem('employeeFormData');
+      router.push('/upload-cv/bulk-employee-info');
     } else {
-      throw new Error('Failed to submit form data')
+      throw new Error('Failed to submit form data');
     }
     */
   } catch (error) {
     console.error('Form submission error:', error)
-    alert('An error occurred while submitting the form. Please try again.')
+    window.alert(
+      'An error occurred while submitting the form. Please try again.'
+    )
   } finally {
     isSubmitting.value = false
   }
@@ -768,34 +906,43 @@ const handleSubmit = async () => {
 const validateForm = async () => {
   if (!form.value) return false
 
-  const { valid } = await form.value.validate()
+  try {
+    const { valid } = await form.value.validate()
 
-  if (!valid) {
-    // Find the first invalid section and expand it
-    const requiredFields = [
-      { field: 'firstName', section: 'personalInfo' },
-      { field: 'lastName', section: 'personalInfo' },
-      { field: 'email', section: 'personalInfo' },
-      { field: 'currentCountry', section: 'location' },
-      { field: 'currentCity', section: 'location' },
-    ]
+    if (!valid) {
+      // Find the first invalid section and expand it
+      const requiredFields = [
+        { field: 'firstName', section: 'personalInfo' },
+        { field: 'lastName', section: 'personalInfo' },
+        { field: 'email', section: 'personalInfo' },
+        { field: 'currentCountry', section: 'location' },
+        { field: 'currentCity', section: 'location' },
+      ]
 
-    for (const { field, section } of requiredFields) {
-      if (!formData[field]) {
-        expandedPanels[section] = 0
-        setTimeout(() => {
-          const element = document.querySelector(`[name="${field}"]`)
-          if (element) element.focus()
-        }, 300)
-        return false
+      for (const { field, section } of requiredFields) {
+        if (!formData[field]) {
+          // Set panel to expanded (0)
+          expandedPanels[section] = 0
+
+          // Use setTimeout to ensure the panel has time to expand
+          setTimeout(() => {
+            const element = document.querySelector(`[name="${field}"]`)
+            if (element) element.focus()
+          }, 300)
+
+          return false
+        }
       }
     }
-  }
 
-  return valid
+    return valid
+  } catch (error) {
+    console.error('Form validation error:', error)
+    return false
+  }
 }
 
-// Lifecycle hooks
+// Initialize panels after component is mounted
 onMounted(() => {
   // Initialize form with CV data
   const formDataWithCV = talentStore.initializeFormWithCVData(formData)
@@ -825,8 +972,12 @@ onMounted(() => {
     container.addEventListener('scroll', handleScroll)
   }
 
-  // Default expand all sections
-  expandAll()
+  // Initialize expanded panels after component is mounted
+  setTimeout(() => {
+    Object.keys(expandedPanels).forEach((key) => {
+      expandedPanels[key] = 0
+    })
+  }, 100)
 })
 
 onBeforeUnmount(() => {

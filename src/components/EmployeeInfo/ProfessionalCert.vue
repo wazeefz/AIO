@@ -272,6 +272,13 @@ const saveCertification = () => {
     expiryDate: editingCertification.hasExpiry
       ? editingCertification.expiryDate
       : null,
+    // Add these fields for backend compatibility
+    issuing_organization: editingCertification.issuingOrganization,
+    credential_id: editingCertification.credentialId || null,
+    issue_date: editingCertification.issueDate,
+    expiry_date: editingCertification.hasExpiry
+      ? editingCertification.expiryDate
+      : null,
   }
 
   const updatedCertifications = [...localCertifications.value]
