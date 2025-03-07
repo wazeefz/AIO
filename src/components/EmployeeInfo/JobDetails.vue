@@ -239,15 +239,26 @@ const updateEmploymentType = (value) => {
   displayEmploymentType.value = value
 
   // Update local form data with backend format
-  localFormData.value.employmentType = EMPLOYMENT_TYPE_MAP[value] || 'Full Time'
+  const backendFormat = EMPLOYMENT_TYPE_MAP[value] || 'Full Time'
+  localFormData.value.employmentType = backendFormat
 
   // Clear contract duration if switching to full time
   if (value === 'fullTime') {
     localFormData.value.contractDuration = ''
   }
 
-  // Emit update with backend format
-  debouncedEmit(localFormData.value)
+  // Force emit update for all fields
+  const dataToEmit = JSON.parse(JSON.stringify(localFormData.value))
+
+  // Add a timestamp to ensure the parent component detects a change
+  dataToEmit._timestamp = Date.now()
+
+  // Emit update immediately
+  console.log(
+    'Emitting employment type update with data:',
+    JSON.stringify(dataToEmit)
+  )
+  emit('update:model-value', dataToEmit)
 }
 
 // Initialize component
@@ -284,12 +295,12 @@ watch(
     const hasChanges = Object.keys(newFormData).some((key) => {
       const currentVal = localFormData.value[key]
       const newVal = newFormData[key]
-      return currentVal !== newVal && (currentVal || newVal) // Only consider it a change if at least one value is non-empty
+      return JSON.stringify(currentVal) !== JSON.stringify(newVal)
     })
 
     if (hasChanges) {
-      console.log('JobDetails updating local form data')
-      localFormData.value = newFormData
+      console.log('JobDetails updating local form data:', newFormData)
+      Object.assign(localFormData.value, newFormData)
       // Update display employment type
       updateDisplayEmploymentType()
     }
@@ -297,27 +308,23 @@ watch(
   { immediate: true, deep: true }
 )
 
-// Debounced emit function
-const debouncedEmit = (() => {
-  let timeout
-  return (data) => {
-    if (timeout) clearTimeout(timeout)
-    timeout = setTimeout(() => {
-      console.log('JobDetails emitting update with data:', data)
-      emit('update:model-value', data)
-    }, 300)
-  }
-})()
-
 const updateFormData = (field, value) => {
-  // Prevent unnecessary updates
-  if (localFormData.value[field] === value) return
-
   // Update local value
   localFormData.value[field] = value
 
-  // Emit update
-  debouncedEmit(localFormData.value)
+  // Log the update for debugging
+  console.log(`JobDetails updating ${field}:`, value)
+  console.log('Current localFormData:', JSON.stringify(localFormData.value))
+
+  // Force emit update for all fields
+  const dataToEmit = JSON.parse(JSON.stringify(localFormData.value))
+
+  // Add a timestamp to ensure the parent component detects a change
+  dataToEmit._timestamp = Date.now()
+
+  // Emit update immediately without debounce
+  console.log('Emitting update with data:', JSON.stringify(dataToEmit))
+  emit('update:model-value', dataToEmit)
 }
 
 // Cleanup

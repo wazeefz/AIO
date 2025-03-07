@@ -55,7 +55,7 @@
             v-model="formData.resumeFilename"
           />
 
-          <!-- <v-expansion-panels v-model="expandedPanels.personalInfo">
+          <v-expansion-panels v-model="expandedPanels.personalInfo">
             <v-expansion-panel>
               <v-expansion-panel-title
                 >Personal Information</v-expansion-panel-title
@@ -78,7 +78,7 @@
                 />
               </v-expansion-panel-text>
             </v-expansion-panel>
-          </v-expansion-panels> -->
+          </v-expansion-panels>
 
           <v-expansion-panels v-model="expandedPanels.location">
             <v-expansion-panel>
@@ -574,29 +574,52 @@ const updateProfessionalSummary = (value) => {
 }
 
 const updateJobDetails = (value) => {
-  console.log('Updating job details with:', value)
+  console.log(
+    'EmployeeInfoForm received job details update:',
+    JSON.stringify(value)
+  )
 
-  // Make sure we preserve the employment type format
-  if (value.employmentType) {
-    // The JobDetails component already sends the correct backend format
-    formData.employmentType = value.employmentType
+  // Ensure we have a value object
+  if (!value) {
+    console.warn('Received empty job details update')
+    return
   }
 
-  // Update other fields
-  formData.jobTitle = value.jobTitle || ''
-  formData.jobPosition = value.jobPosition || ''
-  formData.department = value.department || ''
-  formData.contractDuration = value.contractDuration || ''
-  formData.hireDate = value.hireDate || ''
-  formData.availabilityStatus = value.availabilityStatus || ''
-  formData.careerPreferences = value.careerPreferences || ''
+  // Remove the timestamp if it exists
+  const { _timestamp, ...jobDetailsData } = value
 
-  console.log('Updated job details in formData:', {
-    jobTitle: formData.jobTitle,
-    employmentType: formData.employmentType,
+  // Update all job detail fields in formData
+  const jobDetailFields = [
+    'jobTitle',
+    'jobPosition',
+    'department',
+    'employmentType',
+    'contractDuration',
+    'hireDate',
+    'availabilityStatus',
+    'careerPreferences',
+  ]
+
+  // Always update all fields from the incoming data
+  jobDetailFields.forEach((field) => {
+    if (field in jobDetailsData) {
+      formData[field] = jobDetailsData[field]
+    }
   })
 
-  debounce(saveFormData, 500)()
+  console.log('Updated formData job details:', {
+    jobTitle: formData.jobTitle,
+    jobPosition: formData.jobPosition,
+    department: formData.department,
+    employmentType: formData.employmentType,
+    contractDuration: formData.contractDuration,
+    hireDate: formData.hireDate,
+    availabilityStatus: formData.availabilityStatus,
+    careerPreferences: formData.careerPreferences,
+  })
+
+  // Always save to localStorage immediately
+  saveFormData()
 }
 
 const updateSalary = (value) => {
@@ -656,43 +679,64 @@ const debounce = (fn, delay) => {
   }
 }
 
-const saveFormData = debounce(() => {
+const saveFormData = () => {
   try {
-    // Log before saving to check certifications
-    console.log(
-      'Saving form data with certifications:',
-      formData.certifications
+    // Create a deep copy of the form data
+    const dataToSave = JSON.parse(JSON.stringify(formData))
+
+    // Explicitly ensure all job details fields are included
+    dataToSave.jobTitle = formData.jobTitle || ''
+    dataToSave.jobPosition = formData.jobPosition || ''
+    dataToSave.department = formData.department || ''
+    dataToSave.employmentType = formData.employmentType || 'Full Time'
+    dataToSave.contractDuration = formData.contractDuration || ''
+    dataToSave.hireDate = formData.hireDate || ''
+    dataToSave.availabilityStatus = formData.availabilityStatus || ''
+    dataToSave.careerPreferences = formData.careerPreferences || ''
+
+    // Handle arrays
+    dataToSave.experiences = Array.isArray(formData.experiences)
+      ? [...formData.experiences]
+      : []
+    dataToSave.certifications = Array.isArray(formData.certifications)
+      ? [...formData.certifications]
+      : []
+    dataToSave.education = Array.isArray(formData.education)
+      ? [...formData.education]
+      : []
+    dataToSave.skills = Array.isArray(formData.skills)
+      ? [...formData.skills]
+      : []
+    dataToSave.relocationPreferences = Array.isArray(
+      formData.relocationPreferences
     )
+      ? [...formData.relocationPreferences]
+      : []
 
-    const dataToSave = {
-      ...formData,
-      experiences: Array.isArray(formData.experiences)
-        ? [...formData.experiences]
-        : [],
-      certifications: Array.isArray(formData.certifications)
-        ? [...formData.certifications]
-        : [],
-      education: Array.isArray(formData.education)
-        ? [...formData.education]
-        : [],
-      skills: Array.isArray(formData.skills) ? [...formData.skills] : [],
-      relocationPreferences: Array.isArray(formData.relocationPreferences)
-        ? [...formData.relocationPreferences]
-        : [],
-      resumeFilename: formData.resumeFilename,
-      resumeFileSize: formData.resumeFileSize,
-      resumeFileType: formData.resumeFileType,
-    }
+    // CV data
+    dataToSave.resumeFilename = formData.resumeFilename
+    dataToSave.resumeFileSize = formData.resumeFileSize
+    dataToSave.resumeFileType = formData.resumeFileType
 
-    // Check if certifications are properly included
-    console.log('Certifications in dataToSave:', dataToSave.certifications)
-
+    // Save to localStorage with a timestamp to ensure it's always updated
+    dataToSave._saveTimestamp = Date.now()
     localStorage.setItem('employeeFormData', JSON.stringify(dataToSave))
-    console.log('Form data saved:', dataToSave)
+
+    console.log('Form data saved with job details:', {
+      jobTitle: dataToSave.jobTitle,
+      jobPosition: dataToSave.jobPosition,
+      department: dataToSave.department,
+      employmentType: dataToSave.employmentType,
+      contractDuration: dataToSave.contractDuration,
+      hireDate: dataToSave.hireDate,
+      availabilityStatus: dataToSave.availabilityStatus,
+      careerPreferences: dataToSave.careerPreferences,
+      _saveTimestamp: dataToSave._saveTimestamp,
+    })
   } catch (error) {
     console.error('Error saving form data:', error)
   }
-}, 500)
+}
 
 // Scroll and navigation methods
 const scrollToSection = (sectionId) => {
