@@ -13,6 +13,10 @@ export const useTalentStore = defineStore('talent', {
     getTalentById: (state) => (id) => {
       return state.talents.find((talent) => talent.talent_id === id)
     },
+
+    getTalents: (state) => {
+      return state.talents
+    },
   },
 
   actions: {
@@ -24,6 +28,7 @@ export const useTalentStore = defineStore('talent', {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
         this.talents = await response.json()
+        console.log('talents', this.talents)
         this.error = null
       } catch (error) {
         this.error = error.message
