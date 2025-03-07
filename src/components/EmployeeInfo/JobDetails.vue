@@ -94,8 +94,8 @@
       </h3>
 
       <v-radio-group
-        v-model="localFormData.employmentType"
-        @update:model-value="updateFormData('employmentType', $event)"
+        v-model="displayEmploymentType"
+        @update:model-value="updateEmploymentType"
         mandatory
         class="mb-4"
       >
@@ -106,7 +106,7 @@
 
       <!-- Duration field only for part-time and contract -->
       <v-expand-transition>
-        <div v-if="localFormData.employmentType !== 'fullTime'">
+        <div v-if="displayEmploymentType !== 'fullTime'">
           <v-text-field
             v-model="localFormData.contractDuration"
             @update:model-value="updateFormData('contractDuration', $event)"
@@ -141,7 +141,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, onMounted } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -198,77 +198,126 @@ const availabilityStatuses = [
   'On Project',
 ]
 
+// Employment type mapping constants
+const EMPLOYMENT_TYPE_MAP = {
+  fullTime: 'Full Time',
+  partTime: 'Part Time',
+  contract: 'Contract',
+}
+
+const EMPLOYMENT_TYPE_MAP_REVERSE = {
+  'Full Time': 'fullTime',
+  'Part Time': 'partTime',
+  Contract: 'contract',
+}
+
 // Local form data
 const localFormData = ref({
   jobTitle: '',
   jobPosition: '',
   department: '',
   hireDate: '',
-  employmentType: 'fullTime',
+  employmentType: 'Full Time', // Store backend format
   contractDuration: '',
   availabilityStatus: '',
   careerPreferences: '',
+})
+
+// Display value for employment type (frontend format)
+const displayEmploymentType = ref('fullTime')
+
+// Convert backend format to frontend format for display
+const updateDisplayEmploymentType = () => {
+  displayEmploymentType.value =
+    EMPLOYMENT_TYPE_MAP_REVERSE[localFormData.value.employmentType] ||
+    'fullTime'
+}
+
+// Update employment type from radio buttons
+const updateEmploymentType = (value) => {
+  // Update display value
+  displayEmploymentType.value = value
+
+  // Update local form data with backend format
+  localFormData.value.employmentType = EMPLOYMENT_TYPE_MAP[value] || 'Full Time'
+
+  // Clear contract duration if switching to full time
+  if (value === 'fullTime') {
+    localFormData.value.contractDuration = ''
+  }
+
+  // Emit update with backend format
+  debouncedEmit(localFormData.value)
+}
+
+// Initialize component
+onMounted(() => {
+  // Initialize display employment type from props
+  updateDisplayEmploymentType()
+  console.log(
+    'JobDetails mounted with employment type:',
+    localFormData.value.employmentType
+  )
 })
 
 // Watch for external changes
 watch(
   () => props.modelValue,
   (newVal) => {
-    // Only update if there are actual changes
-    const hasChanges = Object.keys(localFormData.value).some(
-      (key) => localFormData.value[key] !== (newVal[key] || '')
-    )
+    if (!newVal) return
+
+    console.log('JobDetails received new props:', newVal)
+
+    // Only update if values are actually different
+    const newFormData = {
+      jobTitle: newVal.jobTitle || '',
+      jobPosition: newVal.jobPosition || '',
+      department: newVal.department || '',
+      hireDate: newVal.hireDate || '',
+      employmentType: newVal.employmentType || 'Full Time',
+      contractDuration: newVal.contractDuration || '',
+      availabilityStatus: newVal.availabilityStatus || '',
+      careerPreferences: newVal.careerPreferences || '',
+    }
+
+    // Deep compare current and new values
+    const hasChanges = Object.keys(newFormData).some((key) => {
+      const currentVal = localFormData.value[key]
+      const newVal = newFormData[key]
+      return currentVal !== newVal && (currentVal || newVal) // Only consider it a change if at least one value is non-empty
+    })
 
     if (hasChanges) {
-      localFormData.value = {
-        jobTitle: newVal.jobTitle || '',
-        jobPosition: newVal.jobPosition || '',
-        department: newVal.department || '',
-        hireDate: newVal.hireDate || '',
-        employmentType: newVal.employmentType || 'fullTime',
-        contractDuration: newVal.contractDuration || '',
-        availabilityStatus: newVal.availabilityStatus || '',
-        careerPreferences: newVal.careerPreferences || '',
-      }
+      console.log('JobDetails updating local form data')
+      localFormData.value = newFormData
+      // Update display employment type
+      updateDisplayEmploymentType()
     }
   },
-  { immediate: true } // Remove deep watching
+  { immediate: true, deep: true }
 )
 
+// Debounced emit function
+const debouncedEmit = (() => {
+  let timeout
+  return (data) => {
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(() => {
+      console.log('JobDetails emitting update with data:', data)
+      emit('update:model-value', data)
+    }, 300)
+  }
+})()
+
 const updateFormData = (field, value) => {
-  // Check if the value has actually changed
+  // Prevent unnecessary updates
   if (localFormData.value[field] === value) return
 
-  // Map employment type values to backend-expected format if needed
-  if (field === 'employmentType') {
-    // Map internal values to backend-expected format
-    const employmentTypeMapping = {
-      fullTime: 'Full Time',
-      partTime: 'Part Time',
-      contract: 'Contract',
-    }
+  // Update local value
+  localFormData.value[field] = value
 
-    localFormData.value[field] = employmentTypeMapping[value] || value
-
-    // Only clear duration when switching to full time
-    if (value === 'fullTime') {
-      localFormData.value.contractDuration = ''
-    }
-  } else {
-    localFormData.value[field] = value
-  }
-
-  // Debounce the emit to prevent rapid updates
-  if (updateFormData.timeout) {
-    clearTimeout(updateFormData.timeout)
-  }
-
-  updateFormData.timeout = setTimeout(() => {
-    emit('update:model-value', {
-      ...props.modelValue,
-      ...localFormData.value,
-    })
-  }, 300)
+  // Emit update
+  debouncedEmit(localFormData.value)
 }
 
 // Cleanup
@@ -280,8 +329,8 @@ onBeforeUnmount(() => {
 
 // Define the computed property properly
 const getDurationLabel = computed(() => {
-  if (!localFormData.value) return 'Duration (months)'
-  return localFormData.value.employmentType === 'contract'
+  if (!displayEmploymentType.value) return 'Duration (months)'
+  return displayEmploymentType.value === 'contract'
     ? 'Contract Duration (months)'
     : 'Part Time Duration (months)'
 })

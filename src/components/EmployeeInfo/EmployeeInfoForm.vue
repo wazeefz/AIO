@@ -55,7 +55,7 @@
             v-model="formData.resumeFilename"
           />
 
-          <v-expansion-panels v-model="expandedPanels.personalInfo">
+          <!-- <v-expansion-panels v-model="expandedPanels.personalInfo">
             <v-expansion-panel>
               <v-expansion-panel-title
                 >Personal Information</v-expansion-panel-title
@@ -78,7 +78,7 @@
                 />
               </v-expansion-panel-text>
             </v-expansion-panel>
-          </v-expansion-panels>
+          </v-expansion-panels> -->
 
           <v-expansion-panels v-model="expandedPanels.location">
             <v-expansion-panel>
@@ -162,7 +162,6 @@
                 <SkillsSection
                   :model-value="{
                     skills: formData.skills || [],
-                    skillDetails: formData.skillDetails || [],
                   }"
                   :rules="rules"
                   @update:model-value="updateSkills"
@@ -313,22 +312,22 @@ const formData = reactive({
       )
     : [],
 
-  // SkillDetails - store proficiency and category for each skill
-  skillDetails:
-    storedResume?.skills?.reduce((details, skill) => {
-      const skillName = typeof skill === 'string' ? skill : skill.name
-      details[skillName] = {
-        proficiency:
-          typeof skill === 'string'
-            ? storedResume?.skillDetails?.[skill]?.proficiency || 3
-            : skill.proficiency || 3,
-        category:
-          typeof skill === 'string'
-            ? storedResume?.skillDetails?.[skill]?.category || 'Other'
-            : skill.category || 'Other',
-      }
-      return details
-    }, {}) || {},
+  // // SkillDetails - store proficiency and category for each skill
+  // skillDetails:
+  //   storedResume?.skills?.reduce((details, skill) => {
+  //     const skillName = typeof skill === 'string' ? skill : skill.name
+  //     details[skillName] = {
+  //       proficiency:
+  //         typeof skill === 'string'
+  //           ? storedResume?.skillDetails?.[skill]?.proficiency || 3
+  //           : skill.proficiency || 3,
+  //       category:
+  //         typeof skill === 'string'
+  //           ? storedResume?.skillDetails?.[skill]?.category || 'Other'
+  //           : skill.category || 'Other',
+  //     }
+  //     return details
+  //   }, {}) || {},
 
   // Arrays for sections
   education: storedResume?.education || [],
@@ -575,7 +574,28 @@ const updateProfessionalSummary = (value) => {
 }
 
 const updateJobDetails = (value) => {
-  Object.assign(formData, value)
+  console.log('Updating job details with:', value)
+
+  // Make sure we preserve the employment type format
+  if (value.employmentType) {
+    // The JobDetails component already sends the correct backend format
+    formData.employmentType = value.employmentType
+  }
+
+  // Update other fields
+  formData.jobTitle = value.jobTitle || ''
+  formData.jobPosition = value.jobPosition || ''
+  formData.department = value.department || ''
+  formData.contractDuration = value.contractDuration || ''
+  formData.hireDate = value.hireDate || ''
+  formData.availabilityStatus = value.availabilityStatus || ''
+  formData.careerPreferences = value.careerPreferences || ''
+
+  console.log('Updated job details in formData:', {
+    jobTitle: formData.jobTitle,
+    employmentType: formData.employmentType,
+  })
+
   debounce(saveFormData, 500)()
 }
 
@@ -615,7 +635,6 @@ const updateEducation = (value) => {
 
 const updateSkills = (value) => {
   formData.skills = value.skills || []
-  formData.skillDetails = value.skillDetails || []
   debounce(saveFormData, 500)()
 }
 
@@ -657,7 +676,6 @@ const saveFormData = debounce(() => {
         ? [...formData.education]
         : [],
       skills: Array.isArray(formData.skills) ? [...formData.skills] : [],
-      skillDetails: { ...formData.skillDetails },
       relocationPreferences: Array.isArray(formData.relocationPreferences)
         ? [...formData.relocationPreferences]
         : [],
@@ -798,47 +816,44 @@ const handleSubmit = async () => {
   try {
     isSubmitting.value = true
 
-    // For testing purposes, we'll skip validation
-    // Uncomment this for production
-    /*
-    const isValid = await validateForm();
+    // Validate form
+    const isValid = await validateForm()
     if (!isValid) {
-      isSubmitting.value = false;
-      return;
+      isSubmitting.value = false
+      return
     }
-    */
 
-    console.log('=== FORM SUBMISSION TEST MODE ===')
-    console.log('Raw form data:', {
-      ...formData,
-      skills: formData.skills,
-      skillDetails: formData.skillDetails,
-      certifications: formData.certifications, // Log certifications explicitly
-    })
+    console.log('Form submission started')
 
     // Extract and store skill categories
     const skillCategories = talentStore.extractSkillCategories(formData)
     console.log('Extracted skill categories:', skillCategories)
     talentStore.storeSkillCategories(skillCategories)
 
-    // Initialize form with CV data from localStorage
-    const formDataWithCV = talentStore.initializeFormWithCVData(formData)
+    // Get the form data from localStorage to ensure we have the latest edits
+    const savedFormData = localStorage.getItem('employeeFormData')
+    let formDataToSubmit = formData
 
-    // Log certifications before transformation
-    console.log(
-      'Certifications before transformation:',
-      formDataWithCV.certifications
-    )
+    if (savedFormData) {
+      try {
+        const parsedData = JSON.parse(savedFormData)
+        formDataToSubmit = parsedData
+        console.log('Using saved form data from localStorage for submission')
+      } catch (error) {
+        console.error(
+          'Error parsing saved form data, using current form data instead:',
+          error
+        )
+      }
+    }
+
+    // Initialize form with CV data from localStorage
+    const formDataWithCV =
+      talentStore.initializeFormWithCVData(formDataToSubmit)
 
     // Transform data for backend compatibility
     const transformedData = transformDataForBackend(formDataWithCV)
     console.log('Form data with CV details (transformed):', transformedData)
-
-    // Log certifications after transformation
-    console.log(
-      'Certifications after transformation:',
-      transformedData.certifications
-    )
 
     // Create a structured payload for the backend
     const backendPayload = {
@@ -866,34 +881,25 @@ const handleSubmit = async () => {
       skills: transformedData.skills,
       education: transformedData.education,
       experience: transformedData.experiences,
-      certifications: transformedData.certifications || [], // Ensure certifications are included with a fallback
+      certifications: transformedData.certifications || [],
       assessment: transformedData.assessment,
     }
 
-    // Log what would be sent to the backend
-    console.log('=== DATA THAT WOULD BE SENT TO BACKEND ===')
-    console.log('Backend Payload:', backendPayload)
-    console.log('Certifications in payload:', backendPayload.certifications) // Log certifications explicitly
-    console.log('=== TEST MODE: Submission prevented ===')
+    // Submit the data through the store
+    const talentId = await talentStore.submitEmployeeInfo(backendPayload)
 
-    // Display alert - using vanilla JavaScript alert to avoid any Vue reactivity issues
-    window.alert(
-      'Form data logged to console. Backend submission prevented for testing.'
-    )
-
-    // Comment out the actual submission code
-    /*
-    const talentId = await talentStore.submitEmployeeInfo(backendPayload);
     if (talentId) {
-      console.log('Form submitted successfully with talent ID:', talentId);
-      localStorage.removeItem('employeeFormData');
-      router.push('/upload-cv/bulk-employee-info');
+      console.log('Form submitted successfully with talent ID:', talentId)
+      // Clear the stored form data since submission was successful
+      localStorage.removeItem('employeeFormData')
+      // Navigate to the next page
+      router.push('/upload-cv/bulk-employee-info')
     } else {
-      throw new Error('Failed to submit form data');
+      throw new Error('Failed to submit form data')
     }
-    */
   } catch (error) {
     console.error('Form submission error:', error)
+    // Show error to user
     window.alert(
       'An error occurred while submitting the form. Please try again.'
     )
@@ -944,27 +950,43 @@ const validateForm = async () => {
 
 // Initialize panels after component is mounted
 onMounted(() => {
-  // Initialize form with CV data
-  const formDataWithCV = talentStore.initializeFormWithCVData(formData)
-  if (formDataWithCV.resumeFilename) {
-    console.log('CV filename loaded:', formDataWithCV.resumeFilename)
-    Object.assign(formData, formDataWithCV)
-  }
-
-  // Load saved form data if available
+  // First, try to load saved form data from localStorage (highest priority)
   const savedData = localStorage.getItem('employeeFormData')
+  let hasSavedData = false
+
   if (savedData) {
     try {
       const parsedData = JSON.parse(savedData)
       Object.assign(formData, parsedData)
+      hasSavedData = true
+      console.log('Loaded saved form data from localStorage:', parsedData)
     } catch (error) {
       console.error('Error loading saved form data:', error)
     }
   }
 
-  // Load resume data if available
-  if (storedResume) {
-    Object.assign(formData, storedResume)
+  // Only load CV data if we don't have saved form data
+  if (!hasSavedData) {
+    // Initialize form with CV data
+    const formDataWithCV = talentStore.initializeFormWithCVData(formData)
+    if (formDataWithCV.resumeFilename) {
+      console.log('CV filename loaded:', formDataWithCV.resumeFilename)
+      Object.assign(formData, formDataWithCV)
+    }
+
+    // Only load resume data if we don't have saved form data
+    if (storedResume) {
+      console.log('Loading stored resume data as fallback')
+      Object.assign(formData, storedResume)
+    }
+  } else {
+    // If we have saved form data but need the CV filename
+    const formDataWithCV = talentStore.initializeFormWithCVData(formData)
+    if (formDataWithCV.resumeFilename && !formData.resumeFilename) {
+      formData.resumeFilename = formDataWithCV.resumeFilename
+      formData.resumeFileSize = formDataWithCV.resumeFileSize
+      formData.resumeFileType = formDataWithCV.resumeFileType
+    }
   }
 
   const container = document.querySelector('.form-container')

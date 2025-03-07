@@ -62,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onBeforeUnmount } from 'vue'
+import { ref, watch, onBeforeUnmount, onMounted } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -124,6 +124,45 @@ const localFormData = ref({
   skills: [],
 })
 
+// Load saved skills from localStorage on component mount
+onMounted(() => {
+  const savedData = localStorage.getItem('employeeFormData')
+  if (savedData) {
+    try {
+      const parsedData = JSON.parse(savedData)
+      if (Array.isArray(parsedData.skills)) {
+        // Transform the skills data to include proficiency levels
+        const transformedSkills = parsedData.skills.map((skill) => {
+          if (typeof skill === 'string') {
+            return {
+              name: skill,
+              proficiencyLevel: 1, // Default to beginner if no level is set
+              yearsOfExperience: 0,
+              lastUsedDate: new Date().toISOString().split('T')[0],
+            }
+          }
+          return {
+            ...skill,
+            name: skill.name || skill,
+            proficiencyLevel:
+              typeof skill.proficiencyLevel === 'string'
+                ? skill.proficiencyLevel
+                : parseInt(skill.proficiencyLevel) || 1,
+          }
+        })
+        localFormData.value.skills = transformedSkills
+        // Emit the loaded skills
+        emit('update:model-value', {
+          ...props.modelValue,
+          skills: transformedSkills,
+        })
+      }
+    } catch (error) {
+      console.error('Error loading skills from localStorage:', error)
+    }
+  }
+})
+
 // Watch for external changes
 watch(
   () => props.modelValue,
@@ -146,20 +185,24 @@ watch(
 const handleSkillsUpdate = (value) => {
   if (!Array.isArray(value)) return
 
-  // Check if the update is actually different
-  const currentSkills = JSON.stringify(localFormData.value.skills)
-  const newSkills = JSON.stringify(value)
-  if (currentSkills === newSkills) return
-
-  localFormData.value.skills = value.map((skill) => {
+  // Transform the skills and preserve existing proficiency levels
+  const updatedSkills = value.map((skill) => {
+    // If it's a new skill (string), create a new skill object
     if (typeof skill === 'string') {
-      return {
-        name: skill,
-        proficiencyLevel: 1,
-        yearsOfExperience: 0,
-        lastUsedDate: new Date().toISOString().split('T')[0],
-      }
+      // Check if this skill already exists in localFormData to preserve its proficiency
+      const existingSkill = localFormData.value.skills.find(
+        (s) => s.name === skill
+      )
+      return (
+        existingSkill || {
+          name: skill,
+          proficiencyLevel: 1,
+          yearsOfExperience: 0,
+          lastUsedDate: new Date().toISOString().split('T')[0],
+        }
+      )
     }
+    // If it's an existing skill object, preserve its data
     return {
       ...skill,
       name: skill.name || skill,
@@ -170,6 +213,22 @@ const handleSkillsUpdate = (value) => {
     }
   })
 
+  // Update local form data
+  localFormData.value.skills = updatedSkills
+
+  // Save to localStorage
+  const savedData = localStorage.getItem('employeeFormData')
+  if (savedData) {
+    try {
+      const parsedData = JSON.parse(savedData)
+      parsedData.skills = updatedSkills
+      localStorage.setItem('employeeFormData', JSON.stringify(parsedData))
+    } catch (error) {
+      console.error('Error saving skills to localStorage:', error)
+    }
+  }
+
+  // Emit the update
   updateSkillDetails()
 }
 
@@ -190,12 +249,24 @@ const getProficiencyTitle = (level) => {
 }
 
 const updateSkillDetails = () => {
-  // Debounce the emit to prevent rapid updates
   if (updateSkillDetails.timeout) {
     clearTimeout(updateSkillDetails.timeout)
   }
 
   updateSkillDetails.timeout = setTimeout(() => {
+    // Save the updated skills to localStorage
+    const savedData = localStorage.getItem('employeeFormData')
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData)
+        parsedData.skills = localFormData.value.skills
+        localStorage.setItem('employeeFormData', JSON.stringify(parsedData))
+      } catch (error) {
+        console.error('Error saving skill details to localStorage:', error)
+      }
+    }
+
+    // Emit the update
     emit('update:model-value', {
       ...props.modelValue,
       skills: localFormData.value.skills,
